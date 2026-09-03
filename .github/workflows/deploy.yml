@@ -1,0 +1,74 @@
+name: Deploy AI GovCoreX OS (Production)
+
+on:
+  push:
+    branches:
+      - main
+
+# Cancela ejecuciones anteriores en progreso para evitar colisiones
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to Production VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: 📦 Create deployment archive
+        run: |
+          echo "📦 Creando paquete de despliegue comprimido para AI GovCoreX..."
+          tar -czf /tmp/deploy.tar.gz \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='venv' \
+            --exclude='.venv' \
+            --exclude='__pycache__' \
+            --exclude='.git' \
+            --exclude='*.log' \
+            --exclude='backend.log' \
+            --exclude='.DS_Store' \
+            --exclude='*.pyc' \
+            --exclude='deploy.tar.gz' \
+            --exclude='services/whatsapp-voice/dist' \
+            --exclude='services/whatsapp-voice/tmp' \
+            --exclude='services/whatsapp-voice/qr_codes' \
+            .
+          mv /tmp/deploy.tar.gz ./deploy.tar.gz
+          echo "Tamaño del archivo comprimido: $(du -h deploy.tar.gz | cut -f1)"
+
+      - name: 🚀 Copy archive to Production VPS
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SERVER_HOST || secrets.MAIN_SERVER_HOST || secrets.CONTABO_HOST || secrets.SSH_HOST }}
+          username: ${{ secrets.SERVER_USER || secrets.MAIN_SERVER_USER || secrets.CONTABO_USER || secrets.SSH_USER || 'root' }}
+          password: ${{ secrets.SERVER_PASSWORD || secrets.MAIN_SERVER_PASSWORD || secrets.CONTABO_PASSWORD || secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY || secrets.SERVER_KEY || '' }}
+          port: ${{ secrets.SERVER_PORT || secrets.MAIN_SERVER_PORT || secrets.CONTABO_PORT || secrets.SSH_PORT || 22 }}
+          source: "deploy.tar.gz"
+          target: "/tmp"
+
+      - name: ⚙️ Extract and deploy on VPS
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST || secrets.MAIN_SERVER_HOST || secrets.CONTABO_HOST || secrets.SSH_HOST }}
+          username: ${{ secrets.SERVER_USER || secrets.MAIN_SERVER_USER || secrets.CONTABO_USER || secrets.SSH_USER || 'root' }}
+          password: ${{ secrets.SERVER_PASSWORD || secrets.MAIN_SERVER_PASSWORD || secrets.CONTABO_PASSWORD || secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY || secrets.SERVER_KEY || '' }}
+          port: ${{ secrets.SERVER_PORT || secrets.MAIN_SERVER_PORT || secrets.CONTABO_PORT || secrets.SSH_PORT || 22 }}
+          script: |
+            echo '📂 Preparando directorio de despliegue en VPS (~/aigovcorex)...'
+            mkdir -p ~/aigovcorex
+            cd ~/aigovcorex
+            if [ -d "frontend/portal/.next" ]; then rm -rf frontend/portal/.next; fi
+            if [ -d "frontend/dashboard/.next" ]; then rm -rf frontend/dashboard/.next; fi
+            echo '📦 Extrayendo paquete de despliegue...'
+            tar -xzf /tmp/deploy.tar.gz --overwrite
+            rm -f /tmp/deploy.tar.gz
+            echo '⚙️ Ejecutando script de despliegue deploy.sh...'
+            chmod +x deploy.sh
+            ./deploy.sh

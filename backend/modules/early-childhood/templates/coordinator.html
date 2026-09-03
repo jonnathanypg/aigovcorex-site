@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinador - KindiCore AI</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <h2>🏫 Coordinador</h2>
+            <p id="center-name" class="license-info">Cargando...</p>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="#dashboard" class="active">📊 Dashboard</a></li>
+            <li><a href="#applications">📝 Solicitudes</a></li>
+            <li><a href="#reports">📊 Reportes</a></li>
+            <li><a href="#staff">👥 Personal</a></li>
+            <li><a href="#children">👶 Niños</a></li>
+            <li><a href="#reports">📈 Reportes</a></li>
+            <li><a href="#" onclick="logout()">🚪 Salir</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section active">
+            <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Dashboard de Centro</h1>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="current-enrollment">0</h3>
+                    <p>Niños Inscritos</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="today-attendance">0%</h3>
+                    <p>Asistencia Hoy</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="total-staff">0</h3>
+                    <p>Personal Activo</p>
+                </div>
+                <div class="stat-card warning">
+                    <h3 id="pending-alerts">0</h3>
+                    <p>Alertas Pendientes</p>
+                </div>
+            </div>
+
+            <div class="glass-card mt-3">
+                <h2 style="margin-bottom: 1rem;">Actividad Reciente</h2>
+                <div id="recent-activity">
+                    <p class="text-secondary text-center py-3">Cargando actividad...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Applications Section -->
+        <section id="applications-section" class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 2rem; font-weight: 700;">Gestión de Solicitudes</h1>
+                <button class="btn btn-primary" onclick="showNewApplicationModal()">➕ Nueva Solicitud</button>
+            </div>
+
+            <div class="glass-card mb-3">
+                <div class="filters-bar" style="display: flex; gap: 1rem;">
+                    <select id="filter-application-status" onchange="loadApplications()"
+                        style="padding: 0.75rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <option value="">Todas las solicitudes</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="approved">Aprobadas</option>
+                        <option value="rejected">Rechazadas</option>
+                        <option value="waitlist">En Lista de Espera</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="applications-list">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- Staff Section -->
+        <section id="staff-section" class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 2rem; font-weight: 700;">Mi Equipo</h1>
+                <!-- Coordinators usually don't create users, but let's assume they can manage their staff details or viewing -->
+            </div>
+
+            <div class="glass-card" style="padding: 0; overflow: hidden;">
+                <table id="staff-table" style="width: 100%; border-collapse: collapse;">
+                    <thead style="background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--border-color);">
+                        <tr>
+                            <th style="padding: 1rem; text-align: left;">Nombre</th>
+                            <th style="padding: 1rem; text-align: left;">Rol</th>
+                            <th style="padding: 1rem; text-align: left;">Email</th>
+                            <th style="padding: 1rem; text-align: left;">Teléfono</th>
+                            <th style="padding: 1rem; text-align: left;">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-tbody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Children Section -->
+        <section id="children-section" class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 2rem; font-weight: 700;">Gestión de Niños</h1>
+                <button class="btn btn-primary" onclick="showRegisterChildModal()">➕ Inscribir Niño</button>
+            </div>
+
+            <div class="glass-card mb-3">
+                <div class="filters-bar" style="display: flex; gap: 1rem;">
+                    <input type="text" id="search-child" placeholder="Buscar por nombre..."
+                        style="flex: 1; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                </div>
+            </div>
+
+            <div id="children-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports-section" class="content-section">
+            <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Reportes del Centro</h1>
+            <div class="empty-state glass-card">
+                <p>Funcionalidad de reportes detallados disponible próximamente.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Register Child Modal (Placeholder) -->
+    <div id="register-child-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('register-child-modal')">&times;</span>
+            <h2>Inscribir Nuevo Niño</h2>
+            <form id="register-child-form" onsubmit="registerChild(event)">
+                <div class="form-group">
+                    <label>Nombres</label>
+                    <input type="text" name="first_name" required>
+                </div>
+                <div class="form-group">
+                    <label>Apellidos</label>
+                    <input type="text" name="last_name" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('register-child-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Application Modal -->
+    <div id="new-application-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close" onclick="closeModal('new-application-modal'); applicationWizard.reset();">&times;</span>
+            <h2>Nueva Solicitud de Ingreso</h2>
+
+            <!-- Progress Bar -->
+            <div class="progress-container" style="margin: 2rem 0;">
+                <div class="progress-bar">
+                    <div id="form-progress-bar" class="progress-fill" style="width: 25%;"></div>
+                </div>
+                <div class="step-indicators" style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                    <span id="step-indicator-1" class="step-indicator active">1. Niño</span>
+                    <span id="step-indicator-2" class="step-indicator">2. Familia</span>
+                    <span id="step-indicator-3" class="step-indicator">3. Representantes</span>
+                    <span id="step-indicator-4" class="step-indicator">4. Vulnerabilidad</span>
+                </div>
+            </div>
+
+            <!-- Step 1: Child Data -->
+            <div id="step-1" class="form-step">
+                <h3>Datos del Niño/a</h3>
+                <form>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nombres *</label>
+                            <input type="text" name="child_first_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Apellidos *</label>
+                            <input type="text" name="child_last_name" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fecha de Nacimiento *</label>
+                            <input type="date" name="child_birth_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Género *</label>
+                            <select name="child_gender" required>
+                                <option value="">Seleccione...</option>
+                                <option value="masculino">Masculino</option>
+                                <option value="femenino">Femenino</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Cédula (si tiene)</label>
+                        <input type="text" name="child_cedula" maxlength="10">
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Family Data -->
+            <div id="step-2" class="form-step" style="display: none;">
+                <h3>Datos de la Familia</h3>
+                <form>
+                    <div class="form-group">
+                        <label>Dirección *</label>
+                        <textarea name="family_address" rows="2" required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ciudad *</label>
+                            <input type="text" name="family_city" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Provincia *</label>
+                            <input type="text" name="family_province" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Teléfono Principal *</label>
+                            <input type="tel" name="family_phone_primary" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Teléfono Secundario</label>
+                            <input type="tel" name="family_phone_secondary">
+                        </div>
+                    </div>
+                    <h4 style="margin-top: 1.5rem;">Contacto de Emergencia</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nombre *</label>
+                            <input type="text" name="emergency_contact_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Teléfono *</label>
+                            <input type="tel" name="emergency_contact_phone" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Parentesco *</label>
+                        <input type="text" name="emergency_contact_relationship" required>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 3: Representatives -->
+            <div id="step-3" class="form-step" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>Representantes</h3>
+                    <button type="button" class="btn btn-primary btn-sm"
+                        onclick="applicationWizard.addRepresentative()">
+                        ➕ Agregar Representante
+                    </button>
+                </div>
+                <div id="representatives-list"></div>
+            </div>
+
+            <!-- Step 4: Vulnerability -->
+            <div id="step-4" class="form-step" style="display: none;">
+                <h3>Ficha de Vulnerabilidad R01</h3>
+                <form>
+                    <h4>Vivienda</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tipo de Vivienda</label>
+                            <select name="housing_type">
+                                <option value="propia">Propia</option>
+                                <option value="alquilada">Alquilada</option>
+                                <option value="prestada">Prestada</option>
+                                <option value="compartida">Compartida</option>
+                                <option value="precaria">Precaria</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Propiedad</label>
+                            <select name="housing_ownership">
+                                <option value="propia">Propia</option>
+                                <option value="alquilada">Alquilada</option>
+                                <option value="prestada">Prestada</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Número de Habitaciones</label>
+                            <input type="number" name="housing_rooms" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" name="has_basic_services" value="true" checked>
+                                Tiene servicios básicos
+                            </label>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 1.5rem;">Economía</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ingreso Mensual (USD)</label>
+                            <input type="number" name="monthly_income" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Número de Dependientes</label>
+                            <input type="number" name="num_dependents" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Fuentes de Ingreso</label>
+                        <textarea name="income_sources" rows="2"></textarea>
+                    </div>
+
+                    <h4 style="margin-top: 1.5rem;">Factores de Riesgo</h4>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="single_parent" value="true">
+                            Familia monoparental
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="teen_parent" value="true">
+                            Padres adolescentes
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="disability_in_family" value="true">
+                            Discapacidad en la familia
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="chronic_illness" value="true">
+                            Enfermedad crónica
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="domestic_violence" value="true">
+                            Violencia doméstica
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="substance_abuse" value="true">
+                            Abuso de sustancias
+                        </label>
+                    </div>
+
+                    <h4 style="margin-top: 1.5rem;">Educación y Ubicación</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nivel Educativo de Padres</label>
+                            <select name="parent_education_level">
+                                <option value="ninguna">Ninguna</option>
+                                <option value="primaria">Primaria</option>
+                                <option value="secundaria">Secundaria</option>
+                                <option value="superior">Superior</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Zona Geográfica</label>
+                            <select name="geographic_zone">
+                                <option value="urbana">Urbana</option>
+                                <option value="rural">Rural</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Distancia al Centro (km)</label>
+                        <input type="number" name="distance_to_center" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones</label>
+                        <textarea name="observations" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="form-actions" style="margin-top: 2rem;">
+                <button type="button" id="prev-step-btn" class="btn btn-secondary"
+                    onclick="applicationWizard.prevStep()" style="display: none;">
+                    ← Anterior
+                </button>
+                <button type="button" id="next-step-btn" class="btn btn-primary" onclick="applicationWizard.nextStep()">
+                    Siguiente →
+                </button>
+                <button type="button" id="submit-application-btn" class="btn btn-primary"
+                    onclick="applicationWizard.submitApplication()" style="display: none;">
+                    ✓ Enviar Solicitud
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/coordinator.js"></script>
+    <script src="/static/js/documents_ui.js"></script>
+    <script src="/static/js/reports.js"></script>
+    <script src="/static/js/milestones_ui.js"></script>
+    <script src="/static/js/health_ui.js"></script>
+    <script src="/static/js/chat_ui.js"></script>
+    <script src="/static/js/application_form.js"></script>
+</body>
+
+</html>

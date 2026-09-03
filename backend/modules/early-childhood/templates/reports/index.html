@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes - KindiCore AI{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem;">📊 Centro de Reportes</h1>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">📅 Reporte Diario</div>
+        <p style="color: var(--text-gray); margin-bottom: 1rem;">
+            Resumen de actividades del día
+        </p>
+        <button class="btn btn-primary" onclick="generateDailyReport()">Generar</button>
+    </div>
+
+    <div class="card">
+        <div class="card-header">📆 Reporte Mensual</div>
+        <p style="color: var(--text-gray); margin-bottom: 1rem;">
+            Estadísticas del mes completo
+        </p>
+        <button class="btn btn-primary" onclick="generateMonthlyReport()">Generar</button>
+    </div>
+
+    <div class="card">
+        <div class="card-header">👶 Reporte por Niño</div>
+        <p style="color: var(--text-gray); margin-bottom: 1rem;">
+            Historial individual completo
+        </p>
+        <button class="btn btn-primary" onclick="generateChildReport()">Generar</button>
+    </div>
+
+    <div class="card">
+        <div class="card-header">📈 Reporte Personalizado</div>
+        <p style="color: var(--text-gray); margin-bottom: 1rem;">
+            Configura tu propio reporte
+        </p>
+        <button class="btn btn-primary" onclick="generateCustomReport()">Configurar</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">📋 Reportes Generados Recientemente</div>
+    <div id="recentReports">
+        <p style="color: var(--text-gray); text-align: center; padding: 2rem;">
+            No hay reportes generados recientemente
+        </p>
+    </div>
+</div>
+
+<script>
+    function generateDailyReport() {
+        KindiCore.UI.showAlert('Generación de reporte diario en desarrollo', 'info');
+    }
+
+    function generateMonthlyReport() {
+        KindiCore.UI.showAlert('Generación de reporte mensual en desarrollo', 'info');
+    }
+
+    function generateChildReport() {
+        KindiCore.UI.showAlert('Generación de reporte por niño en desarrollo', 'info');
+    }
+
+    function generateCustomReport() {
+        KindiCore.UI.showAlert('Configuración de reporte personalizado en desarrollo', 'info');
+    }
+</script>
+{% endblock %}

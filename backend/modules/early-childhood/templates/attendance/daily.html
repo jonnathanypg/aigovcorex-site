@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Asistencia - KindiCore AI{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem;">📅 Registro de Asistencia</h1>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div class="form-group" style="margin: 0;">
+            <label class="form-label">Fecha:</label>
+            <input type="date" id="attendanceDate" class="form-input" value="{{ today }}" onchange="loadAttendance()">
+        </div>
+        <button class="btn btn-primary" onclick="saveAllAttendance()">Guardar Todo</button>
+    </div>
+
+    <div id="attendanceList">
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<script>
+    // Set today's date
+    document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+
+    async function loadAttendance() {
+        const listDiv = document.getElementById('attendanceList');
+        KindiCore.UI.showLoading(listDiv);
+
+        try {
+            const date = document.getElementById('attendanceDate').value;
+
+            // Load children and attendance
+            const [childrenData, attendanceData] = await Promise.all([
+                KindiCore.ChildrenAPI.getAll({ status: 'activo' }),
+                KindiCore.AttendanceAPI.getByDate(date)
+            ]);
+
+            const attendanceMap = {};
+            attendanceData.attendance.forEach(a => {
+                attendanceMap[a.child_id] = a.status;
+            });
+
+            let html = '<table class="table"><thead><tr>';
+            html += '<th>Niño/a</th><th>Grupo</th><th>Estado</th>';
+            html += '</tr></thead><tbody>';
+
+            childrenData.children.forEach(child => {
+                const currentStatus = attendanceMap[child.id] || 'ausente';
+                html += `<tr>
+                <td><strong>${child.full_name}</strong></td>
+                <td>${child.assigned_group || '-'}</td>
+                <td>
+                    <select class="form-select attendance-status" data-child-id="${child.id}">
+                        <option value="presente" ${currentStatus === 'presente' ? 'selected' : ''}>Presente</option>
+                        <option value="ausente" ${currentStatus === 'ausente' ? 'selected' : ''}>Ausente</option>
+                        <option value="justificado" ${currentStatus === 'justificado' ? 'selected' : ''}>Justificado</option>
+                        <option value="tardanza" ${currentStatus === 'tardanza' ? 'selected' : ''}>Tardanza</option>
+                    </select>
+                </td>
+            </tr>`;
+            });
+
+            html += '</tbody></table>';
+            listDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error('Error loading attendance:', error);
+            listDiv.innerHTML = '<p style="color: var(--danger-color);">Error al cargar asistencia</p>';
+        }
+    }
+
+    async function saveAllAttendance() {
+        const date = document.getElementById('attendanceDate').value;
+        const selects = document.querySelectorAll('.attendance-status');
+
+        try {
+            for (const select of selects) {
+                const childId = select.dataset.childId;
+                const status = select.value;
+
+                await KindiCore.AttendanceAPI.mark({
+                    child_id: parseInt(childId),
+                    date: date,
+                    status: status
+                });
+            }
+
+            KindiCore.UI.showAlert('Asistencia guardada exitosamente', 'success');
+
+        } catch (error) {
+            console.error('Error saving attendance:', error);
+            KindiCore.UI.showAlert('Error al guardar asistencia', 'error');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAttendance);
+</script>
+{% endblock %}

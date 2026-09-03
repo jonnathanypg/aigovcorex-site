@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Niños - KindiCore AI{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>👶 Gestión de Niños</h1>
+    <button class="btn btn-primary" onclick="showAddChildModal()">+ Agregar Niño</button>
+</div>
+
+<!-- Search and Filters -->
+<div class="card">
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <input type="text" id="searchInput" class="form-input" placeholder="Buscar por nombre..."
+            style="flex: 1; min-width: 200px;">
+        <select id="statusFilter" class="form-select" style="width: 150px;">
+            <option value="activo">Activos</option>
+            <option value="inactivo">Inactivos</option>
+            <option value="egresado">Egresados</option>
+            <option value="">Todos</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadChildren()">Buscar</button>
+    </div>
+</div>
+
+<!-- Children List -->
+<div class="card">
+    <div class="card-header">Lista de Niños</div>
+    <div id="childrenList">
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<script>
+    async function loadChildren() {
+        const listDiv = document.getElementById('childrenList');
+        KindiCore.UI.showLoading(listDiv);
+
+        try {
+            const search = document.getElementById('searchInput').value;
+            const status = document.getElementById('statusFilter').value;
+
+            const data = await KindiCore.ChildrenAPI.getAll({ search, status });
+
+            if (data.children.length === 0) {
+                listDiv.innerHTML = '<p style="text-align: center; color: var(--text-gray); padding: 2rem;">No se encontraron niños</p>';
+                return;
+            }
+
+            let html = '<table class="table"><thead><tr>';
+            html += '<th>Nombre</th><th>Edad</th><th>Grupo</th><th>Estado</th><th>Acciones</th>';
+            html += '</tr></thead><tbody>';
+
+            data.children.forEach(child => {
+                const statusBadge = child.status === 'activo' ? 'success' : 'warning';
+                html += `<tr>
+                <td><strong>${child.full_name}</strong></td>
+                <td>${child.age_display}</td>
+                <td>${child.assigned_group || '-'}</td>
+                <td><span class="badge badge-${statusBadge}">${child.status}</span></td>
+                <td>
+                    <a href="/children/${child.id}" class="btn btn-outline" style="padding: 0.25rem 0.75rem;">Ver Perfil</a>
+                </td>
+            </tr>`;
+            });
+
+            html += '</tbody></table>';
+            listDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error('Error loading children:', error);
+            listDiv.innerHTML = '<p style="color: var(--danger-color); text-align: center;">Error al cargar la lista</p>';
+        }
+    }
+
+    function showAddChildModal() {
+        KindiCore.UI.showAlert('Funcionalidad de agregar niño en desarrollo', 'info');
+    }
+
+    // Load on page load
+    document.addEventListener('DOMContentLoaded', loadChildren);
+
+    // Search on enter
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loadChildren();
+    });
+</script>
+{% endblock %}

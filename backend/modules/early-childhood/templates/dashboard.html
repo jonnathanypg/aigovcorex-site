@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - KindiCore AI{% endblock %}
+
+{% block content %}
+<div class="glass-card mb-3" style="border: none; background: transparent; box-shadow: none; padding: 0;">
+    <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">📊 Dashboard</h1>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3 id="totalChildren">-</h3>
+        <p>Niños Activos</p>
+    </div>
+
+    <div class="stat-card">
+        <h3 id="todayAttendance">-</h3>
+        <p>Asistencia Hoy</p>
+    </div>
+
+    <div class="stat-card warning">
+        <h3 id="pendingReports">-</h3>
+        <p>Reportes Pendientes</p>
+    </div>
+
+    <div class="stat-card">
+        <h3 id="activeEducators">-</h3>
+        <p>Educadoras Activas</p>
+    </div>
+</div>
+
+<div class="glass-card mt-3">
+    <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem; font-weight: 600;">Actividad Reciente</h2>
+    <div id="recentActivity">
+        <div class="text-center" style="padding: 2rem; color: var(--text-secondary);">
+            <p>Cargando actividad...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load Dashboard Data
+    async function loadDashboard() {
+        try {
+            // Check if Auth exists
+            if (!KindiCore.Auth.isAuthenticated()) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Mock Data for now - waiting for API endpoints
+            document.getElementById('totalChildren').textContent = '45';
+            document.getElementById('todayAttendance').textContent = '42'; // 93%
+            document.getElementById('pendingReports').textContent = '3';
+            document.getElementById('activeEducators').textContent = '8';
+
+            // Load recent activity
+            loadRecentActivity();
+
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+            // Don't show alert on load to avoid annoyance if API fails
+        }
+    }
+
+    function loadRecentActivity() {
+        const activityDiv = document.getElementById('recentActivity');
+        // Mock activity data
+        const activities = [
+            { time: '08:30', user: 'María González', action: 'Registró asistencia del grupo "Los Pollitos"' },
+            { time: '09:15', user: 'Dr. Carlos Ruiz', action: 'Completó ficha médica de Juan Pérez' },
+            { time: '10:00', user: 'Ana López', action: 'Subió reporte de nutrición semanal' }
+        ];
+
+        let html = '<div style="display: grid; gap: 1rem;">';
+        activities.forEach(act => {
+            html += `
+                <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 1rem;">
+                    <span class="badge badge-success">${act.time}</span>
+                    <div>
+                        <strong style="display: block; color: var(--text-primary);">${act.user}</strong>
+                        <span style="color: var(--text-secondary); font-size: 0.9em;">${act.action}</span>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        activityDiv.innerHTML = html;
+    }
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check if user should be redirected to a different panel
+        const userData = KindiCore.Auth.getUserData();
+        if (userData) {
+            if (userData.role === 'super_admin') {
+                window.location.href = '/super-admin';
+                return;
+            }
+            if (userData.role === 'license_admin') {
+                window.location.href = '/license-admin';
+                return;
+            }
+        }
+
+        loadDashboard();
+    });
+</script>
+{% endblock %}

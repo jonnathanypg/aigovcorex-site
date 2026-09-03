@@ -1,0 +1,63 @@
+# Core Flask Framework
+Flask
+Flask-SQLAlchemy
+Flask-JWT-Extended
+Flask-CORS
+Flask-Mail
+gunicorn
+
+# Database
+PyMySQL
+SQLAlchemy
+
+# RAG / Vector Store
+pinecone
+pypdf
+python-docx
+
+# AI/LLM - LangChain & LangGraph (Latest Stable for Py3.14 compat)
+langchain
+langchain-core
+langchain-openai
+langchain-google-genai
+langgraph
+langsmith
+openai
+google-generativeai
+
+# Messaging
+twilio
+python-telegram-bot
+
+# Utilities
+python-dotenv
+python-dateutil
+pytz
+
+# Reports (sin pandas por incompatibilidad Python 3.13)
+reportlab
+openpyxl
+
+# Security
+bcrypt
+cryptography
+
+# Validation - Pydantic V2 Native
+pydantic
+
+# Email/Phone
+email-validator
+phonenumbers
+
+# HTTP
+requests
+
+# Voice Interface (New)
+# faster-whisper  # Commented out due to 'av' library incompatibility with Python 3.14 (macOS)
+edge-tts
+
+# Development
+pytest  
+pytest-flask
+black
+flake8

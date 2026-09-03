@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil - KindiCore AI{% endblock %}
+
+{% block content %}
+<div id="childProfile" data-child-id="{{ child_id }}">
+    <div class="spinner"></div>
+</div>
+
+<script>
+    async function loadChildProfile() {
+        const container = document.getElementById('childProfile');
+        // Get child ID from data attribute - This allows cleaner separation and no syntax errors
+        const childId = container.dataset.childId;
+
+        try {
+            const data = await KindiCore.ChildrenAPI.getById(childId);
+            const child = data.child;
+
+            let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1>👶 ${child.full_name}</h1>
+                <button class="btn btn-outline" onclick="window.history.back()">← Volver</button>
+            </div>
+            
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">Información Personal</div>
+                    <p><strong>Edad:</strong> ${child.age_display}</p>
+                    <p><strong>Fecha de Nacimiento:</strong> ${KindiCore.UI.formatDate(child.birth_date)}</p>
+                    <p><strong>Género:</strong> ${child.gender}</p>
+                    <p><strong>Tipo de Sangre:</strong> ${child.blood_type || '-'}</p>
+                    <p><strong>Estado:</strong> <span class="badge badge-success">${child.status}</span></p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">Información Académica</div>
+                    <p><strong>Grupo:</strong> ${child.assigned_group || 'No asignado'}</p>
+                    <p><strong>Fecha de Ingreso:</strong> ${KindiCore.UI.formatDate(child.enrollment_date)}</p>
+                </div>
+            </div>
+            
+            ${child.allergies ? `
+            <div class="card">
+                <div class="card-header">⚠️ Alergias</div>
+                <p>${child.allergies}</p>
+            </div>
+            ` : ''}
+            
+            ${child.medical_conditions ? `
+            <div class="card">
+                <div class="card-header">⚕️ Condiciones Médicas</div>
+                <p>${child.medical_conditions}</p>
+            </div>
+            ` : ''}
+            
+            <div class="card">
+                <div class="card-header">📊 Registros Recientes</div>
+                <p style="color: var(--text-gray);">Los registros detallados estarán disponibles próximamente</p>
+            </div>
+        `;
+
+            container.innerHTML = html;
+
+        } catch (error) {
+            console.error('Error loading child profile:', error);
+            container.innerHTML = '<p style="color: var(--danger-color);">Error al cargar el perfil</p>';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadChildProfile);
+</script>
+{% endblock %}

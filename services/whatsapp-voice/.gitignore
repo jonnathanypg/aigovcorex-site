@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+
+# Env
+.env
+.env.*
+
+# Auth/Sessions
+.wwebjs_auth/
+tokens/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+tmp/
+!tmp/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+
+# Reference
+REFERENCIA/

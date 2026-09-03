@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educadora - KindiCore AI</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="logo">
+                <h2>👩‍🏫 Educadora</h2>
+                <p id="educator-name" class="license-info">Cargando...</p>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#dashboard" class="active">📊 Dashboard</a></li>
+                <li><a href="#my-group">👶 Mi Grupo</a></li>
+                <li><a href="#attendance">✓ Asistencia</a></li>
+                <li><a href="#nutrition">🍎 Nutrición</a></li>
+                <li><a href="#activities">📝 Actividades</a></li>
+                <li><a href="#" onclick="logout()">🚪 Salir</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="content-section active">
+                <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Mi Dashboard</h1>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="my-children-count">0</h3>
+                        <p>Niños a mi Cargo</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="present-today">0</h3>
+                        <p>Presentes Hoy</p>
+                    </div>
+                    <div class="stat-card warning">
+                        <h3 id="absent-today">0</h3>
+                        <p>Ausentes Hoy</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="pending-activities">0</h3>
+                        <p>Actividades Pendientes</p>
+                    </div>
+                </div>
+
+                <div class="glass-card mt-3">
+                    <h2 style="margin-bottom: 1rem;">Resumen del Día</h2>
+                    <div id="daily-summary">
+                        <p class="text-secondary text-center py-3">Cargando resumen...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- My Group Section -->
+            <section id="my-group-section" class="content-section">
+                <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">Mi Grupo de Niños</h1>
+
+                <div id="children-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+            <!-- Attendance Section -->
+            <section id="attendance-section" class="content-section">
+                <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">✓ Registro de Asistencia</h1>
+
+                <div class="glass-card mb-3">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="margin-bottom: 0.5rem;">Fecha: <span id="attendance-date"></span></h3>
+                            <p class="text-secondary">Registra entrada, salida y notas de cada niño</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveAllAttendance()">💾 Guardar Todo</button>
+                    </div>
+                </div>
+
+                <!-- Attendance Cards Grid -->
+                <div id="attendance-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Attendance Alerts -->
+                <div id="attendance-alerts-section" class="glass-card mt-3" style="display: none;">
+                    <h3>⚠️ Alertas de Inasistencia</h3>
+                    <div id="attendance-alerts-list"></div>
+                </div>
+            </section>
+
+            <!-- Activities Section -->
+
+            <!-- Nutrition Section -->
+            <section id="nutrition-section" class="content-section">
+                <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 700;">🍎 Nutrición del Día</h1>
+
+                <!-- Daily Menu -->
+                <div class="glass-card mb-3">
+                    <h3>Menú de Hoy</h3>
+                    <div id="daily-menu">
+                        <p class="text-center text-secondary">Cargando menú...</p>
+                    </div>
+                </div>
+
+                <!-- Consumption Tracking -->
+                <div class="glass-card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Registro de Consumo</h3>
+                        <button class="btn btn-primary" onclick="saveNutritionData()">💾 Guardar Consumo</button>
+                    </div>
+                    <div id="nutrition-grid"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+            <section id="activities-section" class="content-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h1 style="font-size: 2rem; font-weight: 700;">Registro de Actividades</h1>
+                    <button class="btn btn-primary" onclick="showAddActivityModal()">➕ Nueva Actividad</button>
+                </div>
+
+                <div id="activities-list">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add Activity Modal -->
+    <div id="add-activity-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('add-activity-modal')">&times;</span>
+            <h2>Registrar Nueva Actividad</h2>
+            <form id="add-activity-form" onsubmit="addActivity(event)">
+                <div class="form-group">
+                    <label>Título de la Actividad</label>
+                    <input type="text" name="title" required placeholder="Ej: Lectura de cuentos">
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea name="description" rows="3" required
+                        placeholder="Describe la actividad realizada..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Actividad</label>
+                    <select name="activity_type" required>
+                        <option value="">Seleccione...</option>
+                        <option value="pedagogica">Pedagógica</option>
+                        <option value="recreativa">Recreativa</option>
+                        <option value="artistica">Artística</option>
+                        <option value="fisica">Física</option>
+                        <option value="social">Social</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('add-activity-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/educator.js"></script>
+    <script src="/static/js/milestones_ui.js"></script>
+    <script src="/static/js/health_ui.js"></script>
+    <script src="/static/js/educator_enhanced.js"></script>
+    <script src="/static/js/chat_ui.js"></script>
+</body>
+
+</html>

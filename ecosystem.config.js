@@ -11,14 +11,14 @@ module.exports = {
       name: "aigovcorex-portal",
       cwd: "./frontend/portal",
       script: "node_modules/next/dist/bin/next",
-      args: "start -p 3000",
+      args: "start -p 3002",
       instances: 1,
       autorestart: true,
       watch: false,
       max_memory_restart: "500M",
       env: {
         NODE_ENV: "production",
-        PORT: 3000
+        PORT: 3002
       }
     },
 
@@ -44,6 +44,7 @@ module.exports = {
       cwd: "./backend/modules/early-childhood",
       script: "./venv/bin/gunicorn",
       args: "wsgi:app --bind 0.0.0.0:5000 --workers 2 --timeout 120",
+      interpreter: "none",
       instances: 1,
       autorestart: true,
       watch: false,

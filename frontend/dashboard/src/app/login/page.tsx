@@ -135,7 +135,7 @@ export default function LoginPage() {
                     </div>
 
                     <div className="flex items-center gap-3 pt-2 text-zinc-500 text-[11px]">
-                        <span className="flex items-center gap-1"><Map className="w-3 h-3 text-emerald-400" /> Ojo de Dios</span>
+                        <span className="flex items-center gap-1"><Map className="w-3 h-3 text-emerald-400" /> GeoMap OS</span>
                         <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3 text-violet-400" /> WhatsApp RAG</span>
                         <span className="flex items-center gap-1"><Layers className="w-3 h-3 text-sky-400" /> KindiCore AI</span>
                     </div>

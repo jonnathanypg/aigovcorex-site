@@ -251,6 +251,72 @@ def list_programs():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@social_programs_bp.route('/beneficiaries', methods=['GET'])
+@jwt_required()
+def list_all_beneficiaries():
+    """Lista todos los beneficiarios adscritos a programas sociales con filtros y paginación"""
+    try:
+        program_id = request.args.get('program_id', type=int)
+        status = request.args.get('status')
+        channel = request.args.get('channel')
+        search = request.args.get('search')
+        limit = min(request.args.get('limit', default=100, type=int), 200)
+
+        query = ProgramBeneficiary.query
+        if program_id:
+            query = query.filter(ProgramBeneficiary.program_id == program_id)
+        if status:
+            query = query.filter(ProgramBeneficiary.status == status)
+        if channel:
+            query = query.filter(ProgramBeneficiary.intake_channel == channel)
+        if search:
+            search_like = f"%{search}%"
+            query = query.filter(
+                (ProgramBeneficiary.full_name.ilike(search_like)) |
+                (ProgramBeneficiary.cedula.ilike(search_like)) |
+                (ProgramBeneficiary.phone.ilike(search_like))
+            )
+
+        beneficiaries = query.order_by(ProgramBeneficiary.created_at.desc()).limit(limit).all()
+        data = []
+        for b in beneficiaries:
+            b_dict = b.to_dict()
+            if b.program:
+                b_dict['program_name'] = b.program.name
+                b_dict['program_category'] = b.program.category
+            data.append(b_dict)
+
+        return jsonify({
+            'success': True,
+            'data': data,
+            'count': len(data),
+            'total_active': ProgramBeneficiary.query.filter_by(status='active').count(),
+            'total_applicants': ProgramBeneficiary.query.filter_by(status='applicant').count(),
+            'total_approved': ProgramBeneficiary.query.filter_by(status='approved').count(),
+        }), 200
+    except Exception as e:
+        logger.error(f'Error listing beneficiaries: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@social_programs_bp.route('/programs/<int:program_id>/beneficiaries', methods=['GET'])
+@jwt_required()
+def list_program_beneficiaries(program_id: int):
+    """Lista beneficiarios de un programa social específico"""
+    try:
+        program = SocialProgram.query.get_or_404(program_id)
+        beneficiaries = ProgramBeneficiary.query.filter_by(program_id=program.id).order_by(ProgramBeneficiary.created_at.desc()).all()
+        return jsonify({
+            'success': True,
+            'program': {'id': program.id, 'name': program.name},
+            'data': [b.to_dict() for b in beneficiaries],
+            'count': len(beneficiaries)
+        }), 200
+    except Exception as e:
+        logger.error(f'Error listing program beneficiaries {program_id}: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @social_programs_bp.route('/programs', methods=['POST'])
 @jwt_required()
 def create_program():

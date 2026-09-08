@@ -404,21 +404,31 @@ textarea:focus {
   --module-copilot-border: rgba(236, 72, 153, 0.25);
   --os-rail-width: 72px;
   --os-subnav-width: 240px;
-  --os-rail-bg: #11141e;
-  --os-rail-border: rgba(255, 255, 255, 0.08);
-  --os-subnav-bg: #161a26;
-  --os-subnav-border: rgba(255, 255, 255, 0.07);
+  --os-rail-bg: #f8fafc;
+  --os-rail-border: rgba(0, 0, 0, 0.08);
+  --os-rail-fg: rgba(30, 41, 59, 0.7);
+  --os-rail-fg-hover: rgba(15, 23, 42, 0.95);
+  --os-subnav-bg: #f1f5f9;
+  --os-subnav-border: rgba(0, 0, 0, 0.08);
+  --os-subnav-fg: #1e293b;
+  --os-subnav-muted: #64748b;
+  --os-subnav-section: #94a3b8;
 }
 .dark {
   --os-rail-bg: #0b0e16;
   --os-rail-border: rgba(255, 255, 255, 0.06);
+  --os-rail-fg: rgba(255, 255, 255, 0.55);
+  --os-rail-fg-hover: rgba(255, 255, 255, 0.95);
   --os-subnav-bg: #0f131f;
   --os-subnav-border: rgba(255, 255, 255, 0.06);
+  --os-subnav-fg: #f8fafc;
+  --os-subnav-muted: rgba(255, 255, 255, 0.6);
+  --os-subnav-section: rgba(255, 255, 255, 0.35);
 }
 .os-module-rail { background: var(--os-rail-bg); border-right: 1px solid var(--os-rail-border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-.os-module-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem; border-radius: 0.75rem; transition: all 0.2s; cursor: pointer; position: relative; gap: 0.25rem; color: rgba(255,255,255,0.55); }
-.os-module-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.95); }
-.os-module-btn.active { color: white; }
+.os-module-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem; border-radius: 0.75rem; transition: all 0.2s; cursor: pointer; position: relative; gap: 0.25rem; color: var(--os-rail-fg); }
+.os-module-btn:hover { background: rgba(125, 125, 125, 0.1); color: var(--os-rail-fg-hover); }
+.os-module-btn.active { color: var(--foreground); }
 .os-subnav-panel { background: var(--os-subnav-bg); border-right: 1px solid var(--os-subnav-border); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); transition: width 0.25s cubic-bezier(0.16,1,0.3,1), opacity 0.2s ease; }
 .os-bottom-nav { background: var(--os-rail-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--os-rail-border); }
 @keyframes module-pulse { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }

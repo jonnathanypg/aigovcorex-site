@@ -41,7 +41,7 @@ export function OSModuleRail({ activeModule, onModuleChange }: OSModuleRailProps
       </div>
 
       {/* Divider */}
-      <div className="w-8 h-px bg-white/10 mb-1" />
+      <div className="w-8 h-px bg-border mb-1" />
 
       {/* Module Buttons */}
       {visibleModules.map((mod) => {
@@ -80,12 +80,12 @@ export function OSModuleRail({ activeModule, onModuleChange }: OSModuleRailProps
       <div className="flex-1" />
 
       {/* Bottom OS badge */}
-      <div className="w-8 h-px bg-white/10 mb-1" />
+      <div className="w-8 h-px bg-border mb-1" />
       <div
-        className="w-9 h-9 rounded-lg bg-white/5 border border-white/8 flex items-center justify-center"
+        className="w-9 h-9 rounded-lg bg-muted/40 border border-border flex items-center justify-center"
         title="AI GovCoreX OS v2.0"
       >
-        <span className="text-white/30 text-[8px] font-mono">OS</span>
+        <span className="text-muted-foreground/60 text-[8px] font-mono">OS</span>
       </div>
     </div>
   );

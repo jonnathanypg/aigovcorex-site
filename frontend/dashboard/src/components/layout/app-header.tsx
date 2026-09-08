@@ -69,11 +69,7 @@ export function AppHeader() {
 
   return (
     <header
-      className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur-xl lg:h-[58px] lg:px-5 transition-all duration-300 relative"
-      style={{
-        background: 'rgba(10, 12, 20, 0.85)',
-        borderBottomColor: currentMod ? `${currentMod.color}20` : 'rgba(255,255,255,0.06)',
-      }}
+      className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur-xl lg:h-[58px] lg:px-5 transition-all duration-300 relative bg-background/80 border-border/70"
     >
       {/* Module accent left border */}
       {currentMod && (
@@ -101,10 +97,10 @@ export function AppHeader() {
         )}
 
         {currentMod && (
-          <span className="text-white/20 text-xs hidden sm:block">/</span>
+          <span className="text-muted-foreground/40 text-xs hidden sm:block">/</span>
         )}
 
-        <span className="text-sm font-semibold text-white/75 truncate">{pageLabel}</span>
+        <span className="text-sm font-semibold text-foreground/90 truncate">{pageLabel}</span>
       </div>
 
       {/* Right side controls */}
@@ -113,28 +109,28 @@ export function AppHeader() {
         <Button
           variant="ghost"
           size="sm"
-          className="hidden lg:flex gap-2 text-white/40 hover:text-white/70 hover:bg-white/5 text-xs px-3 py-1.5 h-8 rounded-lg border border-white/8"
+          className="hidden lg:flex gap-2 text-muted-foreground hover:text-foreground hover:bg-accent text-xs px-3 py-1.5 h-8 rounded-lg border border-border"
         >
           <Search className="w-3.5 h-3.5" />
           <span>Buscar...</span>
-          <kbd className="ml-1 text-[9px] bg-white/10 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+          <kbd className="ml-1 text-[9px] bg-muted px-1.5 py-0.5 rounded font-mono border border-border">⌘K</kbd>
         </Button>
 
         {/* Voice Copilot Trigger */}
         <button
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-pink-500/15 border border-white/8 hover:border-pink-500/30"
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-pink-500/15 border border-border hover:border-pink-500/30"
           title="Copiloto de Voz"
         >
-          <Mic className="w-4 h-4 text-white/40 hover:text-pink-400" />
+          <Mic className="w-4 h-4 text-muted-foreground hover:text-pink-500" />
         </button>
 
         {/* Notifications */}
         <button
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-white/8 border border-white/8 relative"
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-accent border border-border relative"
           title="Notificaciones"
         >
-          <Bell className="w-4 h-4 text-white/40" />
-          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <Bell className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-500" />
         </button>
 
         <CenterSelector />

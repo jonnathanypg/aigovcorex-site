@@ -1,6 +1,6 @@
 """
 Geo Intelligence API Blueprint
-AI GovCoreX OS — Endpoints para "Ojo de Dios" — Inteligencia Geoespacial
+AI GovCoreX OS — Endpoints para "GeoMap OS" — Inteligencia Geoespacial
 """
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required

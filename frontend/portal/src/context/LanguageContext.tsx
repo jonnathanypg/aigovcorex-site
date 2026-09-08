@@ -134,6 +134,7 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.contact': 'Get in Touch',
     'footer.rights': '© 2026 AI GovCoreX. Autonomous Agentic Compliance OS for the Public Sector. All rights reserved.',
     'footer.privacy': 'Privacy Policy',
+    'footer.cookies': 'Cookie Policy',
     'footer.terms': 'Terms of Service',
 
     // Beta Register
@@ -362,6 +363,7 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.contact': 'Contactar',
     'footer.rights': '© 2026 AI GovCoreX. Sistema Operativo Agéntico de Compliance para el Sector Público. Todos los derechos reservados.',
     'footer.privacy': 'Política de Privacidad',
+    'footer.cookies': 'Política de Cookies',
     'footer.terms': 'Términos de Servicio',
 
     // Beta Register

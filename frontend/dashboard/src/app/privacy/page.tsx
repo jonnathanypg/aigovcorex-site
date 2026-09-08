@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useLanguage } from '@/context/LanguageContext';
 import {
   ArrowLeft,
   Shield,
@@ -21,17 +20,16 @@ import {
 } from 'lucide-react';
 
 export default function PrivacyPage() {
-  const { language } = useLanguage();
-  const isEs = language === 'es';
+  const isEs = true;
 
   return (
-    <div className="min-h-screen py-24 px-4 max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen py-16 px-4 max-w-4xl mx-auto space-y-8 bg-zinc-950 text-zinc-100">
       <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-xs font-bold text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
+        href="/login"
+        className="inline-flex items-center gap-2 text-xs font-bold text-sky-400 hover:text-sky-300 hover:underline transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>{isEs ? 'Volver al Inicio de AI GovCoreX' : 'Back to AI GovCoreX Home'}</span>
+        <span>Volver al Ingreso / Dashboard</span>
       </Link>
 
       {/* Header */}

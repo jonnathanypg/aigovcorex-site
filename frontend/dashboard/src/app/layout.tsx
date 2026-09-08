@@ -6,6 +6,7 @@ import { RoleProvider } from '@/hooks/use-role';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LicenseProvider } from '@/contexts/license-context';
 import { ReactQueryProvider } from '@/components/providers/react-query-provider';
+import { PrivacyBannerDashboard } from '@/components/auth/privacy-banner-dashboard';
 
 export const metadata: Metadata = {
   title: {
@@ -46,6 +47,7 @@ export default function RootLayout({
               </ReactQueryProvider>
             </LicenseProvider>
           </RoleProvider>
+          <PrivacyBannerDashboard />
           <Toaster />
         </ThemeProvider>
       </body>

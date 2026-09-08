@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -243,7 +244,21 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    <p className="text-center text-xs text-zinc-600 mt-4">
+                    <div className="flex items-center justify-center gap-4 text-xs text-zinc-500 mt-4">
+                        <Link href="/privacy" className="hover:text-sky-400 transition-colors">
+                            Privacidad
+                        </Link>
+                        <span>&bull;</span>
+                        <Link href="/cookies" className="hover:text-sky-400 transition-colors">
+                            Cookies
+                        </Link>
+                        <span>&bull;</span>
+                        <Link href="/terms" className="hover:text-sky-400 transition-colors">
+                            Términos
+                        </Link>
+                    </div>
+
+                    <p className="text-center text-xs text-zinc-600 mt-2">
                         © {new Date().getFullYear()} AI GovCoreX OS · WeblifeTech · Todos los derechos reservados.
                     </p>
                 </div>

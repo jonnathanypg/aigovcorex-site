@@ -36,7 +36,7 @@ class User(db.Model, BaseModel):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id', ondelete='SET NULL'), nullable=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id', ondelete='CASCADE'), nullable=True)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
     email = db.Column(db.String(255), nullable=False)
     phone = db.Column(db.String(20))
@@ -44,6 +44,7 @@ class User(db.Model, BaseModel):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
+    avatar_url = db.Column(db.Text, nullable=True)  # URL or base64 data URI of avatar
     cedula = db.Column(db.String(10), unique=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     last_login = db.Column(db.DateTime)
@@ -52,9 +53,9 @@ class User(db.Model, BaseModel):
     telegram_chat_id = db.Column(db.String(50), nullable=True, unique=True)  # Chat ID de Telegram
     telegram_link_code = db.Column(db.String(20), nullable=True, unique=True)  # Código de vinculación
     
-    # Unique constraint for email per tenant
+    # Unique index for email (matches existing DB index `unique_email`)
     __table_args__ = (
-        db.UniqueConstraint('email', 'tenant_id', name='unique_email_tenant'),
+        db.Index('unique_email', 'email', unique=True),
         db.Index('idx_user_tenant', 'tenant_id'),
         db.Index('idx_user_active', 'is_active'),
     )
@@ -91,6 +92,7 @@ class User(db.Model, BaseModel):
             'whatsapp_phone': self.whatsapp_phone,
             'first_name': self.first_name,
             'last_name': self.last_name,
+            'avatar_url': self.avatar_url,
             'full_name': self.full_name,
             'cedula': self.cedula,
             'is_active': self.is_active,

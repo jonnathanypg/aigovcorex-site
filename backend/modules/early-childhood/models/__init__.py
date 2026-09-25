@@ -58,6 +58,10 @@ def init_models():
     from models.geo_intelligence import GeoLayer, GeoPoint, GeoFence, OrgNetworkEdge
     from models.channel_config import ChannelConfig, ChannelConversation
     from models.inter_org import OrgProgramMembership, ProgramTeamMember
+    from models.intervention import FamilyIntervention
+    from models.notification import Notification
+    from models.report import GeneratedReport
+    from models.operation import MaintenanceTask
     
     return {
         'License': License,
@@ -92,6 +96,10 @@ def init_models():
         'ChannelConfig': ChannelConfig,
         'ChannelConversation': ChannelConversation,
         'OrgProgramMembership': OrgProgramMembership,
-        'ProgramTeamMember': ProgramTeamMember
+        'ProgramTeamMember': ProgramTeamMember,
+        'FamilyIntervention': FamilyIntervention,
+        'Notification': Notification,
+        'GeneratedReport': GeneratedReport,
+        'MaintenanceTask': MaintenanceTask
     }
 

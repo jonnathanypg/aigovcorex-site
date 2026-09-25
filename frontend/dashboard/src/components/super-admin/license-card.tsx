@@ -12,7 +12,8 @@ import {
     Pencil,
     Trash2,
     UserPlus,
-    AlertTriangle
+    AlertTriangle,
+    Layers
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -34,6 +35,7 @@ import {
 import { superAdminService, type License } from "@/services/super-admin.service";
 import { EditLicenseDialog } from "./edit-license-dialog";
 import { AssignAdminDialog } from "./assign-admin-dialog";
+import { QuickModulesDialog } from "./quick-modules-dialog";
 
 interface LicenseCardProps {
     license: License;
@@ -42,6 +44,7 @@ interface LicenseCardProps {
 
 export function LicenseCard({ license, onUpdate }: LicenseCardProps) {
     const [showEditDialog, setShowEditDialog] = useState(false);
+    const [showModulesDialog, setShowModulesDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showAssignDialog, setShowAssignDialog] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -108,6 +111,10 @@ export function LicenseCard({ license, onUpdate }: LicenseCardProps) {
                                     <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setShowModulesDialog(true)}>
+                                        <Layers className="mr-2 h-4 w-4 text-primary" />
+                                        Habilitar Módulos
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setShowAssignDialog(true)}>
                                         <UserPlus className="mr-2 h-4 w-4" />
@@ -178,7 +185,18 @@ export function LicenseCard({ license, onUpdate }: LicenseCardProps) {
                     <div className="pt-2 border-t border-border/40">
                         <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
                             <span className="font-semibold uppercase tracking-wider text-[10px]">Módulos Activos</span>
-                            <span>{license.enabled_modules?.length || 5} de 5</span>
+                            <div className="flex items-center gap-2">
+                                <span>{license.enabled_modules?.length || 5} de 5</span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowModulesDialog(true)}
+                                    className="h-5 px-1.5 text-[10px] text-primary hover:text-primary hover:bg-primary/10 font-bold"
+                                    title="Modificar módulos asignados a esta organización"
+                                >
+                                    Configurar
+                                </Button>
+                            </div>
                         </div>
                         <div className="flex flex-wrap gap-1">
                             {[
@@ -192,14 +210,15 @@ export function LicenseCard({ license, onUpdate }: LicenseCardProps) {
                                 return (
                                     <span
                                         key={m.id}
-                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded transition-all"
+                                        onClick={() => setShowModulesDialog(true)}
+                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded transition-all cursor-pointer hover:opacity-80"
                                         style={{
                                             background: isEnabled ? `${m.color}18` : 'rgba(255,255,255,0.04)',
                                             color: isEnabled ? m.color : 'rgba(255,255,255,0.25)',
                                             border: `1px solid ${isEnabled ? m.color + '40' : 'rgba(255,255,255,0.06)'}`,
                                             textDecoration: isEnabled ? 'none' : 'line-through'
                                         }}
-                                        title={isEnabled ? `Módulo ${m.label} habilitado` : `Módulo ${m.label} inactivo`}
+                                        title={isEnabled ? `Módulo ${m.label} habilitado (clic para editar)` : `Módulo ${m.label} inactivo (clic para habilitar)`}
                                     >
                                         {m.label}
                                     </span>
@@ -215,6 +234,14 @@ export function LicenseCard({ license, onUpdate }: LicenseCardProps) {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Quick Modules Dialog */}
+            <QuickModulesDialog
+                license={license}
+                open={showModulesDialog}
+                onOpenChange={setShowModulesDialog}
+                onSuccess={onUpdate}
+            />
 
             {/* Edit Dialog */}
             <EditLicenseDialog

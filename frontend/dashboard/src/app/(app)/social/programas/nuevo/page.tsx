@@ -14,6 +14,7 @@ export default function NuevoProgramaPage() {
   const [description, setDescription] = useState('');
   const [targetPopulation, setTargetPopulation] = useState('');
   const [budget, setBudget] = useState('');
+  const [inheritChannels, setInheritChannels] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,7 +31,8 @@ export default function NuevoProgramaPage() {
         code,
         description,
         target_population: targetPopulation,
-        budget: parseFloat(budget) || 0
+        budget: parseFloat(budget) || 0,
+        inherit_org_channels: inheritChannels
       });
       toast.success('Programa social creado exitosamente');
       setName('');
@@ -115,6 +117,21 @@ export default function NuevoProgramaPage() {
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
                   className="bg-zinc-950/60 border-white/10 text-white text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-sky-500/5 border border-sky-500/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-white">Multicanalidad & Herencia de Canales</p>
+                  <p className="text-[11px] text-white/50">Heredar automáticamente el WhatsApp y Telegram institucional para este programa</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={inheritChannels}
+                  onChange={(e) => setInheritChannels(e.target.checked)}
+                  className="w-4 h-4 accent-sky-500 rounded"
                 />
               </div>
             </div>

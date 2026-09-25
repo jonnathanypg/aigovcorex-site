@@ -569,7 +569,7 @@ def get_all_tools():
         ManagePlanningTool, ManageWeeklyMenuTool,
         ManageMaintenanceTaskTool, ManageInterventionTool,
         ManageAdmissionTool, ManageChildTool, ManageIngestionTool,
-        SendEmailTool, ManageSocialProgramsTool,
+        SendEmailTool, ManageSocialProgramsTool, ManageChannelsTool,
     )
     return [
         SearchChildTool(),
@@ -599,5 +599,7 @@ def get_all_tools():
         SendEmailTool(),
         # Social Programs & Dynamic Forms (Phase 9)
         ManageSocialProgramsTool(),
+        # Multichannel Infrastructure & Inheritance (Phase 10)
+        ManageChannelsTool(),
     ]
 

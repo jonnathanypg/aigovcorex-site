@@ -289,11 +289,6 @@ export function ChatWidget() {
                         },
                     ]);
                     setIsLoading(false);
-                    if (voiceMode && response.response) {
-                        chatService.synthesizeText(response.response, undefined, currentTenantId)
-                            .then(r => { if (r.success && r.audio_url) playResponseAudio(r.audio_url); })
-                            .catch(() => {});
-                    }
                     if (response.success) processAgentCommands(response.response);
                 },
                 onError: (err) => {
@@ -475,12 +470,7 @@ export function ChatWidget() {
                     ),
                     { id: `assistant-${Date.now()}`, role: 'assistant', content: ag, timestamp: new Date(), isLoading: false },
                 ]);
-                if (response.audio_url) playResponseAudio(response.audio_url);
-                else if (voiceMode && ag) {
-                    chatService.synthesizeText(ag, undefined, currentTenantId)
-                        .then(r => { if (r.success && r.audio_url) playResponseAudio(r.audio_url); })
-                        .catch(() => {});
-                }
+                // Audio synthesis output deactivated per instructions (text response only)
                 processAgentCommands(ag);
             } else {
                 setMessages(prev => prev.filter(m => m.id !== procId));
@@ -498,13 +488,22 @@ export function ChatWidget() {
 
     return (
         <>
-            {/* ─── Floating Trigger Button ─── */}
+            {/* Mobile Backdrop Overlay (matches Aikrofy) */}
+            {isOpen && (
+                <div
+                    onClick={() => setIsOpen(false)}
+                    className="fixed inset-0 z-[145] bg-black/60 backdrop-blur-sm transition-opacity duration-300 sm:hidden"
+                />
+            )}
+
+            {/* ─── Floating Trigger Button (elevated above bottom nav on mobile) ─── */}
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
                     className={cn(
-                        "fixed bottom-6 right-6 z-[99] h-14 w-14 rounded-full flex items-center justify-center",
-                        "shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95",
+                        "fixed right-4 sm:right-6 z-[99] h-14 w-14 rounded-full flex items-center justify-center",
+                        "bottom-20 sm:bottom-6", // elevated on mobile to clear bottom nav
+                        "shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 cursor-pointer",
                         "bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-500",
                         "text-white border border-amber-400/30 shadow-glow-amber-sm"
                     )}
@@ -519,17 +518,25 @@ export function ChatWidget() {
                 </button>
             )}
 
-            {/* ─── 100vh Right Sidebar Panel ─── */}
+            {/* ─── Responsive Sidebar Container (Desktop right drawer, Mobile bottom 75vh sheet - Aikrofy style) ─── */}
             <div
                 className={cn(
-                    "fixed top-0 right-0 z-[150] h-screen flex flex-col transition-all duration-300 ease-in-out",
-                    "border-l shadow-glass-lg",
+                    "fixed z-[150] flex flex-col overflow-hidden transition-all duration-300 ease-out",
+                    // Mobile: bottom 75% sheet, curved top-left/right corners, full shadow
+                    "bottom-0 left-0 right-0 h-[75dvh] max-h-[75dvh] rounded-t-3xl border-t border-border/80 shadow-[0_-10px_35px_rgba(0,0,0,0.4)]",
+                    // Desktop: full height right drawer
+                    "sm:bottom-auto sm:left-auto sm:top-0 sm:right-0 sm:h-screen sm:max-h-screen sm:w-[420px] sm:rounded-none sm:border-t-0 sm:border-l sm:border-border/50",
                     isOpen
-                        ? "w-full sm:w-[420px] translate-x-0"
-                        : "w-0 translate-x-full overflow-hidden border-transparent",
-                    "bg-background/95 backdrop-blur-xl border-border/50"
+                        ? "translate-y-0 sm:translate-x-0 opacity-100"
+                        : "translate-y-full sm:translate-y-0 sm:translate-x-full sm:w-0 opacity-0 sm:opacity-100 border-transparent overflow-hidden pointer-events-none",
+                    "bg-background/95 backdrop-blur-2xl text-foreground"
                 )}
             >
+                {/* Mobile Pull Handle Pill */}
+                <div className="sm:hidden w-full flex items-center justify-center pt-2.5 pb-1 bg-card/40 shrink-0">
+                    <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                </div>
+
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border/40 bg-gradient-to-r from-amber-500/5 via-orange-500/5 to-yellow-500/5 shrink-0">
                     <div className="flex items-center gap-3">
@@ -562,18 +569,7 @@ export function ChatWidget() {
                                 <Trash2 className="w-4 h-4" />
                             </Button>
                         )}
-                        <Button variant="ghost" size="icon"
-                            className={cn(
-                                "h-8 w-8 rounded-xl transition-all border border-transparent",
-                                voiceMode
-                                    ? "bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                            )}
-                            onClick={() => setVoiceMode(!voiceMode)}
-                            title={voiceMode ? "Desactivar voz" : "Activar voz"}
-                        >
-                            {voiceMode ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                        </Button>
+                        {/* Voice synthesis button hidden per instructions */}
                         <Button variant="ghost" size="icon"
                             className="h-8 w-8 rounded-xl hover:bg-muted/80 text-muted-foreground hover:text-foreground"
                             onClick={() => setIsOpen(false)} title="Cerrar consola"

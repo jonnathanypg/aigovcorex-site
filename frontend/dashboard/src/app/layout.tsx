@@ -6,11 +6,12 @@ import { RoleProvider } from '@/hooks/use-role';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LicenseProvider } from '@/contexts/license-context';
 import { ReactQueryProvider } from '@/components/providers/react-query-provider';
+import { PrivacyBannerDashboard } from '@/components/auth/privacy-banner-dashboard';
 
 export const metadata: Metadata = {
   title: {
-    default: 'KindiCore AI — Sistema CDI',
-    template: '%s | KindiCore AI',
+    default: 'AI GovCoreX',
+    template: '%s | AI GovCoreX',
   },
   description: 'Sistema Operativo Integral para la Gestión de Centros de Desarrollo Infantil. IA pedagógica, cumplimiento MIES, seguimiento IDII, salud y nutrición.',
   keywords: ['CDI', 'MIES', 'desarrollo infantil', 'Ecuador', 'gestión', 'IA pedagógica', 'IDII'],
@@ -46,6 +47,7 @@ export default function RootLayout({
               </ReactQueryProvider>
             </LicenseProvider>
           </RoleProvider>
+          <PrivacyBannerDashboard />
           <Toaster />
         </ThemeProvider>
       </body>

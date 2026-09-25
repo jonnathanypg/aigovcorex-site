@@ -4,10 +4,13 @@ Handles different environments: development, testing, production
 """
 import os
 from datetime import timedelta
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables explicitly from module directory
+_current_dir = Path(__file__).resolve().parent
+load_dotenv(_current_dir / '.env')
+load_dotenv(_current_dir.parent.parent.parent / '.env')
 
 
 class Config:

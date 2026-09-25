@@ -1,30 +1,104 @@
-import { LayoutGrid, ClipboardList, Users, MapPin, Activity } from 'lucide-react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { 
+  LayoutGrid, 
+  ClipboardList, 
+  Users, 
+  MapPin, 
+  Activity, 
+  Plus, 
+  ArrowRight,
+  RefreshCw,
+  Eye,
+  FileCode2
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { socialService, SocialProgram, ProgramFormDefinition } from '@/services/social.service';
+import { ProgramDetailsDialog } from '@/components/social/program-details-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DynamicFormRenderer } from '@/components/social/dynamic-form-renderer';
+import { toast } from 'sonner';
 
 export default function SocialDashboardPage() {
+  const [programs, setPrograms] = useState<SocialProgram[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Program Detail Dialog
+  const [selectedProgram, setSelectedProgram] = useState<SocialProgram | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  // Form Preview Modal
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'web_form' | 'conversational'>('web_form');
+  const [activeFormDef, setActiveFormDef] = useState<ProgramFormDefinition | null>(null);
+
+  const loadPrograms = async () => {
+    try {
+      setLoading(true);
+      const data = await socialService.getPrograms();
+      setPrograms(data);
+    } catch (e) {
+      console.error('Error fetching social programs:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPrograms();
+  }, []);
+
+  const handleOpenProgram = (prog: SocialProgram) => {
+    setSelectedProgram(prog);
+    setDetailsOpen(true);
+  };
+
+  const handleOpenFormPreview = async (prog: SocialProgram, mode: 'web_form' | 'conversational') => {
+    try {
+      setSelectedProgram(prog);
+      setPreviewMode(mode);
+      const form = await socialService.getProgramForm(prog.id);
+      setActiveFormDef(form);
+      setPreviewOpen(true);
+    } catch {
+      toast.error('Error al cargar la definición del formulario');
+    }
+  };
+
+  const totalBeneficiaries = programs.reduce((acc, p) => acc + (p.beneficiaries_count || p.current_beneficiaries || 0), 0);
+
   const stats = [
-    { label: 'Programas Activos', value: '12', change: '+3 este mes', icon: ClipboardList, color: '#0ea5e9' },
-    { label: 'Beneficiarios Totales', value: '4,820', change: '+124 nuevos', icon: Users, color: '#10b981' },
-    { label: 'Instituciones Vinculadas', value: '38', change: '8 multilaterales', icon: LayoutGrid, color: '#8b5cf6' },
-    { label: 'Cobertura Geográfica', value: '18 Cantones', change: '3 provincias', icon: MapPin, color: '#f97316' },
+    { label: 'Programas Activos', value: programs.length.toString(), change: 'En ejecución', icon: ClipboardList, color: '#0ea5e9' },
+    { label: 'Beneficiarios Totales', value: totalBeneficiaries.toString(), change: 'Postulados / Aprobados', icon: Users, color: '#10b981' },
+    { label: 'Organizaciones Vinculadas', value: '38', change: 'Red interinstitucional', icon: LayoutGrid, color: '#8b5cf6' },
+    { label: 'Cobertura Territorial', value: '18 Cantones', change: 'Ecuador', icon: MapPin, color: '#f97316' },
   ];
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Programas Sociales</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <ClipboardList className="w-6 h-6 text-sky-400" />
+            Social AI
+          </h1>
           <p className="text-white/50 text-sm mt-1">
-            Gestión integral de programas e intervenciones sociales
+            Gestión integral de programas, formularios conversacionales y captación multicanal
           </p>
         </div>
-        <button
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
-          style={{ background: '#0ea5e920', border: '1px solid #0ea5e940', color: '#0ea5e9' }}
-        >
-          <ClipboardList className="w-4 h-4" />
-          Nuevo Programa
-        </button>
+        <div className="flex items-center gap-2">
+          <Link href="/social/programas/nuevo">
+            <Button className="bg-sky-600 hover:bg-sky-500 text-white font-medium">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Programa
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -50,29 +124,119 @@ export default function SocialDashboardPage() {
 
       {/* Programs List */}
       <div className="rounded-xl border border-white/8 bg-white/3 p-6">
-        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-          <ClipboardList className="w-4 h-4 text-sky-400" />
-          Programas Activos
-        </h2>
-        <div className="space-y-3">
-          {[
-            'Alimentación Escolar Nacional',
-            'Bono Desarrollo Humano — Ciclo 2026',
-            'Brigadas de Salud Comunitaria Costa',
-          ].map((prog, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between p-3 rounded-lg bg-white/4 border border-white/6 hover:bg-white/6 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#0ea5e9' }} />
-                <span className="text-white/80 text-sm font-medium">{prog}</span>
-              </div>
-              <span className="text-xs text-white/35 font-mono">Ver →</span>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-white font-semibold flex items-center gap-2 text-base">
+              <ClipboardList className="w-4 h-4 text-sky-400" />
+              Programas Sociales Registrados
+            </h2>
+            <p className="text-xs text-white/40 mt-0.5">
+              Haz clic sobre cualquier programa para ver su ficha técnica, objetivos y configuración
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={loadPrograms}
+            className="text-xs text-white/50 hover:text-white"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+            Recargar
+          </Button>
         </div>
+
+        {programs.length === 0 ? (
+          <div className="text-center py-8 text-xs text-white/40">
+            No se han creado programas sociales aún. Crea uno nuevo usando el botón superior.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {programs.map((prog) => (
+              <div
+                key={prog.id}
+                onClick={() => handleOpenProgram(prog)}
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-sky-500/5 hover:border-sky-500/30 cursor-pointer transition-all gap-3 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-sky-400 group-hover:scale-125 transition-transform" />
+                  <div>
+                    <p className="text-white text-sm font-semibold group-hover:text-sky-300 transition-colors">
+                      {prog.name}
+                    </p>
+                    <p className="text-xs text-white/40">
+                      Código: <span className="font-mono text-sky-300">{prog.short_code}</span> • Beneficiarios: {prog.beneficiaries_count || prog.current_beneficiaries || 0}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <Badge variant="outline" className="text-[10px] border-sky-500/30 text-sky-300 bg-sky-500/10 uppercase">
+                    {prog.status || 'Activo'}
+                  </Badge>
+                  
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenProgram(prog);
+                    }}
+                    className="text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 h-8 gap-1"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Ficha Técnica
+                  </Button>
+
+                  <Link
+                    href={`/social/postulaciones?program_id=${prog.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button size="sm" variant="ghost" className="text-xs text-white/60 hover:text-white h-8">
+                      Postulantes →
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Modal Ficha Técnica de Programa */}
+      <ProgramDetailsDialog
+        program={selectedProgram}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        onOpenFormPreview={handleOpenFormPreview}
+      />
+
+      {/* Modal Preview Formulario Dinámico */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl bg-zinc-950 border-white/15 text-white p-6 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+              <FileCode2 className="w-5 h-5 text-sky-400" />
+              {selectedProgram?.name} — Ficha de Captación
+            </DialogTitle>
+            <DialogDescription className="text-xs text-white/50">
+              Visualización y prueba del esquema dinámico en tiempo real
+            </DialogDescription>
+          </DialogHeader>
+
+          {activeFormDef && selectedProgram && (
+            <div className="mt-4">
+              <DynamicFormRenderer
+                programId={selectedProgram.id}
+                programName={selectedProgram.name}
+                formDefinition={activeFormDef}
+                initialMode={previewMode}
+                onSubmitted={() => {
+                  toast.success('¡Postulación de prueba procesada!');
+                  setPreviewOpen(false);
+                }}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

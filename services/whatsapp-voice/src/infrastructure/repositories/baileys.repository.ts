@@ -21,6 +21,7 @@ interface SessionInfo {
 export class BaileysTransporter extends EventEmitter implements LeadExternal {
   private sessions: Map<string, SessionInfo> = new Map();
   private retryCount405: Map<string, number> = new Map();
+  private retryCount408: Map<string, number> = new Map();
   private baileys: typeof Baileys;
 
   constructor(baileys: typeof Baileys = Baileys) {
@@ -90,10 +91,26 @@ export class BaileysTransporter extends EventEmitter implements LeadExternal {
     try {
       const { saveCreds, state } = await this.getAuth(companyId);
 
+      let waVersion: [number, number, number] | undefined = undefined;
+      try {
+        const fetchVersion =
+          (this.baileys as any).fetchLatestBaileysVersion ||
+          (this.baileys as any).fetchLatestWaWebVersion;
+        if (typeof fetchVersion === "function") {
+          const vInfo = await fetchVersion();
+          if (vInfo && Array.isArray(vInfo.version)) {
+            waVersion = vInfo.version as [number, number, number];
+            console.log(`[${companyId}] Using latest WhatsApp Web version: ${waVersion.join(".")}`);
+          }
+        }
+      } catch (verErr) {
+        console.warn(`[${companyId}] Could not fetch latest WA version, using default:`, verErr);
+      }
+
       const socket = this.baileys.makeWASocket({
         printQRInTerminal: false,
         browser: ["KindiCoreAI", "Chrome", "1.0.0"],
-        version: [2, 3000, 1033893291],
+        ...(waVersion ? { version: waVersion } : {}),
         //@ts-ignore
         logger: pino({ level: "silent" }),
         auth: state,
@@ -176,6 +193,22 @@ export class BaileysTransporter extends EventEmitter implements LeadExternal {
             } catch (cleanErr) {
               console.error(`[${companyId}] Cleanup error:`, cleanErr);
             }
+          }
+
+          if (statusCode === 408) {
+            const retries = (this.retryCount408.get(companyId) || 0) + 1;
+            this.retryCount408.set(companyId, retries);
+            const MAX_408_RETRIES = 3;
+
+            if (retries < MAX_408_RETRIES) {
+              console.log(`[${companyId}] QR timeout (attempt ${retries}/${MAX_408_RETRIES}). Reconnecting in 3s...`);
+              setTimeout(() => this.startSession(companyId), 3000);
+            } else {
+              console.log(`[${companyId}] Max QR attempts reached. Stopping auto-reconnect. Waiting for frontend init.`);
+              this.sessions.delete(companyId);
+              this.retryCount408.delete(companyId);
+            }
+            return;
           }
 
           if (shouldReconnect) {
@@ -278,8 +311,11 @@ export class BaileysTransporter extends EventEmitter implements LeadExternal {
       const { useMySQLAuthState } = await import("../auth/mysql.auth");
       const { state } = await useMySQLAuthState(companyId);
 
-      // Check if credentials have been paired (me.id exists means device was paired)
-      if (state.creds && state.creds.me && state.creds.me.id) {
+      // Check if credentials have been paired (me.id exists AND device is registered).
+      // Gate on `registered`: Baileys sets it to true only after the sync pair completes.
+      // A session with me.id but registered === false holds stale/corrupt creds that
+      // O.S. the server rejects with 405 — auto-restoring it hot-loops forever.
+      if (state.creds && state.creds.me && state.creds.me.id && state.creds.registered === true) {
         // Auto-start session in background (don't wait for it)
         console.log(`[${companyId}] Auto-restoring session from MySQL...`);
         this.startSession(companyId).catch(err => {
@@ -293,6 +329,11 @@ export class BaileysTransporter extends EventEmitter implements LeadExternal {
           restoring: true,
         };
       }
+
+      // Registered=false → stale session; do NOT auto-restore (would 405 hot-loop).
+      // Return a clean "not connected" so the frontend shows the QR/re-link. Removed the
+      // indiscriminate "auto-start in background" branch that kept this machine busy.
+      console.log(`[${companyId}] Stored creds exist but device not registered. Not auto-restoring (stale). Frontend must re-link via QR.`);
     } catch (error) {
       console.error(`[${companyId}] Error checking stored credentials:`, error);
     }

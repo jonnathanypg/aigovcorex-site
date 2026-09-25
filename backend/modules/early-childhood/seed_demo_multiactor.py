@@ -12,7 +12,7 @@ Este script crea de forma aislada y segura:
     - Nivel 5: CDI / Centro Operativo (CDI Semillitas de Esperanza)
  3. Programa Social Demo: "Programa Nutrición y Desarrollo Infantil Integral 2026"
  4. Usuarios Demo con roles específicos y credenciales seguras.
- 5. Puntos Geoespaciales y Red de Grafos ("Ojo de Dios").
+ 5. Puntos Geoespaciales y Red de Grafos ("GeoMap OS").
 
 Ejecución:
  python3 seed_demo_multiactor.py
@@ -416,7 +416,7 @@ def run_seed():
             )
             db.session.add_all([m1, m2, m3])
 
-        print("👁️ [6/6] Creando Puntos y Grafos para 'Ojo de Dios'...")
+        print("🗺️ [6/6] Creando Puntos y Grafos para 'GeoMap OS'...")
         # Capas Geográficas
         layer_centros = GeoLayer.query.filter_by(name="Centros de Atención Infantil").first()
         if not layer_centros:

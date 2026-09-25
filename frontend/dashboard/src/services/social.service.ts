@@ -147,6 +147,7 @@ export const socialService = {
         message: string;
         session_id: string;
         collected_data?: Record<string, any>;
+        history?: Array<{ role: 'assistant' | 'user'; content: string }>;
         user_name?: string;
         phone?: string;
         channel?: string;
@@ -174,6 +175,27 @@ export const socialService = {
         return {
             data: res.data.data || [],
             pagination: res.data.pagination || { page: 1, total: 0, pages: 1 },
+        };
+    },
+
+    async getAllBeneficiaries(params?: {
+        program_id?: number;
+        status?: string;
+        channel?: string;
+        search?: string;
+        limit?: number;
+    }): Promise<{
+        data: ProgramBeneficiary[];
+        total_active?: number;
+        total_applicants?: number;
+        total_approved?: number;
+    }> {
+        const res = await api.get('/api/social/beneficiaries', { params });
+        return {
+            data: res.data.data || [],
+            total_active: res.data.total_active || 0,
+            total_applicants: res.data.total_applicants || 0,
+            total_approved: res.data.total_approved || 0,
         };
     },
 };

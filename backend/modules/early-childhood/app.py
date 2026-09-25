@@ -9,6 +9,13 @@ from config import get_config
 from models import db
 from middleware.tenant_context import init_tenant_middleware
 
+import sys
+import os
+
+_BACKEND_MODULES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if _BACKEND_MODULES_PATH not in sys.path:
+    sys.path.insert(0, _BACKEND_MODULES_PATH)
+
 def create_app(config_name=None):
     """Application factory"""
     app = Flask(__name__)
@@ -39,7 +46,8 @@ def create_app(config_name=None):
     from api.voice import voice_bp
     from api.public_chat import public_chat_bp
     from api.chat_upload import chat_upload_bp
-    from api.social_programs import social_programs_bp
+    # Canonical Social AI module at backend/modules/social
+    from social.api.social_programs import social_programs_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)

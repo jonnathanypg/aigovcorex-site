@@ -15,8 +15,8 @@ class Application(db.Model, BaseModel):
     
     id = db.Column(db.Integer, primary_key=True)
     center_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
-    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False) # Fix: Add missing col
-    child_id = db.Column(db.Integer, db.ForeignKey('children.id'), nullable=False)
+    tenant_id = db.Column(db.Integer, nullable=False)  # Legacy column (no FK in DB)
+    child_id = db.Column(db.Integer, db.ForeignKey('children.id'), nullable=True)
     
     # Datos de la solicitud
     application_date = db.Column(db.Date, default=datetime.utcnow, nullable=False)
@@ -30,6 +30,16 @@ class Application(db.Model, BaseModel):
     decision_date = db.Column(db.Date)
     decided_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     decision_notes = db.Column(db.Text)
+    
+    # Columnas legado (existen en la BD; la app crea registros en `children`)
+    child_first_name = db.Column(db.String(100))
+    child_last_name = db.Column(db.String(100))
+    child_birth_date = db.Column(db.Date)
+    child_gender = db.Column(db.String(20))
+    child_cedula = db.Column(db.String(20))
+    family_id = db.Column(db.Integer)
+    submission_date = db.Column(db.Date)
+    submitted_by = db.Column(db.Integer)
     
     # Relaciones
     center = db.relationship('Tenant', foreign_keys=[center_id], backref='applications')
@@ -78,8 +88,9 @@ class VulnerabilityForm(db.Model, BaseModel):
     __tablename__ = 'vulnerability_forms'
     
     id = db.Column(db.Integer, primary_key=True)
-    child_id = db.Column(db.Integer, db.ForeignKey('children.id'), nullable=False, unique=True)
+    child_id = db.Column(db.Integer, db.ForeignKey('children.id'), nullable=True, unique=True)
     application_id = db.Column(db.Integer, db.ForeignKey('applications.id'))
+    tenant_id = db.Column(db.Integer)  # Legacy column
     
     # Datos del núcleo familiar
     household_members = db.Column(db.Integer)  # Número de miembros
@@ -117,6 +128,12 @@ class VulnerabilityForm(db.Model, BaseModel):
     # Metadata
     evaluated_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     evaluation_date = db.Column(db.Date, default=datetime.utcnow)
+    
+    # Columnas legado (existen en la BD)
+    parent_education_level = db.Column(db.String(50))
+    geographic_zone = db.Column(db.String(50))
+    distance_to_center = db.Column(db.Float)
+    observations = db.Column(db.Text)
     
     # Relaciones
     child = db.relationship('Child', backref='vulnerability_form')

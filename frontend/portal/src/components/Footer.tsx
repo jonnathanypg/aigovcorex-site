@@ -46,6 +46,9 @@ export const Footer: React.FC = () => {
             <Link href="/privacy" className="hover:text-cyan-400 transition-colors">
               {t('footer.privacy')}
             </Link>
+            <Link href="/cookies" className="hover:text-cyan-400 transition-colors">
+              {t('footer.cookies') || 'Cookies'}
+            </Link>
             <Link href="/terms" className="hover:text-cyan-400 transition-colors">
               {t('footer.terms')}
             </Link>

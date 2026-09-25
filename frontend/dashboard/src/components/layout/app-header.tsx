@@ -9,10 +9,26 @@ import { UserNav } from './user-nav';
 import { ClientOnly } from './client-only';
 import { ThemeSwitcher } from './theme-switcher';
 import { CenterSelector } from './center-selector';
-import { usePathname } from 'next/navigation';
-import { getModuleByRoute } from '@/lib/os-modules';
-import { Bell, Mic, Search } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { getModuleByRoute, OS_MODULES } from '@/lib/os-modules';
+import { Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from '@/components/ui/command';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
+
+import { useLicense } from '@/contexts/license-context';
+import { authService } from '@/services/auth.service';
 
 const routeLabels: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -32,7 +48,7 @@ const routeLabels: Record<string, string> = {
   '/license-admin/centers': 'Gestión de Centros',
   '/license-admin/users': 'Gestión de Usuarios',
   // New OS routes
-  '/social/dashboard': 'Programas Sociales',
+  '/social/dashboard': 'Social AI',
   '/social/programas/nuevo': 'Crear Programa Social',
   '/social/postulaciones': 'Postulaciones',
   '/social/beneficiarios': 'Beneficiarios',
@@ -64,85 +80,158 @@ const routeLabels: Record<string, string> = {
 
 export function AppHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const pageLabel = routeLabels[pathname] || 'AI GovCoreX OS';
   const currentMod = getModuleByRoute(pathname);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
+  const { hasModule } = useLicense();
+
+  useEffect(() => {
+    const user = authService.getStoredUser();
+    if (user) {
+      const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+      setUserRole(roleName);
+    }
+  }, []);
+
+  // Filter modules based on user license and role
+  const allowedModules = OS_MODULES.filter(m =>
+    (!userRole || m.requiredRoles.includes(userRole)) && hasModule(m.id)
+  );
+
+  // Keyboard shortcut ⌘K / Ctrl+K
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const handleSelectRoute = (href: string) => {
+    setIsSearchOpen(false);
+    router.push(href);
+  };
 
   return (
-    <header
-      className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur-xl lg:h-[58px] lg:px-5 transition-all duration-300 relative"
-      style={{
-        background: 'rgba(10, 12, 20, 0.85)',
-        borderBottomColor: currentMod ? `${currentMod.color}20` : 'rgba(255,255,255,0.06)',
-      }}
-    >
-      {/* Module accent left border */}
-      {currentMod && (
-        <div
-          className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full transition-all duration-300"
-          style={{ background: currentMod.color }}
-        />
-      )}
-
-      {/* Breadcrumb + Module Context */}
-      <div className="flex-1 flex items-center gap-2 min-w-0 ml-2">
-        {/* Module chip */}
+    <>
+      <header
+        className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur-xl lg:h-[58px] lg:px-5 transition-all duration-300 relative bg-background/80 border-border/70"
+      >
+        {/* Module accent left border */}
         {currentMod && (
           <div
-            className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-bold shrink-0"
-            style={{
-              background: `${currentMod.color}15`,
-              border: `1px solid ${currentMod.color}30`,
-              color: currentMod.color,
-            }}
+            className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full transition-all duration-300"
+            style={{ background: currentMod.color }}
+          />
+        )}
+
+        {/* Breadcrumb + Module Context */}
+        <div className="flex-1 flex items-center gap-2 min-w-0 ml-2">
+          {/* Module chip */}
+          {currentMod && (
+            <div
+              className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-bold shrink-0"
+              style={{
+                background: `${currentMod.color}15`,
+                border: `1px solid ${currentMod.color}30`,
+                color: currentMod.color,
+              }}
+            >
+              <currentMod.icon className="w-3 h-3" />
+              <span>{currentMod.shortLabel}</span>
+            </div>
+          )}
+
+          {currentMod && (
+            <span className="text-muted-foreground/40 text-xs hidden sm:block">/</span>
+          )}
+
+          <span className="text-sm font-semibold text-foreground/90 truncate">{pageLabel}</span>
+        </div>
+
+        {/* Right side controls */}
+        <div className="flex items-center gap-1.5">
+          {/* Search Button (clickable on desktop and tablet) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsSearchOpen(true)}
+            className="hidden sm:flex gap-2 text-muted-foreground hover:text-foreground hover:bg-accent text-xs px-3 py-1.5 h-8 rounded-lg border border-border cursor-pointer"
+            title="Buscar módulo o sección (⌘K)"
           >
-            <currentMod.icon className="w-3 h-3" />
-            <span>{currentMod.shortLabel}</span>
-          </div>
-        )}
+            <Search className="w-3.5 h-3.5" />
+            <span>Buscar...</span>
+            <kbd className="ml-1 text-[9px] bg-muted px-1.5 py-0.5 rounded font-mono border border-border">⌘K</kbd>
+          </Button>
 
-        {currentMod && (
-          <span className="text-white/20 text-xs hidden sm:block">/</span>
-        )}
+          {/* Search icon for very small mobile screens */}
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="sm:hidden w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-accent border border-border"
+            title="Buscar sección"
+          >
+            <Search className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+          </button>
 
-        <span className="text-sm font-semibold text-white/75 truncate">{pageLabel}</span>
-      </div>
+          {/* Notifications Button (Navigates to /notificaciones) */}
+          <button
+            onClick={() => router.push('/notificaciones')}
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-accent border border-border relative cursor-pointer"
+            title="Ver Notificaciones"
+          >
+            <Bell className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-500" />
+          </button>
 
-      {/* Right side controls */}
-      <div className="flex items-center gap-1.5">
-        {/* Search */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="hidden lg:flex gap-2 text-white/40 hover:text-white/70 hover:bg-white/5 text-xs px-3 py-1.5 h-8 rounded-lg border border-white/8"
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span>Buscar...</span>
-          <kbd className="ml-1 text-[9px] bg-white/10 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
-        </Button>
+          <CenterSelector />
+          <ThemeSwitcher />
+          <ClientOnly>
+            <UserNav />
+          </ClientOnly>
+        </div>
+      </header>
 
-        {/* Voice Copilot Trigger */}
-        <button
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-pink-500/15 border border-white/8 hover:border-pink-500/30"
-          title="Copiloto de Voz"
-        >
-          <Mic className="w-4 h-4 text-white/40 hover:text-pink-400" />
-        </button>
-
-        {/* Notifications */}
-        <button
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-white/8 border border-white/8 relative"
-          title="Notificaciones"
-        >
-          <Bell className="w-4 h-4 text-white/40" />
-          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
-        </button>
-
-        <CenterSelector />
-        <ThemeSwitcher />
-        <ClientOnly>
-          <UserNav />
-        </ClientOnly>
-      </div>
-    </header>
+      {/* Global Quick Search Dialog (⌘K) */}
+      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <DialogContent className="p-0 overflow-hidden max-w-lg border-border/80 shadow-2xl">
+          <Command className="rounded-lg border shadow-md">
+            <CommandInput placeholder="Escribe para buscar cualquier módulo o función..." />
+            <CommandList className="max-h-[350px] overflow-y-auto">
+              <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+              {allowedModules.map((mod) => (
+                <CommandGroup key={mod.id} heading={mod.label}>
+                  {mod.sections.flatMap(s => s.items).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <CommandItem
+                        key={item.href}
+                        onSelect={() => handleSelectRoute(item.href)}
+                        className="flex items-center gap-2.5 px-3 py-2 cursor-pointer"
+                      >
+                        <div
+                          className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                          style={{ background: `${mod.color}18`, color: mod.color }}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-sm font-medium">{item.label}</span>
+                        <span className="ml-auto text-[10px] text-muted-foreground font-mono">
+                          {item.href}
+                        </span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              ))}
+            </CommandList>
+          </Command>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

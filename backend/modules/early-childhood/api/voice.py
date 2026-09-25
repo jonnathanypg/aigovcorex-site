@@ -25,6 +25,37 @@ def ensure_voice_dir():
     if not os.path.exists(UPLOAD_VOICE_DIR):
         os.makedirs(UPLOAD_VOICE_DIR, exist_ok=True)
 
+@voice_bp.route('/transcribe', methods=['POST'])
+@tenant_required
+def voice_transcribe():
+    """
+    Transcripción liviana para dictado (ej: detalle del programa en Copiloto IA).
+    Expects: 'file' (audio blob webm/mp3/wav). Retorna { transcription }.
+    No pasa por el orquestador ni sintetiza respuesta.
+    """
+    try:
+        ensure_voice_dir()
+        if 'file' not in request.files:
+            return jsonify({'error': 'No se recibió archivo de audio', 'success': False}), 400
+        audio_file = request.files['file']
+        filename = f"dict_{uuid.uuid4().hex}.webm"
+        input_path = os.path.join(UPLOAD_VOICE_DIR, filename)
+        audio_file.save(input_path)
+        transcription = VoiceService.transcribe(input_path)
+        try:
+            if os.path.exists(input_path):
+                os.remove(input_path)
+        except Exception:
+            pass
+        if not transcription or not transcription.strip():
+            return jsonify({'transcription': '', 'success': False,
+                            'error': 'No se pudo transcribir el audio. Intente de nuevo.'}), 422
+        return jsonify({'transcription': transcription.strip(), 'success': True}), 200
+    except Exception as e:
+        logger.error(f"Error in voice transcribe: {str(e)}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
 @voice_bp.route('/interact', methods=['POST'])
 @tenant_required
 def voice_interact():

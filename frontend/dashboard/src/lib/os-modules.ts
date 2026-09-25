@@ -92,7 +92,7 @@ export const OS_MODULES: OSModule[] = [
   },
   {
     id: 'social',
-    label: 'Programas Sociales',
+    label: 'Social AI',
     shortLabel: 'Social',
     icon: ClipboardList,
     color: '#0ea5e9',
@@ -100,7 +100,7 @@ export const OS_MODULES: OSModule[] = [
     borderClass: 'border-sky-500/30',
     textClass: 'text-sky-400',
     glowClass: 'glow-social',
-    badgeLabel: 'NUEVO',
+    badgeLabel: 'ACTIVO',
     badgeColor: 'bg-sky-500/20 text-sky-300',
     href: '/social/dashboard',
     requiredRoles: ['super_admin','license_admin','supervisor','coordinator','social_worker'],

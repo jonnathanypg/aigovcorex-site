@@ -7,9 +7,6 @@ import { OSSubNavPanel } from './os-subnav-panel';
 import { OSBottomNav } from './os-bottom-nav';
 import { AppHeader } from './app-header';
 import { ChatWidget } from '@/components/chat';
-import { OnboardingWelcomeModal } from '@/components/shared/onboarding-welcome-modal';
-import { OnboardingTour } from '@/components/shared/onboarding-tour';
-import { OnboardingChecklistWidget } from '@/components/shared/onboarding-checklist-widget';
 import { OS_MODULES, getModuleByRoute, type ModuleId } from '@/lib/os-modules';
 import { cn } from '@/lib/utils';
 
@@ -17,7 +14,7 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isSubNavOpen, setIsSubNavOpen] = useState(true);
+  const [isSubNavOpen, setIsSubNavOpen] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleId>('kindicore');
 
   // Sync active module with current route
@@ -28,6 +25,13 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  // Open subnav on desktop on mount if needed
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setIsSubNavOpen(true);
+    }
+  }, []);
 
   // Track chat sidebar state
   useEffect(() => {
@@ -63,11 +67,16 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
         <OSModuleRail activeModule={activeModule} onModuleChange={handleModuleChange} />
       </div>
 
-      {/* ── Level 2: Sub-Navigation Slide (Desktop) ── */}
+      {/* ── Level 2: Sub-Navigation Slide (Desktop & Mobile Drawer) ── */}
       <OSSubNavPanel
         activeModule={activeModule}
         isOpen={isSubNavOpen}
         onClose={() => setIsSubNavOpen(false)}
+        onNavigate={() => {
+          if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            setIsSubNavOpen(false);
+          }
+        }}
       />
 
       {/* ── Level 3: Main Canvas ── */}
@@ -97,13 +106,15 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ── Mobile Bottom Navigation ── */}
-      <OSBottomNav activeModule={activeModule} onModuleChange={handleModuleChange} />
+      <OSBottomNav
+        activeModule={activeModule}
+        onModuleChange={handleModuleChange}
+        isSubNavOpen={isSubNavOpen}
+        onToggleSubNav={() => setIsSubNavOpen(v => !v)}
+      />
 
-      {/* ── Global Overlays ── */}
+      {/* ── Global Copilot Console ── */}
       <ChatWidget />
-      <OnboardingWelcomeModal />
-      <OnboardingTour />
-      <OnboardingChecklistWidget isChatOpen={isChatOpen} />
     </div>
   );
 }

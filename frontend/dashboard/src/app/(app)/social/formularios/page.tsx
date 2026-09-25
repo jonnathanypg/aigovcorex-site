@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     FileCode2,
     Plus,
@@ -13,6 +13,14 @@ import {
     CheckCircle2,
     ArrowRight,
     RefreshCw,
+    Pencil,
+    Trash2,
+    Save,
+    Mic,
+    Square,
+    Wand2,
+    ChevronUp,
+    ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +35,11 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { socialService, type SocialProgram, type ProgramFormDefinition } from '@/services/social.service';
+import { socialService, type SocialProgram, type ProgramFormDefinition, type FormField } from '@/services/social.service';
+import { chatService } from '@/services/chat.service';
 import { DynamicFormRenderer } from '@/components/social/dynamic-form-renderer';
+
+const FIELD_TYPES: Array<FormField['type']> = ['text', 'number', 'currency', 'select', 'boolean', 'date', 'cedula', 'file'];
 
 export default function FormulariosDinamicosPage() {
     const [programs, setPrograms] = useState<SocialProgram[]>([]);
@@ -43,6 +54,23 @@ export default function FormulariosDinamicosPage() {
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiProgramName, setAiProgramName] = useState('');
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+    // Voice dictation state (mic en el textarea del Copiloto IA)
+    const [isRecordingPrompt, setIsRecordingPrompt] = useState(false);
+    const [isTranscribingPrompt, setIsTranscribingPrompt] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+
+    // Editor visual de campos (punto 3: editar/agregar/eliminar tras crear con IA)
+    const [editOpen, setEditOpen] = useState(false);
+    const [editingProgram, setEditingProgram] = useState<SocialProgram | null>(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+    const [editSuccess, setEditSuccess] = useState('');
+    const [editFields, setEditFields] = useState<FormField[]>([]);
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const [regenPrompt, setRegenPrompt] = useState('');
+    const [isRegenerating, setIsRegenerating] = useState(false);
 
     const loadPrograms = async () => {
         try {
@@ -99,6 +127,166 @@ export default function FormulariosDinamicosPage() {
             toast.error(err?.response?.data?.error || 'Error en el generador agéntico');
         } finally {
             setIsGeneratingAI(false);
+        }
+    };
+
+    // ── Dictado por voz del detalle del programa (usa /api/voice/transcribe) ──
+    const togglePromptRecording = async () => {
+        if (isRecordingPrompt) {
+            mediaRecorderRef.current?.stop();
+            return;
+        }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mr = new MediaRecorder(stream);
+            mediaRecorderRef.current = mr;
+            audioChunksRef.current = [];
+            mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+            mr.onstop = async () => {
+                setIsRecordingPrompt(false);
+                stream.getTracks().forEach((t) => t.stop());
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                if (blob.size === 0) return;
+                try {
+                    setIsTranscribingPrompt(true);
+                    const res = await chatService.transcribeDictation(blob);
+                    const txt = (res?.transcription || '').trim();
+                    if (txt) {
+                        setAiPrompt((prev) => (prev ? `${prev} ${txt}` : txt));
+                        toast.success('Dictado transcrito e insertado');
+                    } else {
+                        toast.error('No se pudo transcribir el audio');
+                    }
+                } catch {
+                    toast.error('Error al transcribir el dictado');
+                } finally {
+                    setIsTranscribingPrompt(false);
+                }
+            };
+            mr.start();
+            setIsRecordingPrompt(true);
+        } catch {
+            toast.error('No se pudo acceder al micrófono');
+        }
+    };
+
+    // ── Editor visual: abrir / manipular / guardar ──
+    const openEditor = async (prog: SocialProgram) => {
+        try {
+            setEditingProgram(prog);
+            const form = await socialService.getProgramForm(prog.id);
+            setEditTitle(form.form_title || `Formulario: ${prog.name}`);
+            setEditDescription(form.form_description || '');
+            setEditSuccess(form.success_message || '');
+            setEditFields(form.fields || []);
+            setRegenPrompt('');
+            setEditOpen(true);
+        } catch {
+            toast.error('Error al cargar el formulario para editar');
+        }
+    };
+
+    const patchField = (idx: number, patch: Partial<FormField>) => {
+        setEditFields((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
+    };
+
+    const addField = () => {
+        const nid = `campo_${Date.now().toString(36)}`;
+        setEditFields((prev) => [
+            ...prev,
+            {
+                id: nid,
+                label: 'Nuevo campo',
+                type: 'text',
+                required: true,
+                placeholder: '',
+                conversational_prompt: 'Por favor indíqueme su Nuevo campo:',
+                section_id: 'datos_titular',
+            },
+        ]);
+    };
+
+    const removeField = (idx: number) => {
+        setEditFields((prev) => prev.filter((_, i) => i !== idx));
+    };
+
+    const moveField = (idx: number, dir: -1 | 1) => {
+        setEditFields((prev) => {
+            const next = [...prev];
+            const j = idx + dir;
+            if (j < 0 || j >= next.length) return prev;
+            [next[idx], next[j]] = [next[j], next[idx]];
+            return next;
+        });
+    };
+
+    const buildSectionsForSave = () => {
+        const groups: Record<string, string[]> = {};
+        editFields.forEach((f) => {
+            const sid = f.section_id || 'datos_titular';
+            (groups[sid] = groups[sid] || []).push(f.id);
+        });
+        const titles: Record<string, string> = {
+            datos_titular: '1. Datos del Solicitante / Titular',
+            datos_nino: '2. Datos del Niño/a',
+            composicion_hogar: '3. Composición Familiar & Vulnerabilidad',
+            socioeconomico: '4. Situación Socioeconómica & Vivienda',
+        };
+        return Object.entries(groups).map(([sid, ids], i) => ({
+            id: sid,
+            title: titles[sid] || `${i + 1}. ${sid}`,
+            description: '',
+            field_ids: ids,
+        }));
+    };
+
+    const saveEditor = async () => {
+        if (!editingProgram) return;
+        const ids = editFields.map((f) => f.id.trim()).filter(Boolean);
+        if (new Set(ids).size !== ids.length) {
+            toast.error('Hay IDs de campo duplicados. Cada campo debe tener un ID único.');
+            return;
+        }
+        if (editFields.some((f) => !f.label.trim() || !f.id.trim())) {
+            toast.error('Cada campo necesita ID y etiqueta.');
+            return;
+        }
+        try {
+            setIsSavingEdit(true);
+            await socialService.updateProgramForm(editingProgram.id, {
+                form_title: editTitle,
+                form_description: editDescription,
+                fields: editFields,
+                sections: buildSectionsForSave(),
+                success_message: editSuccess,
+            });
+            toast.success('Formulario actualizado');
+            setEditOpen(false);
+            await loadPrograms();
+        } catch (err: any) {
+            toast.error(err?.response?.data?.error || 'Error al guardar el formulario');
+        } finally {
+            setIsSavingEdit(false);
+        }
+    };
+
+    const handleRegenerateEditor = async () => {
+        if (!editingProgram || !regenPrompt.trim()) {
+            toast.error('Escribe qué quieres cambiar para regenerar con IA.');
+            return;
+        }
+        try {
+            setIsRegenerating(true);
+            const updated = await socialService.generateFormWithAI(editingProgram.id, regenPrompt);
+            setEditTitle(updated.form_title || editTitle);
+            setEditDescription(updated.form_description || '');
+            setEditSuccess(updated.success_message || '');
+            setEditFields(updated.fields || []);
+            toast.success('Formulario regenerado con IA. Revísalo y guarda.');
+        } catch (err: any) {
+            toast.error(err?.response?.data?.error || 'Error al regenerar con IA');
+        } finally {
+            setIsRegenerating(false);
         }
     };
 
@@ -206,6 +394,18 @@ export default function FormulariosDinamicosPage() {
                                     <div className="space-y-2 pt-1">
                                         <Button
                                             type="button"
+                                            onClick={() => openEditor(prog)}
+                                            variant="outline"
+                                            className="w-full justify-between text-xs border-amber-500/30 text-white hover:bg-amber-500/10 hover:border-amber-500/50 h-9"
+                                        >
+                                            <span className="flex items-center gap-1.5">
+                                                <Pencil className="w-3.5 h-3.5 text-amber-400" />
+                                                Editar campos (agregar / quitar / ajustar)
+                                            </span>
+                                            <ArrowRight className="w-3 h-3 text-white/40" />
+                                        </Button>
+                                        <Button
+                                            type="button"
                                             onClick={() => openPreview(prog, 'web_form')}
                                             variant="outline"
                                             className="w-full justify-between text-xs border-white/10 text-white hover:bg-sky-500/10 hover:border-sky-500/30 h-9"
@@ -297,16 +497,38 @@ export default function FormulariosDinamicosPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-white/80">
-                                Instrucciones o Perfil del Programa para la IA *
+                            <label className="text-xs font-semibold text-white/80 flex items-center justify-between">
+                                <span>Instrucciones o Perfil del Programa para la IA *</span>
+                                <button
+                                    type="button"
+                                    onClick={togglePromptRecording}
+                                    disabled={isTranscribingPrompt || isGeneratingAI}
+                                    title={isRecordingPrompt ? 'Detener y transcribir' : 'Dictar por voz'}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                                        isRecordingPrompt
+                                            ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse'
+                                            : 'bg-sky-500/10 border-sky-500/30 text-sky-300 hover:bg-sky-500/20'
+                                    }`}
+                                >
+                                    {isTranscribingPrompt ? (
+                                        <><Loader2 className="w-3 h-3 animate-spin" /> Transcribiendo...</>
+                                    ) : isRecordingPrompt ? (
+                                        <><Square className="w-3 h-3" /> Detener y transcribir</>
+                                    ) : (
+                                        <><Mic className="w-3 h-3" /> Dictar por voz</>
+                                    )}
+                                </button>
                             </label>
                             <Textarea
                                 rows={5}
-                                placeholder="Ejemplo: Necesito un programa de asistencia alimentaria para hogares vulnerables con niños menores de 5 años. Necesito preguntar cédula, número de hijos, ingreso mensual, tipo de vivienda, si tienen acceso a agua potable y si algún miembro tiene discapacidad. Las familias con ingreso menor a $200 y más de 2 niños deben tener máxima prioridad..."
+                                placeholder="Ejemplo: Necesito un programa de asistencia alimentaria para hogares vulnerables con niños menores de 5 años. Necesito preguntar cédula, número de hijos, ingreso mensual, tipo de vivienda, si tienen acceso a agua potable y si algún miembro tiene discapacidad. Las familias con ingreso menor a $200 y más de 2 niños deben tener máxima prioridad... (o dicta con el micrófono)"
                                 value={aiPrompt}
                                 onChange={(e) => setAiPrompt(e.target.value)}
                                 className="bg-zinc-900 border-white/10 text-white text-xs"
                             />
+                            <p className="text-[10px] text-white/40">
+                                Puedes escribirlo o dictarlo con el micrófono (se transcribe con el servicio de voz de la plataforma).
+                            </p>
                         </div>
                     </div>
 
@@ -333,6 +555,116 @@ export default function FormulariosDinamicosPage() {
                                     <Sparkles className="w-3.5 h-3.5" /> Generar y Activar
                                 </>
                             )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* ══════════════════════════════════════════════════════════════════════ */}
+            {/* MODAL: EDITOR VISUAL DE CAMPOS (editar/agregar/eliminar tras IA) */}
+            {/* ══════════════════════════════════════════════════════════════════════ */}
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent className="max-w-3xl bg-zinc-950 border-white/15 text-white p-6 max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
+                            <Pencil className="w-4 h-4 text-amber-400" />
+                            Editar formulario: {editingProgram?.name}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-white/50">
+                            Ajusta etiquetas, tipos, obligatoriedad, agrega o elimina campos. Se guarda como nueva versión del schema.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-white/80">Título del formulario</label>
+                            <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="bg-zinc-900 border-white/10 text-white text-xs h-10" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-white/80">Mensaje de éxito</label>
+                            <Input value={editSuccess} onChange={(e) => setEditSuccess(e.target.value)} className="bg-zinc-900 border-white/10 text-white text-xs h-10" />
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                            <label className="text-xs font-semibold text-white/80">Descripción</label>
+                            <Textarea rows={2} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="bg-zinc-900 border-white/10 text-white text-xs" />
+                        </div>
+                    </div>
+
+                    {/* Regenerar con IA desde el editor */}
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-sky-500/5 border border-sky-500/20">
+                        <Input
+                            placeholder="Ej: agrega peso, talla y fecha de nacimiento del niño; quita email..."
+                            value={regenPrompt}
+                            onChange={(e) => setRegenPrompt(e.target.value)}
+                            className="bg-zinc-900 border-white/10 text-white text-xs h-9"
+                        />
+                        <Button onClick={handleRegenerateEditor} disabled={isRegenerating || !regenPrompt.trim()} className="bg-sky-600 hover:bg-sky-700 text-white text-xs gap-1.5 shrink-0">
+                            {isRegenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                            Regenerar con IA
+                        </Button>
+                    </div>
+
+                    <div className="space-y-2 mt-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white/80">Campos ({editFields.length})</span>
+                            <Button onClick={addField} variant="outline" size="sm" className="border-white/10 text-white hover:bg-white/10 text-xs gap-1.5 h-8">
+                                <Plus className="w-3.5 h-3.5" /> Agregar campo
+                            </Button>
+                        </div>
+                        {editFields.map((f, idx) => (
+                            <div key={`${f.id}-${idx}`} className="p-3 rounded-xl bg-zinc-900/60 border border-white/10 space-y-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-white/50">ID (único, snake_case)</label>
+                                        <Input value={f.id} onChange={(e) => patchField(idx, { id: e.target.value.replace(/\s+/g, '_').toLowerCase() })} className="bg-zinc-950 border-white/10 text-white text-xs h-9 font-mono" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-white/50">Etiqueta</label>
+                                        <Input value={f.label} onChange={(e) => patchField(idx, { label: e.target.value })} className="bg-zinc-950 border-white/10 text-white text-xs h-9" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-white/50">Tipo</label>
+                                        <select value={f.type} onChange={(e) => patchField(idx, { type: e.target.value as FormField['type'] })} className="w-full h-9 px-2 rounded-md bg-zinc-950 border border-white/10 text-white text-xs">
+                                            {FIELD_TYPES.map((t) => (<option key={t} value={t} className="bg-zinc-900">{t}</option>))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-white/50">Pregunta conversacional (WhatsApp)</label>
+                                        <Input value={f.conversational_prompt || ''} onChange={(e) => patchField(idx, { conversational_prompt: e.target.value })} className="bg-zinc-950 border-white/10 text-white text-xs h-9" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-white/50">Opciones (solo select, separadas por coma)</label>
+                                        <Input
+                                            value={(f.options || []).join(', ')}
+                                            onChange={(e) => patchField(idx, { options: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+                                            className="bg-zinc-950 border-white/10 text-white text-xs h-9"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between pt-1">
+                                    <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+                                        <input type="checkbox" checked={!!f.required} onChange={(e) => patchField(idx, { required: e.target.checked })} className="accent-sky-500" />
+                                        Obligatorio
+                                    </label>
+                                    <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" onClick={() => moveField(idx, -1)} disabled={idx === 0} className="text-white/50 hover:text-white h-7 w-7"><ChevronUp className="w-4 h-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => moveField(idx, 1)} disabled={idx === editFields.length - 1} className="text-white/50 hover:text-white h-7 w-7"><ChevronDown className="w-4 h-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => removeField(idx)} className="text-rose-400 hover:text-rose-300 h-7 w-7"><Trash2 className="w-4 h-4" /></Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {editFields.length === 0 && (
+                            <p className="text-xs text-white/40 text-center py-6">Sin campos. Agrega el primero con el botón superior.</p>
+                        )}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10 mt-3">
+                        <Button variant="ghost" onClick={() => setEditOpen(false)} disabled={isSavingEdit} className="text-white/60 hover:text-white text-xs">Cancelar</Button>
+                        <Button onClick={saveEditor} disabled={isSavingEdit || editFields.length === 0} className="bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold gap-1.5 px-5">
+                            {isSavingEdit ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Guardando...</> : <><Save className="w-3.5 h-3.5" /> Guardar cambios</>}
                         </Button>
                     </div>
                 </DialogContent>

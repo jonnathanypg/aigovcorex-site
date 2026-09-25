@@ -231,6 +231,21 @@ export const chatService = {
     },
 
     /**
+     * Transcribe dictado (liviano, sin respuesta del agente).
+     * Usado en Copiloto IA de formularios y cualquier textarea con botón mic.
+     */
+    async transcribeDictation(audioBlob: Blob): Promise<{ transcription: string; success: boolean }> {
+        const formData = new FormData();
+        formData.append('file', audioBlob);
+        const { data } = await api.post('/api/voice/transcribe', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return data;
+    },
+
+    /**
      * Get available Spanish voices from Edge TTS
      */
     async getVoices(): Promise<{ voices: any[] }> {

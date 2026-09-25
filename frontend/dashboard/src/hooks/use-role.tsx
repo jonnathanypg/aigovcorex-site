@@ -35,7 +35,7 @@ function getStoredUserId(): number | null {
     const stored = localStorage.getItem('user');
     if (stored) {
       const user = JSON.parse(stored);
-      if (user.id) return user.id;
+      if (user.id !== undefined && user.id !== null) return user.id;
     }
   } catch { }
   return null;

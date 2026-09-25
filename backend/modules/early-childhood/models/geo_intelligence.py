@@ -1,5 +1,5 @@
 """
-Geo Intelligence Models — "Ojo de Dios"
+Geo Intelligence Models — "GeoMap OS"
 AI GovCoreX OS — Inteligencia Geoespacial y Grafos de Red
 
 Incluye: puntos georreferenciados, cercos digitales, capas y grafos de red.

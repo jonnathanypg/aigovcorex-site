@@ -27,10 +27,11 @@ interface UserProfile {
   last_name: string;
   email: string;
   phone?: string;
+  avatar_url?: string;
 }
 
 export function UserProfileClient({ children }: { children: React.ReactNode }) {
-  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
+  const defaultPlaceholder = PlaceHolderImages.find(p => p.id === 'user-avatar');
 
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +46,7 @@ export function UserProfileClient({ children }: { children: React.ReactNode }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
 
   // Password fields
   const [newPassword, setNewPassword] = useState("");
@@ -66,12 +68,31 @@ export function UserProfileClient({ children }: { children: React.ReactNode }) {
       setFirstName(data.user.first_name);
       setLastName(data.user.last_name);
       setPhone(data.user.phone || "");
+      setAvatarUrl(data.user.avatar_url || "");
     } catch (error) {
       console.error("Error loading profile:", error);
       toast.error("Error al cargar el perfil");
     } finally {
       setIsFetching(false);
     }
+  };
+
+  const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("La imagen debe ser menor a 2MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const base64 = uploadEvent.target?.result as string;
+      setAvatarUrl(base64);
+      toast.success("Foto seleccionada. Recuerda guardar cambios para aplicarla.");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,7 +109,8 @@ export function UserProfileClient({ children }: { children: React.ReactNode }) {
       const updateData: any = {
         first_name: firstName,
         last_name: lastName,
-        phone: phone
+        phone: phone,
+        avatar_url: avatarUrl
       };
 
       if (newPassword) {
@@ -96,7 +118,23 @@ export function UserProfileClient({ children }: { children: React.ReactNode }) {
         updateData.confirm_password = confirmPassword;
       }
 
-      await api.put('/api/users/profile', updateData);
+      const res = await api.put('/api/users/profile', updateData);
+      
+      // Update local storage user if exists
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            parsed.avatar_url = avatarUrl;
+            parsed.first_name = firstName;
+            parsed.last_name = lastName;
+            localStorage.setItem('user', JSON.stringify(parsed));
+            window.dispatchEvent(new Event('user-profile-updated'));
+          } catch (e) {}
+        }
+      }
+
       toast.success("Perfil actualizado correctamente");
       setNewPassword("");
       setConfirmPassword("");
@@ -132,13 +170,39 @@ export function UserProfileClient({ children }: { children: React.ReactNode }) {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                {userAvatar && <Image src={userAvatar.imageUrl} alt="User avatar" width={64} height={64} data-ai-hint={userAvatar.imageHint} />}
-                <AvatarFallback>{firstName?.[0]}{lastName?.[0]}</AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar className="h-16 w-16 border-2 border-primary/20 overflow-hidden">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="User avatar" className="w-full h-full object-cover" />
+                  ) : defaultPlaceholder ? (
+                    <Image src={defaultPlaceholder.imageUrl} alt="User avatar" width={64} height={64} data-ai-hint={defaultPlaceholder.imageHint} />
+                  ) : (
+                    <AvatarFallback>{firstName?.[0]}{lastName?.[0]}</AvatarFallback>
+                  )}
+                </Avatar>
+                <label 
+                  htmlFor="avatarUploadInput" 
+                  className="absolute inset-0 bg-black/50 text-white rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-medium"
+                >
+                  Cambiar
+                </label>
+                <input
+                  id="avatarUploadInput"
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  className="hidden"
+                  onChange={handleAvatarFile}
+                />
+              </div>
               <div>
                 <p className="font-medium">{profile?.email}</p>
                 <p className="text-sm text-muted-foreground">{role} {center ? `- ${center}` : ''}</p>
+                <label 
+                  htmlFor="avatarUploadInput" 
+                  className="text-xs text-primary hover:underline cursor-pointer block mt-1"
+                >
+                  Subir o cambiar foto de perfil
+                </label>
               </div>
             </div>
 

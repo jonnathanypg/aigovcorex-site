@@ -4,6 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Bot, User } from 'lucide-react';
 import { ChatMessage } from '@/services/chat.service';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 
 interface ChatBubbleProps {
     message: ChatMessage;
@@ -154,7 +155,7 @@ export function ChatBubble({ message, agentIcon }: ChatBubbleProps) {
                         "px-4 py-2.5 rounded-2xl text-sm leading-relaxed overflow-hidden",
                         isUser
                             ? "bg-primary text-primary-foreground rounded-tr-md"
-                            : "bg-muted/80 text-foreground rounded-tl-md"
+                            : "bg-muted/80 text-neutral-900 dark:bg-zinc-800/80 dark:text-white border border-border/40 dark:border-zinc-700/50 rounded-tl-md"
                     )}
                     style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
                 >
@@ -169,9 +170,13 @@ export function ChatBubble({ message, agentIcon }: ChatBubbleProps) {
                                 <span className="w-2.5 h-2.5 bg-amber-500/80 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                             </div>
                         </div>
-                    ) : (
+                    ) : isUser ? (
                         <div className="whitespace-pre-wrap" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                             {renderMessageContent(displayText)}
+                        </div>
+                    ) : (
+                        <div style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                            <MarkdownRenderer content={displayText} />
                         </div>
                     )}
                 </div>

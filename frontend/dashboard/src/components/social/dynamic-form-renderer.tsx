@@ -17,6 +17,7 @@ import {
     Check,
     Layers,
     SlidersHorizontal,
+    RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -144,11 +145,17 @@ export function DynamicFormRenderer({
     // ──────────────────────────────────────────────────────────────────────────
     // METHOD B: Conversational Simulator State (WhatsApp / Widget)
     // ──────────────────────────────────────────────────────────────────────────
+    const getInitialGreeting = () => {
+        const firstField = formDefinition.fields && formDefinition.fields[0];
+        const firstPrompt = firstField?.conversational_prompt || (firstField?.label ? `Por favor, ¿cuál es tu ${firstField.label}?` : '¿cuál es tu nombre y apellido completo?');
+        return `¡Hola! Soy el Asistente del programa *${programName}*. Te ayudaré a registrar tu postulación paso a paso de forma rápida y sencilla.\n\nPara comenzar, ${firstPrompt}`;
+    };
+
     const [chatMessages, setChatMessages] = useState<Array<{ id: string; role: 'assistant' | 'user'; content: string }>>([
         {
             id: 'init',
             role: 'assistant',
-            content: `¡Hola! Soy el Asistente del programa *${programName}*. Te ayudaré a registrar tu postulación paso a paso. Para comenzar, ¿cuál es tu nombre y apellido completo?`
+            content: getInitialGreeting()
         }
     ]);
     const [chatInput, setChatInput] = useState('');
@@ -157,12 +164,28 @@ export function DynamicFormRenderer({
     const [chatProgress, setChatProgress] = useState(10);
     const [chatCompleted, setChatCompleted] = useState(false);
 
+    const handleRestartChat = () => {
+        setChatMessages([
+            {
+                id: `init-${Date.now()}`,
+                role: 'assistant',
+                content: getInitialGreeting()
+            }
+        ]);
+        setChatInput('');
+        setChatCollectedData({});
+        setChatLoading(false);
+        setChatProgress(10);
+        setChatCompleted(false);
+    };
+
     const handleSendChatMessage = async () => {
         const text = chatInput.trim();
         if (!text || chatLoading) return;
 
         const userMsg = { id: `u-${Date.now()}`, role: 'user' as const, content: text };
-        setChatMessages(prev => [...prev, userMsg]);
+        const updatedHistory = [...chatMessages, userMsg];
+        setChatMessages(updatedHistory);
         setChatInput('');
         setChatLoading(true);
 
@@ -171,6 +194,7 @@ export function DynamicFormRenderer({
                 message: text,
                 session_id: `sim_${Date.now()}`,
                 collected_data: chatCollectedData,
+                history: updatedHistory.slice(-8).map(m => ({ role: m.role, content: m.content })),
                 channel: 'chat_simulator'
             });
 
@@ -474,9 +498,22 @@ export function DynamicFormRenderer({
                                     </p>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <span className="text-xs font-mono text-emerald-400">{chatProgress}%</span>
-                                <Progress value={chatProgress} className="w-20 h-1 mt-1 bg-zinc-950" />
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleRestartChat}
+                                    title="Reiniciar conversación"
+                                    className="text-white/60 hover:text-white hover:bg-white/10 h-8 px-2 text-xs flex items-center gap-1.5"
+                                >
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    Reiniciar
+                                </Button>
+                                <div className="text-right">
+                                    <span className="text-xs font-mono text-emerald-400">{chatProgress}%</span>
+                                    <Progress value={chatProgress} className="w-20 h-1 mt-1 bg-zinc-950" />
+                                </div>
                             </div>
                         </div>
 

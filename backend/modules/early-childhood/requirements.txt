@@ -61,3 +61,4 @@ pytest
 pytest-flask
 black
 flake8
+langfuse==4.15.4

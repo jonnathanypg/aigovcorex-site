@@ -43,7 +43,7 @@ module.exports = {
       name: "aigovcorex-backend",
       cwd: "./backend/modules/early-childhood",
       script: "./venv/bin/gunicorn",
-      args: "wsgi:app --bind 0.0.0.0:5000 --workers 2 --timeout 120",
+      args: "wsgi:app --bind 0.0.0.0:5000 --workers 4 --threads 4 --worker-class gthread --timeout 120",
       interpreter: "none",
       instances: 1,
       autorestart: true,
@@ -52,7 +52,11 @@ module.exports = {
       exp_backoff_restart_delay: 100,
       env: {
         FLASK_ENV: "production",
-        PORT: 5000
+        PORT: 5000,
+        LANGFUSE_BASE_URL: process.env.LANGFUSE_BASE_URL || "https://labmonitor.weblifetech.com",
+        LANGFUSE_HOST: process.env.LANGFUSE_HOST || "https://labmonitor.weblifetech.com",
+        LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY || "pk-lf-6a78bfc3-4404-4904-a6a1-99b569e57dee",
+        LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY || "sk-lf-f63d7d1a-d8ba-4059-b665-fd40c8963106"
       }
     },
 

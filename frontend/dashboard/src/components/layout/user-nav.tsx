@@ -31,7 +31,10 @@ export function UserNav() {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
 
   useEffect(() => {
-    setUser(authService.getStoredUser());
+    const updateUser = () => setUser(authService.getStoredUser());
+    updateUser();
+    window.addEventListener('user-profile-updated', updateUser);
+    return () => window.removeEventListener('user-profile-updated', updateUser);
   }, []);
 
   const handleLogout = () => {
@@ -56,9 +59,14 @@ export function UserNav() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-            <Avatar className="h-9 w-9">
-              {userAvatar && <Image src={userAvatar.imageUrl} alt="User avatar" width={40} height={40} data-ai-hint={userAvatar.imageHint} />}
-              <AvatarFallback>{user?.first_name?.charAt(0) || 'U'}</AvatarFallback>
+            <Avatar className="h-9 w-9 overflow-hidden border border-white/10">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="User avatar" className="w-full h-full object-cover" />
+              ) : userAvatar ? (
+                <Image src={userAvatar.imageUrl} alt="User avatar" width={40} height={40} data-ai-hint={userAvatar.imageHint} />
+              ) : (
+                <AvatarFallback>{user?.first_name?.charAt(0) || 'U'}</AvatarFallback>
+              )}
             </Avatar>
           </Button>
         </DropdownMenuTrigger>

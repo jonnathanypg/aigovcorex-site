@@ -61,7 +61,7 @@ api_bp.register_blueprint(planning_bp)
 from api.social_programs import social_programs_bp
 api_bp.register_blueprint(social_programs_bp)
 
-# Geo Intelligence OS ("Ojo de Dios")
+# Geo Intelligence OS ("GeoMap OS")
 from api.geo_intelligence import geo_intelligence_bp
 api_bp.register_blueprint(geo_intelligence_bp)
 

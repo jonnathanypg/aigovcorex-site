@@ -36,7 +36,7 @@ class License(db.Model):
     # ── Datos de la Organización ────────────────────────────────────
     legal_name = db.Column(db.String(255), nullable=True)   # Razón Social
     ruc = db.Column(db.String(13), nullable=True)           # RUC / NIT
-    annual_cost = db.Column(db.Numeric(10, 2))              # Costo anual
+    annual_cost = db.Column(db.Numeric(10, 2), comment='Costo anual de la licencia')
 
     # ── Metadata ────────────────────────────────────────────────────
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -92,7 +92,7 @@ class License(db.Model):
 
     # Slug único para el chatbot público web de esta organización
     # Acceso: /api/public/org/{public_org_slug}
-    public_org_slug = db.Column(db.String(100), nullable=True, unique=True)
+    public_org_slug = db.Column(db.String(100), nullable=True)
 
     # ── Métodos de módulos ───────────────────────────────────────────
 

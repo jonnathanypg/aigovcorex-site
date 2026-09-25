@@ -19,9 +19,15 @@ def restore_super_admin():
             if user.tenant_id is not None:
                 print(f"⚠️ Unlinking from tenant {user.tenant_id}...")
                 user.tenant_id = None
+            user.is_active = True
+            # FIX: Always reset password so this script truly "restores" access
+            user.set_password('GovCoreX2026!')
             db.session.commit()
-            print("✨ User checks passed.")
+            # Immediately verify
+            assert user.check_password('GovCoreX2026!'), "Password verification FAILED!"
+            print("✨ User checks passed. Password reset to: GovCoreX2026!")
             return
+
 
         print(f"❌ User {email} NOT FOUND. Restoring...")
         
@@ -40,13 +46,13 @@ def restore_super_admin():
             is_active=True,
             tenant_id=None # Super Admin belongs to no tenant
         )
-        new_user.set_password('SUPER ADMIN') # Password requested by user
+        new_user.set_password('GovCoreX2026!')
         
         db.session.add(new_user)
         db.session.commit()
         
         print(f"🎉 SUCCESSS: User {email} restored with ID {new_user.id}")
-        print("🔑 Password: SUPER ADMIN")
+        print("🔑 Password: GovCoreX2026!")
 
 if __name__ == '__main__':
     restore_super_admin()

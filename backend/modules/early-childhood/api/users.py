@@ -66,7 +66,7 @@ def update_profile():
     
     try:
         # Update basic info
-        allowed_fields = ['first_name', 'last_name', 'phone']
+        allowed_fields = ['first_name', 'last_name', 'phone', 'avatar_url']
         for field in allowed_fields:
             if field in data:
                 setattr(user, field, data[field])

@@ -9,6 +9,7 @@ export interface User {
     tenant_id: number | null;
     is_active: boolean;
     phone?: string;
+    avatar_url?: string;
 }
 
 export interface LoginResponse {

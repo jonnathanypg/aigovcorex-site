@@ -44,7 +44,7 @@ export const SYSTEM_MODULES: ModuleConfig[] = [
   },
   {
     id: 'geo',
-    label: 'GeoInteligencia & Ojo de Dios',
+    label: 'GeoInteligencia & GeoMap OS',
     shortLabel: 'GeoInt',
     description: 'Mapas GIS, Zonas de Calor de Vulnerabilidad, Cercos Digitales, Grafos de Convenios',
     icon: Map,

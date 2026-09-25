@@ -1057,7 +1057,11 @@ class ManageSocialProgramsTool(BaseTool):
 
         try:
             from models.social_program import SocialProgram, ProgramFormDefinition, ProgramBeneficiary
-            from api.social_programs import _generate_default_social_form, _calculate_eligibility_score
+            from api.social_programs import (
+                _generate_default_social_form, _build_smart_fallback_schema,
+                _generate_schema_via_llm, _calculate_eligibility_score,
+                _set_form_sections, _get_form_sections,
+            )
 
             # ── LIST PROGRAMS ──
             if action == 'list_programs':
@@ -1098,18 +1102,21 @@ class ManageSocialProgramsTool(BaseTool):
                 db.session.add(program)
                 db.session.flush()
 
-                # Generate dynamic form schema
+                # Generate dynamic form schema (LLM -> smart fallback -> default)
                 fields = kwargs.get('fields')
                 if not fields:
-                    schema = _generate_default_social_form(name, category, description)
+                    _prompt = description or name
+                    schema = _generate_schema_via_llm(name, _prompt) or _build_smart_fallback_schema(name, category, _prompt)
                     fields = schema.get('fields', [])
                     rules = schema.get('eligibility_rules', [])
                     conv_instructions = schema.get('conversational_instructions', '')
                     success_msg = schema.get('success_message', '')
+                    _sections = schema.get('sections', [])
                 else:
                     rules = kwargs.get('eligibility_rules', [])
                     conv_instructions = kwargs.get('conversational_instructions', '')
                     success_msg = kwargs.get('success_message', 'Postulación registrada exitosamente.')
+                    _sections = kwargs.get('sections', [])
 
                 form_def = ProgramFormDefinition(
                     program_id=program.id,
@@ -1122,14 +1129,24 @@ class ManageSocialProgramsTool(BaseTool):
                     version=1
                 )
                 db.session.add(form_def)
+                db.session.flush()
+                try:
+                    _set_form_sections(form_def, _sections)
+                except Exception:
+                    pass
                 db.session.commit()
 
+                _payload = form_def.to_dict()
+                try:
+                    _payload['sections'] = _get_form_sections(form_def)
+                except Exception:
+                    pass
                 return {
                     'success': True,
                     'message': f"Programa '{name}' creado exitosamente con {len(fields)} campos dinámicos configurados.",
                     'program_id': program.id,
                     'short_code': short_code,
-                    'form': form_def.to_dict()
+                    'form': _payload
                 }
 
             # ── GET FORM ──
@@ -1162,16 +1179,26 @@ class ManageSocialProgramsTool(BaseTool):
                     db.session.add(form)
 
                 if 'fields' in kwargs: form.fields = kwargs['fields']
+                if 'sections' in kwargs:
+                    try:
+                        _set_form_sections(form, kwargs['sections'] or [])
+                    except Exception:
+                        pass
                 if 'eligibility_rules' in kwargs: form.eligibility_rules = kwargs['eligibility_rules']
                 if 'conversational_instructions' in kwargs: form.conversational_instructions = kwargs['conversational_instructions']
                 if 'success_message' in kwargs: form.success_message = kwargs['success_message']
                 form.version = (form.version or 1) + 1
                 db.session.commit()
 
+                _payload = form.to_dict()
+                try:
+                    _payload['sections'] = _get_form_sections(form)
+                except Exception:
+                    pass
                 return {
                     'success': True,
                     'message': f"Formulario del programa '{program.name}' actualizado a versión {form.version}.",
-                    'form': form.to_dict()
+                    'form': _payload
                 }
 
             # ── REGISTER APPLICANT ──
@@ -1215,6 +1242,105 @@ class ManageSocialProgramsTool(BaseTool):
         except Exception as e:
             db.session.rollback()
             logger.error(f"ManageSocialProgramsTool error: {e}")
+            return {'success': False, 'error': str(e)}
+
+
+# ═══════════════════════════════════════════════════════
+# 11. Multicanalidad, Herencia & Conexiones (Phase 10)
+# ═══════════════════════════════════════════════════════
+
+class ManageChannelsTool(BaseTool):
+    """Tool to inspect and manage multichannel infrastructure, connections and inheritances across programs and centers."""
+    name: str = "manage_channels"
+    description: str = (
+        "Inspect and manage communication channels (WhatsApp Baileys, Telegram bots) and their inheritances. "
+        "Actions: \n"
+        "  - 'list_channels': list active channels and their connection/inheritance status.\n"
+        "  - 'get_channel_status': get real-time status of WhatsApp and Telegram for an organization or program.\n"
+        "  - 'link_program_channel': inherit or link an existing root channel to a specific social program.\n"
+        "Input examples:\n"
+        "  {'action': 'list_channels', 'tenant_id': 1, 'user_id': 1}\n"
+        "  {'action': 'get_channel_status', 'channel_type': 'whatsapp'}\n"
+        "  {'action': 'link_program_channel', 'program_id': 2, 'parent_channel_id': 1, 'agent_name': 'Agente BDH'}"
+    )
+
+    def _run(self, *args, **kwargs) -> dict:
+        _safe_session()
+        action = kwargs.get('action', 'list_channels')
+
+        try:
+            from models.channel_config import ChannelConfig, ChannelConversation
+
+            if action == 'list_channels':
+                channels = ChannelConfig.query.filter_by(is_active=True).all()
+                return {
+                    'success': True,
+                    'total': len(channels),
+                    'channels': [c.to_dict() for c in channels]
+                }
+
+            elif action == 'get_channel_status':
+                channel_type = kwargs.get('channel_type')
+                query = ChannelConfig.query.filter_by(is_active=True)
+                if channel_type:
+                    query = query.filter_by(channel_type=channel_type)
+                channels = query.all()
+                return {
+                    'success': True,
+                    'count': len(channels),
+                    'statuses': [
+                        {
+                            'id': c.id,
+                            'name': c.channel_name,
+                            'type': c.channel_type,
+                            'status': c.status,
+                            'ownership': c.ownership_type,
+                            'parent_id': c.parent_channel_id,
+                            'phone': c.phone_number,
+                            'bot': c.bot_username
+                        } for c in channels
+                    ]
+                }
+
+            elif action == 'link_program_channel':
+                program_id = kwargs.get('program_id')
+                parent_channel_id = kwargs.get('parent_channel_id')
+                if not program_id or not parent_channel_id:
+                    return {'success': False, 'error': 'program_id y parent_channel_id son requeridos'}
+
+                parent = ChannelConfig.query.get(parent_channel_id)
+                if not parent:
+                    return {'success': False, 'error': f'Canal padre {parent_channel_id} no encontrado'}
+
+                child = ChannelConfig(
+                    program_id=program_id,
+                    org_id=parent.org_id,
+                    license_id=parent.license_id,
+                    channel_type=parent.channel_type,
+                    channel_name=kwargs.get('channel_name') or f"Heredado de {parent.channel_name or parent.channel_type}",
+                    ownership_type='inherited',
+                    parent_channel_id=parent.id,
+                    status=parent.status,
+                    phone_number=parent.phone_number,
+                    bot_username=parent.bot_username,
+                    agent_name=kwargs.get('agent_name', 'GovCore AI'),
+                    data_isolation_level=kwargs.get('data_isolation_level', 'strict'),
+                    is_active=True
+                )
+                db.session.add(child)
+                db.session.commit()
+
+                return {
+                    'success': True,
+                    'message': f"Programa {program_id} ahora hereda el canal {parent.channel_name or parent.channel_type}.",
+                    'channel_id': child.id
+                }
+
+            return {'success': False, 'error': f'Acción desconocida: {action}'}
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"ManageChannelsTool error: {e}")
             return {'success': False, 'error': str(e)}
 
 

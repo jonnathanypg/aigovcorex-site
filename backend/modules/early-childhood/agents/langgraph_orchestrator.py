@@ -16,6 +16,14 @@ import operator
 from langchain_core.messages import ToolMessage
 from models.user import User
 
+try:
+    from langfuse import observe
+except ImportError:  # observabilidad opcional: sin SDK no se traza pero nada se rompe
+    def observe(_fn=None, **kwargs):
+        def wrap(fn):
+            return fn
+        return wrap(_fn) if callable(_fn) else wrap
+
 # State definition
 class AgentState(TypedDict):
     """State of the agent system"""
@@ -205,6 +213,7 @@ class LangGraphOrchestrator:
         
         return "tools"
 
+    @observe()
     def process_message(self, message: str, channel: str = 'web_chat', sender_identifier: str = None) -> dict:
         """
         Process user message through the graph or via specialized sub-agents

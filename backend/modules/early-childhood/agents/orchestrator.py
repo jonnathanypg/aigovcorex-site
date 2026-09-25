@@ -47,7 +47,17 @@ class AgentOrchestrator:
             intent = self._classify_intent(message)
             
             # Route to appropriate agent
-            if intent['type'] == 'ingesta':
+            if intent['type'] == 'postulacion':
+                from agents.postulacion_agent import PostulacionAgent
+                agent = PostulacionAgent(self.tenant_id, self.user_id)
+                result = {
+                    'response': 'Te ayudo con mucho gusto en tu postulación a nuestros programas sociales.',
+                    'success': True,
+                    'agent_used': 'postulacion_agent',
+                    'action': 'program_intake'
+                }
+
+            elif intent['type'] == 'ingesta':
                 from agents.ingesta_agent import IngestaAgent
                 agent = IngestaAgent(self.tenant_id, self.user_id)
                 result = agent.process(message, self.context)
@@ -104,6 +114,7 @@ class AgentOrchestrator:
         system_prompt = """Eres un clasificador de intenciones para un sistema de gestión de CDI (Centro de Desarrollo Infantil).
 
 Clasifica el mensaje del usuario en una de estas categorías:
+- postulacion: Consultar, iniciar o postular a programas sociales, ayudas o admisiones
 - ingesta: Registrar datos (nutrición, salud, actividades)
 - asistencia: Control de asistencia
 - resumenes: Solicitar resúmenes o reportes

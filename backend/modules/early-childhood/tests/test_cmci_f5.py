@@ -121,18 +121,27 @@ def _auth(app, uid):
 # ── IDOR tenant==site ────────────────────────────────────────────────────
 
 def test_idor_cruza_sitio_404(ctx):
-    """Ficha del tenant A vista por usuario del tenant B → 404."""
-    cmci_mod = _load_cmci_module()
+    """Ficha del tenant A vista por usuario del tenant B → 404.
+
+    NOTA contrato DB-first: la persistencia primaria de CMCI es la tabla
+    vulnerability_assessments (api/cmci.py), por eso la fixture inserta el
+    row en DB en vez de manipular el fallback en memoria _VULN_DB
+    (solo activo si la DB no está disponible).
+    """
+    from datetime import date
+    from models import db as _db
+    from models.cmci import VulnerabilityAssessment
     app, ids = ctx
     client = app.test_client()
     with app.app_context():
-        cmci_mod._SEQ["vuln"] += 1
-        rid = cmci_mod._SEQ["vuln"]
-        cmci_mod._VULN_DB[rid] = {"id": rid, "tenant_id": ids["tenant_a"],
-                                  "center": "OR", "code": "FV-X-001",
-                                  "status": "Validada",
-                                  "assessed_at": "2026-09-01T00:00:00",
-                                  "result": {"total": 61.1}}
+        rec = VulnerabilityAssessment(
+            center_id=ids["tenant_a"], code="FV-X-001", status="Validada",
+            assessed_at=date(2026, 9, 1), total=61.1,
+            level="Vulnerabilidad alta", priority="PRIORIDAD 1",
+            protection_alert=False)
+        _db.session.add(rec)
+        _db.session.commit()
+        rid = rec.id
     with app.test_request_context():
         pass
     # Mismo tenant: 200

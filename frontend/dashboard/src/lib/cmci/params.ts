@@ -212,9 +212,14 @@ export const SOCIO_RANGES = [
 export interface CountryConfig {
   country_iso: string; phone_prefix: string; id_type: string; id_validation: string;
   timezone: string; currency: string; canasta_ref: number; age_min: number; age_max: number;
+  /** Longitud mínima del documento para validación genérica (no módulo-10).
+   * TODO(country): cada país nuevo DEBE definir su id_min_length + su
+   * estrategia id_validation en su entrada country_config (vía params con
+   * scope). Nunca hardcodear longitudes ni regex de otro país en engine/UI. */
+  id_min_length?: number;
 }
 export const COUNTRY_CONFIGS: Record<string, CountryConfig> = {
-  EC: { country_iso: "EC", phone_prefix: "593", id_type: "cedula", id_validation: "modulo-10", timezone: "America/Guayaquil", currency: "USD", canasta_ref: 220, age_min: 12, age_max: 42 },
+  EC: { country_iso: "EC", phone_prefix: "593", id_type: "cedula", id_validation: "modulo-10", timezone: "America/Guayaquil", currency: "USD", canasta_ref: 220, age_min: 12, age_max: 42, id_min_length: 10 },
 };
 export const DEFAULT_COUNTRY = "EC";
 

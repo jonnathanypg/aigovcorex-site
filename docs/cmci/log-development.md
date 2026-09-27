@@ -136,3 +136,10 @@
 
 ## 2026-09-27 — LIMPIEZA REFERENCIA [DONE]
 Carpeta `IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/` + `captura-conversiaon-whatsapp.jpeg` + 2 Excels referencia fuera de git (gitignore + rm). Docs propios movidos a `docs/cmci/`. Seeds ya viven en `backend/.../seeds/cmci/`.
+
+## 2026-09-27 — F3 fix inconsistencias cmci.service + validateId [DONE]
+**Hito:** 2 inconsistencias frontend sin refactor legacy: (1) `services/cmci.service.ts` pasa de localStorage temporal a fetch real `/api/cmci/*` con fallback local SOLO si backend inalcanzable; (2) `lib/cmci/engine.ts:123` elimina `length>=5` hardcodeado → estrategia por país desde `country_config`.
+**Archivos:** `frontend/dashboard/src/services/cmci.service.ts` (rewrite: axios `api` + JWT, tipos `VulnRecord|SocioRecord|DashboardSummary|PriorizacionRow|Backend*|Paginated|ParamsResponse|ImportResponse`, `CmciApiError` 401/403/404/422, `isBackendUnreachable` solo-sin-response, compute/list/get/create vulnerabilidad + socioeconómica, priorización Y/Z, dashboard E5/I5, params GET/PUT license_admin, import-excels, `exportPriorizacionCSV(rows?)` async; `updateEstado` local + TODO sin PATCH backend); `lib/cmci/params.ts` (`CountryConfig.id_min_length?` + TODO por país, EC=10); `lib/cmci/engine.ts` (`validateId`: EC cédula 10 dígitos + tercer dígito<6 + módulo-10 coef 2,1 alternados; resto `id_min_length` configurable + TODO, nunca hardcodear otro país); wizards/páginas a async (`vulnerability-wizard`, `socioeconomic-form`, `priorizacion`, `dashboard-cmci`, `admision/[id]/print`, `ficha-socioeconomica/[id]`, `reportes/print` con `Awaited<ReturnType>` + catch 401/403/404).
+**Tests:** `npx tsc --noEmit --skipLibCheck` → 0 errores en archivos cmci, 47 legacy intactos con TODO (sin tocar backend ni legacy fuera de cmci). `node` check cédulas: `1710034065` válida, `1760001556` rechazada por tercer dígito>=6, `1234567890` rechazada por checksum.
+**Decisión:** 404 en get → `undefined` (no fallback); 401/403/422 se propagan (sin fallback, toast en wizards); localStorage solo ante red caída.
+**Próximo:** e2e con backend arriba + corte 24-oct.

@@ -107,8 +107,11 @@ export function validateId(value: string, countryIso = DEFAULT_COUNTRY): { valid
   const v = (value ?? "").trim();
   if (!v) return { valid: true, message: "" }; // opcional
   if (c.id_validation === "modulo-10") {
+    // Cédula ecuatoriana: 10 dígitos, tercer dígito < 6 (persona natural),
+    // módulo-10 con coeficientes 2,1 alternados sobre los 9 primeros.
     if (!/^\d{10}$/.test(v)) return { valid: false, message: `${c.id_type} debe tener 10 dígitos` };
     const digits = v.split("").map(Number);
+    if (digits[2] >= 6) return { valid: false, message: `${c.id_type} inválida (tercer dígito debe ser < 6)` };
     let sum = 0;
     for (let i = 0; i < 9; i++) {
       let d = digits[i] * (i % 2 === 0 ? 2 : 1);
@@ -120,7 +123,12 @@ export function validateId(value: string, countryIso = DEFAULT_COUNTRY): { valid
       ? { valid: true, message: "" }
       : { valid: false, message: `${c.id_type} inválida (módulo-10)` };
   }
-  return { valid: v.length >= 5, message: v.length >= 5 ? "" : "Documento inválido" }; // TODO: estrategia por país
+  // Estrategia genérica por país: longitud mínima desde country_config.
+  // TODO(country): al agregar un país, definir id_min_length + id_validation
+  // en COUNTRY_CONFIGS (vía params con scope) y, si requiere checksum propio,
+  // añadir una rama aquí keyeada por c.id_validation — nunca hardcodear otro país.
+  const minLen = c.id_min_length ?? 5;
+  return { valid: v.length >= minLen, message: v.length >= minLen ? "" : `${c.id_type || "Documento"} debe tener al menos ${minLen} caracteres` };
 }
 
 /** Teléfono E.164 por country_config (EC default 593). Acepta 09XXXXXXXX o 593XXXXXXXXX. */

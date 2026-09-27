@@ -10,6 +10,8 @@ Scopes: 'global' | 'country:XX' | 'center:YYY'.
 import copy
 import json
 import os
+import re
+from datetime import datetime
 
 SEED_PATH = os.path.abspath(os.path.join(
     os.path.dirname(__file__), "..", "..", "seeds", "cmci", "cmci_params_v1.json"))
@@ -33,26 +35,60 @@ def _deep_merge(base, override):
 
 
 class ParamStore:
-    """Store en memoria con overrides por scope.
+    """Store versionado con overrides por scope.
 
-    TODO(F0-resto): persistir en tabla scoring_params(scope,key,value,version);
-    este store es el contrato que usará el modelo (otro worker crea modelos cmci.py).
+    Vía principal: tabla scoring_params(scope,key,value,version) — un row
+    por cada clave top-level del patch (upsert). GET lee DB y mezcla sobre
+    el seed; si la DB no está disponible (sin app context / tabla ausente)
+    usa el seed JSON + overrides en memoria como fallback (try/except).
     """
 
     def __init__(self, seed=None):
         self.seed = seed if seed is not None else load_seed()
         self.version = self.seed.get("version", "v1")
-        self._overrides = {}  # scope -> dict parcial
+        self._overrides = {}  # scope -> dict parcial (fallback + caché)
         self._history = []  # auditoría de PUT
 
+    def _refresh_version_from_db(self):
+        """Sincroniza self.version con el último row persistido (best-effort)."""
+        try:
+            from models.cmci import ScoringParams
+            row = (ScoringParams.query
+                   .order_by(ScoringParams.updated_at.desc()).first())
+            if row is not None and getattr(row, "version", None):
+                self.version = row.version
+        except Exception:
+            pass
+
+    def _db_overrides(self, scope):
+        """Lee overrides persistidos del scope; {} si DB no disponible."""
+        try:
+            from models.cmci import ScoringParams
+            rows = (ScoringParams.query.filter_by(scope=scope)
+                    .order_by(ScoringParams.id.asc()).all())
+            merged = {}
+            for row in rows:
+                if isinstance(getattr(row, "value", None), dict):
+                    merged = _deep_merge(merged, {row.key: row.value})
+            return merged
+        except Exception:
+            return {}
+
     def get(self, scope="global"):
-        """Params efectivos: seed + override de scope (country|center heredan global)."""
+        """Params efectivos: seed + overrides DB + overrides memoria."""
         if scope in (None, "global"):
             return copy.deepcopy(self.seed)
-        return _deep_merge(self.seed, self._overrides.get(scope, {}))
+        self._refresh_version_from_db()
+        merged = _deep_merge(self.seed, self._db_overrides(scope))
+        return _deep_merge(merged, self._overrides.get(scope, {}))
 
     def set(self, scope, patch, actor=None):
-        """Aplica override parcial por scope. Cambios -> nueva versión menor."""
+        """Aplica override parcial por scope. Upsert en DB + bump de versión.
+
+        Versión: v1 → v1.1-<fecha>, luego v1.2-<fecha>, ... (nunca reescribe
+        el seed global inmutable). Si la DB no está disponible, persiste
+        solo en memoria (fallback) manteniendo el mismo contrato.
+        """
         if scope in (None, "global", ""):
             raise ValueError("El scope global (seed validada) es inmutable; use country:* o center:*")
         kind = scope.split(":", 1)[0] if ":" in scope else scope
@@ -60,14 +96,46 @@ class ParamStore:
             raise ValueError(f"Scope inválido: {scope} (global|country:XX|center:YYY)")
         merged = _deep_merge(self.get(scope), patch)
         validate(merged)  # no persistir params que rompan sumas
+        new_version = bump_version(self.version)
+        try:
+            from models import db
+            from models.cmci import ScoringParams
+            for key, val in (patch or {}).items():
+                row = (ScoringParams.query
+                       .filter_by(scope=scope, key=str(key)).first())
+                if row is None:
+                    db.session.add(ScoringParams(scope=scope, key=str(key),
+                                                 value=val, version=new_version))
+                else:
+                    row.value = val
+                    row.version = new_version
+            db.session.commit()
+        except Exception:
+            try:
+                from models import db as _db
+                _db.session.rollback()
+            except Exception:
+                pass
         self._overrides[scope] = _deep_merge(self._overrides.get(scope, {}), patch)
-        self.version = f"{self.seed.get('version')}+{scope}.{len(self._history) + 1}"
+        self.version = new_version
         self._history.append({"scope": scope, "patch": patch, "actor": actor,
                               "version": self.version})
         return self.get(scope)
 
     def history(self):
         return list(self._history)
+
+
+def bump_version(current):
+    """Bump menor con fecha: v1 → v1.1-<fecha>, v1.1-<f> → v1.2-<fecha>."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    minor = re.match(r"^v(\d+)\.(\d+)-\d{4}-\d{2}-\d{2}$", str(current or ""))
+    if minor:
+        return f"v{minor.group(1)}.{int(minor.group(2)) + 1}-{today}"
+    major = re.match(r"^v(\d+)\b", str(current or ""))
+    if major:
+        return f"v{major.group(1)}.1-{today}"
+    return f"v1.1-{today}"
 
 
 def validate(params):

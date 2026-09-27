@@ -816,8 +816,14 @@ def _generate_schema_via_llm(program_name: str, prompt_text: str) -> dict | None
         return None
 
 
-def _calculate_eligibility_score(form_data: dict, rules: list) -> tuple:
-    """Calcula el score de elegibilidad (0 a 100) en base a las reglas configuradas"""
+def _calculate_eligibility_score(form_data: dict, rules: list, program_id=None) -> tuple:
+    """Calcula el score de elegibilidad (0 a 100) en base a las reglas configuradas.
+
+    `program_id` es opcional (default None) para no cambiar la firma de los
+    callers existentes; solo da contexto de trazabilidad al shadow ML (F2).
+    El score retornado es 100% determinista: el ML shadow solo informa
+    en `_calculate_eligibility_score.last_ml_shadow` y jamás lo modifica.
+    """
     score = 0.0
     notes = []
     if not rules or not isinstance(rules, list):
@@ -855,7 +861,49 @@ def _calculate_eligibility_score(form_data: dict, rules: list) -> tuple:
             notes.append(f"+{points:.0f} pts por criterio en {field_id}")
 
     final_score = min(100.0, max(0.0, score))
+    _attach_ml_shadow(program_id, form_data, final_score)
     return final_score, "; ".join(notes) or "Sin criterios específicos cumplidos."
+
+
+def _load_ml_calibrate():
+    """Import lazy del calibrador shadow F2 (multi-ruta; None si no disponible)."""
+    try:
+        from services.ml_calibrator import calibrate
+        return calibrate
+    except ImportError:
+        pass
+    try:  # fallback por ubicación de archivo, sin depender de sys.path
+        import importlib.util
+        import os
+        here = os.path.dirname(os.path.abspath(__file__))
+        cand = os.path.normpath(os.path.join(
+            here, '..', '..', 'early-childhood', 'services', 'ml_calibrator.py'))
+        if os.path.isfile(cand):
+            spec = importlib.util.spec_from_file_location(
+                'cmci_ml_calibrator_shadow', cand)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod.calibrate
+    except Exception:
+        pass
+    return None
+
+
+def _attach_ml_shadow(program_id, form_data, deterministic_score):
+    """Shadow ML post-score F2: informa sin alterar. Nunca lanza excepciones."""
+    _calculate_eligibility_score.last_ml_shadow = {"mode": "shadow", "proba": None}
+    try:
+        calibrate = _load_ml_calibrate()
+        if calibrate is None:
+            _calculate_eligibility_score.last_ml_shadow = {
+                "mode": "shadow", "proba": None, "reason": "sin_calibrador"}
+            return
+        _, info = calibrate(program_id, form_data or {}, deterministic_score)
+        _calculate_eligibility_score.last_ml_shadow = info
+    except Exception as e:
+        logger.warning(f"ML shadow hook fallo ({e}); score determinista intacto")
+        _calculate_eligibility_score.last_ml_shadow = {
+            "mode": "shadow", "proba": None, "reason": "excepcion_hook"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1304,7 +1352,9 @@ def submit_program_form(program_id: int):
 
         # Calcular score de elegibilidad con las reglas configuradas
         rules = form_def.eligibility_rules if form_def else []
-        score, notes = _calculate_eligibility_score(form_data, rules)
+        score, notes = _calculate_eligibility_score(form_data, rules, program_id)
+        ml_shadow = getattr(_calculate_eligibility_score,
+                            'last_ml_shadow', None) or {"mode": "shadow", "proba": None}
 
         beneficiary = ProgramBeneficiary(
             program_id=program.id,
@@ -1332,6 +1382,7 @@ def submit_program_form(program_id: int):
             'beneficiary_id': beneficiary.id,
             'eligibility_score': score,
             'status': beneficiary.status,
+            'ml_shadow': ml_shadow,  # F2 informativo: no afecta score ni status
             'data': beneficiary.to_dict()
         }), 201
 
@@ -1425,7 +1476,9 @@ def conversational_step(program_id: int):
         if not remaining_fields:
             # Calcular score de elegibilidad y guardar en DB
             rules = form_def.eligibility_rules or []
-            score, notes = _calculate_eligibility_score(current_data, rules)
+            score, notes = _calculate_eligibility_score(current_data, rules, program_id)
+            ml_shadow = getattr(_calculate_eligibility_score,
+                                'last_ml_shadow', None) or {"mode": "shadow", "proba": None}
 
             beneficiary = ProgramBeneficiary(
                 program_id=program.id,
@@ -1450,6 +1503,7 @@ def conversational_step(program_id: int):
                 'completed': True,
                 'response': success_response,
                 'beneficiary_id': beneficiary.id,
+                'ml_shadow': ml_shadow,  # F2 informativo: no afecta score ni status
                 'collected_data': current_data
             }), 200
 

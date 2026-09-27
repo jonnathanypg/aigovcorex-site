@@ -88,7 +88,7 @@ class VulnerabilityForm(db.Model, BaseModel):
     __tablename__ = 'vulnerability_forms'
     
     id = db.Column(db.Integer, primary_key=True)
-    child_id = db.Column(db.Integer, db.ForeignKey('children.id'), nullable=True, unique=True)
+    child_id = db.Column(db.Integer, db.ForeignKey('children.id'), nullable=True)
     application_id = db.Column(db.Integer, db.ForeignKey('applications.id'))
     tenant_id = db.Column(db.Integer)  # Legacy column
     
@@ -139,6 +139,10 @@ class VulnerabilityForm(db.Model, BaseModel):
     child = db.relationship('Child', backref='vulnerability_form')
     application = db.relationship('Application', backref='vulnerability_form')
     evaluator = db.relationship('User')
+
+    __table_args__ = (
+        db.Index('idx_vulnform_child', 'child_id'),
+    )
     
     def calculate_score(self):
         """

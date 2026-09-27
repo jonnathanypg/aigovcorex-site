@@ -11,8 +11,29 @@ from flask_jwt_extended import (
 from models import db
 from models.user import User
 from datetime import datetime
+from auth.rate_limit import rate_limit_auth
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+
+def _jwt_claims_for(user):
+    """F5: cmci_code/site_code + country_iso + role en el JWT.
+
+    El frontend y el middleware leen el centro (site) sin query extra;
+    el filtro SQL forzado (WHERE site=tenant) lo aplica tenant_required.
+    """
+    cmci_code = None
+    country_iso = 'EC'
+    try:
+        tenant = getattr(user, 'tenant', None)
+        if tenant is not None:
+            cmci_code = getattr(tenant, 'cmci_code', None)
+            country_iso = getattr(tenant, 'country_iso', None) or 'EC'
+    except Exception:
+        pass
+    role = getattr(getattr(user, 'role', None), 'name', None)
+    return {'cmci_code': cmci_code, 'site_code': cmci_code,
+            'country_iso': country_iso, 'role': role}
 
 
 def _get_user_modules(user) -> list:
@@ -50,6 +71,7 @@ def _get_user_modules(user) -> list:
 
 
 @auth_bp.route('/login', methods=['POST'])
+@rate_limit_auth  # F5: 5 intentos/min/IP → 429
 def login():
     """
     User login endpoint
@@ -78,9 +100,12 @@ def login():
         user.last_login = datetime.utcnow()
         db.session.commit()
         
-        # Create tokens (identity must be string)
-        access_token = create_access_token(identity=str(user.id))
-        refresh_token = create_refresh_token(identity=str(user.id))
+        # Create tokens (identity must be string; F5: claims multicentro)
+        claims = _jwt_claims_for(user)
+        access_token = create_access_token(identity=str(user.id),
+                                           additional_claims=claims)
+        refresh_token = create_refresh_token(identity=str(user.id),
+                                             additional_claims=claims)
         
         user_dict = user.to_dict()
         user_dict['enabled_modules'] = _get_user_modules(user)
@@ -104,7 +129,10 @@ def refresh():
     """
     try:
         current_user_id = get_jwt_identity()
-        access_token = create_access_token(identity=current_user_id)
+        user = User.query.get(int(current_user_id))
+        claims = _jwt_claims_for(user) if user else {}
+        access_token = create_access_token(identity=current_user_id,
+                                           additional_claims=claims)
         
         return jsonify({'access_token': access_token}), 200
         

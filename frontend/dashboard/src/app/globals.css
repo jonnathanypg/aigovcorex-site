@@ -442,3 +442,20 @@ textarea:focus {
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
+/* ════════════════════════════════════
+   🖨️ F3 CMCI — Impresión oficial A4
+   Fichas portrait · matrices landscape · sin firma electrónica
+   ════════════════════════════════════ */
+.print-only { display: none; }
+@media print {
+  .os-module-rail, .os-subnav-panel, .os-bottom-nav, .app-header,
+  .os-shell-root > div:first-child, header.app-header { display: none !important; }
+  body { background: #fff !important; animation: none; }
+  body * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .print-sheet { box-shadow: none !important; margin: 0 !important; max-width: none !important; }
+  .print-only { display: block; }
+  @page { size: A4 portrait; margin: 12mm; }
+  .print-landscape { page: landscape-sheet; }
+  @page landscape-sheet { size: A4 landscape; margin: 12mm; }
+}
+

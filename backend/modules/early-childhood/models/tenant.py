@@ -40,11 +40,19 @@ class Tenant(db.Model, BaseModel):
     logo_url = db.Column(db.String(500))
     settings = db.Column(JSON)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+
+    # CMCI Fase 0: código centro BH/GU/OR + país (default EC, multi-país desde F0)
+    cmci_code = db.Column(db.String(10), nullable=True)
+    country_iso = db.Column(db.String(5), default='EC', nullable=False)
     
     # Relationships
     users = db.relationship('User', backref='tenant', lazy='dynamic', cascade='all, delete-orphan')
     children = db.relationship('Child', backref='tenant', lazy='dynamic', cascade='all, delete-orphan')
     families = db.relationship('Family', backref='tenant', lazy='dynamic', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.Index('idx_tenant_cmci_code', 'cmci_code'),
+    )
     
     def __repr__(self):
         return f'<Tenant {self.name}>'

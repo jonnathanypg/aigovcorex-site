@@ -62,6 +62,11 @@ def init_models():
     from models.notification import Notification
     from models.report import GeneratedReport
     from models.operation import MaintenanceTask
+    from models.cmci import (
+        CmciCenter, VulnerabilityAssessment, SocioeconomicAssessment,
+        ScoringParams, CountryConfig, DocumentTemplate, MonthlyReport,
+        FoodIntakeReception,
+    )
     
     return {
         'License': License,
@@ -100,6 +105,14 @@ def init_models():
         'FamilyIntervention': FamilyIntervention,
         'Notification': Notification,
         'GeneratedReport': GeneratedReport,
-        'MaintenanceTask': MaintenanceTask
+        'MaintenanceTask': MaintenanceTask,
+        'CmciCenter': CmciCenter,
+        'VulnerabilityAssessment': VulnerabilityAssessment,
+        'SocioeconomicAssessment': SocioeconomicAssessment,
+        'ScoringParams': ScoringParams,
+        'CountryConfig': CountryConfig,
+        'DocumentTemplate': DocumentTemplate,
+        'MonthlyReport': MonthlyReport,
+        'FoodIntakeReception': FoodIntakeReception,
     }
 

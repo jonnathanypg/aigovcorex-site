@@ -48,6 +48,8 @@ def create_app(config_name=None):
     from api.chat_upload import chat_upload_bp
     # Canonical Social AI module at backend/modules/social
     from social.api.social_programs import social_programs_bp
+    # F2 ML shadow explain (TODO fusión en api/cmci.py cuando F1 lo cree)
+    from api.cmci_ml import cmci_ml_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
@@ -63,6 +65,7 @@ def create_app(config_name=None):
     app.register_blueprint(public_chat_bp)
     app.register_blueprint(chat_upload_bp)
     app.register_blueprint(social_programs_bp, url_prefix='/api/social')
+    app.register_blueprint(cmci_ml_bp, url_prefix='/api/cmci')
     @app.route('/')
     def index():
         """Landing page"""
@@ -185,6 +188,22 @@ def create_app(config_name=None):
             # Set default modules for existing licenses that have null
             try:
                 db.session.execute(text("UPDATE licenses SET enabled_modules = '[\"kindicore\",\"social\",\"geo\",\"channels\",\"copilot\"]' WHERE enabled_modules IS NULL"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            # CMCI Fase 0: Tenant.cmci_code + country_iso (idempotente: try/except por columna)
+            for col_sql in [
+                "ALTER TABLE tenants ADD COLUMN cmci_code VARCHAR(10) NULL",
+                "ALTER TABLE tenants ADD COLUMN country_iso VARCHAR(5) NULL DEFAULT 'EC'",
+            ]:
+                try:
+                    db.session.execute(text(col_sql))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            try:
+                db.session.execute(text("UPDATE tenants SET country_iso = 'EC' WHERE country_iso IS NULL"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()

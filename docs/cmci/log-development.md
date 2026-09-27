@@ -143,3 +143,9 @@ Carpeta `IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/` + `c
 **Tests:** `npx tsc --noEmit --skipLibCheck` → 0 errores en archivos cmci, 47 legacy intactos con TODO (sin tocar backend ni legacy fuera de cmci). `node` check cédulas: `1710034065` válida, `1760001556` rechazada por tercer dígito>=6, `1234567890` rechazada por checksum.
 **Decisión:** 404 en get → `undefined` (no fallback); 401/403/422 se propagan (sin fallback, toast en wizards); localStorage solo ante red caída.
 **Próximo:** e2e con backend arriba + corte 24-oct.
+
+## 2026-09-27 — REVISIÓN FINAL [DONE]
+**Antes (4ad968c):** motor vulnerabilidad antiguo ≠ Excel, sin socioeconómica, cero print, uniques globales, sin wizard WA bert, sin ML, sin provision.
+**Ahora:** scoring exacto + API DB-first 26 rutas + ML shadow + frontend CMCI en KindiCore + 5 matrices + cron 22/24 + provision MariaDB. 135 archivos diff (incluye 2 commits previos decouple social).
+**Hallazgo:** `backend/.gitignore:61 *.xlsx` bloqueaba seed socioeconómico → `git add -f` + push `95b49d4`. Remoto: 0 referencia, seeds completos, sin secretos/basura.
+**Verde:** 46 passed, BOOT_OK, tsc 0 cmci. **Fuera de alcance local:** deploy VPS, PDF visual Javier, videos, corte real, ML n≥100.

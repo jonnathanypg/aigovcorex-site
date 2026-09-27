@@ -144,6 +144,12 @@ Carpeta `IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/` + `c
 **Decisión:** 404 en get → `undefined` (no fallback); 401/403/422 se propagan (sin fallback, toast en wizards); localStorage solo ante red caída.
 **Próximo:** e2e con backend arriba + corte 24-oct.
 
+## 2026-09-27 — F3 diseño informes [DONE]
+**Hito:** completa diseño de informes sin refactor legacy (solo archivos CMCI/print): `print-header.tsx` con bloque convenio institucional (props opcionales con defaults CMCI) + `periodo {inicio,fin}` + leyenda semáforo verde/amarillo/naranja/rojo + helper `semaforoBg`; `reportes/print` con `?reportId=` (preview antes de descargar), semáforo con color de fondo, firmas papel + nota firma física; `registro/[id]/print` grid→`<table>` real con secciones Identificación/Familia/Salud/Asistencia/Observaciones + semáforo completitud; `reports-client.tsx` enlace "Vista previa" → `/reportes/print?reportId=` junto a Descargar (backend intacto); `globals.css` print con `thead:table-header-group`, `table/tr:page-break-inside:avoid`, zebra `.print-row-alt`, tipografía A4 11pt.
+**Archivos:** `src/components/cmci/print-header.tsx`, `src/app/(app)/reportes/print/page.tsx`, `src/app/(app)/registro/[id]/print/page.tsx`, `src/components/reportes/reports-client.tsx`, `src/app/globals.css`.
+**Tests:** `npx tsc --noEmit --skipLibCheck` → 0 errores cmci (grep cmci/print/reports-client/globals vacío; resto legacy preexistente intacto). Sin tocar backend.
+**Próximo:** e2e con backend arriba + corte 24-oct.
+
 ## 2026-09-27 — REVISIÓN FINAL [DONE]
 **Antes (4ad968c):** motor vulnerabilidad antiguo ≠ Excel, sin socioeconómica, cero print, uniques globales, sin wizard WA bert, sin ML, sin provision.
 **Ahora:** scoring exacto + API DB-first 26 rutas + ML shadow + frontend CMCI en KindiCore + 5 matrices + cron 22/24 + provision MariaDB. 135 archivos diff (incluye 2 commits previos decouple social).

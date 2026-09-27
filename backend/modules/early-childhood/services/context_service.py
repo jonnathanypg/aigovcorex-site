@@ -85,8 +85,8 @@ class ContextService:
                 scope['child_ids'] = child_ids
                 scope['tenant_id'] = user.tenant_id
             
-        elif role_name == ContextService.ROLE_PARENT:
-            # Read Only for Parents
+        elif role_name in [ContextService.ROLE_PARENT, 'padre']:
+            # Read Only for Parents (alias ES 'padre' == EN 'parent')
             # Use pre-fetched child_ids from IdentityResolver (supports Real & Virtual users)
             if hasattr(user, 'child_ids') and user.child_ids:
                 child_ids = user.child_ids
@@ -132,7 +132,7 @@ class ContextService:
         role_name = user.role.name if user.role else 'unknown'
         
         # Select Base Prompt File
-        if role_name == ContextService.ROLE_PARENT:
+        if role_name in [ContextService.ROLE_PARENT, 'padre']:
             filename = 'child_profile.md'
         elif intent == "sql_analysis":
             filename = 'sql_analyst.md'  # Prompt mejorado con schema real (renombrado)

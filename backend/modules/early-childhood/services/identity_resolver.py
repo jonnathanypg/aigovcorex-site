@@ -100,11 +100,35 @@ class IdentityResolver:
             return None
 
     @staticmethod
+    def _normalize_phone(phone: str) -> str:
+        """Normaliza a E.164 antes de buscar (utils.phone_utils si existe).
+
+        Fallback sin dependencia: quita +, 00, espacios/guiones y antepone
+        593 si empieza con 09 (formato local EC).
+        """
+        try:
+            from utils.phone_utils import normalize_phone_e164
+            normalized = normalize_phone_e164(phone)
+            if normalized:
+                return normalized
+        except Exception:
+            pass
+        import re
+        digits = re.sub(r"[^\d]", "", str(phone or ""))
+        if not digits:
+            return str(phone or "")
+        if digits.startswith("00"):
+            digits = digits[2:]
+        if digits.startswith("09") and not digits.startswith("593"):
+            digits = "593" + digits[1:]
+        return "+" + digits
+
+    @staticmethod
     def resolve_from_phone(phone: str, license_id: int) -> dict:
         """
         Resolve user identity from WhatsApp phone number with O(1) Hash Cache.
         """
-        phone_clean = phone.replace(" ", "").replace("-", "")
+        phone_clean = IdentityResolver._normalize_phone(phone)
         cache_key = ('whatsapp', phone_clean, license_id)
         cached_result = IdentityResolver._get_from_cache(cache_key)
         if cached_result:
@@ -118,7 +142,7 @@ class IdentityResolver:
         # 1. Check if this is the configured License Admin phone
         license_obj = License.query.get(license_id)
         if license_obj and license_obj.whatsapp_admin_phone:
-            admin_phone = license_obj.whatsapp_admin_phone.replace(" ", "").replace("-", "")
+            admin_phone = IdentityResolver._normalize_phone(license_obj.whatsapp_admin_phone)
             if phone_search.replace("+", "") == admin_phone.replace("+", ""):
                 from models.license import LicenseAdmin
                 license_admin_record = LicenseAdmin.query.filter_by(license_id=license_id, is_active=True).first()
@@ -309,7 +333,7 @@ class IdentityResolver:
             'permissions': IdentityResolver._get_permissions_for_role(role_name, user)
         }
         
-        if role_name == 'padre':
+        if role_name in ('padre', 'parent'):
             response['child_ids'] = IdentityResolver._get_parent_children(user.id)
         if role_name in ['educadora', 'educator']:
             response['child_ids'] = IdentityResolver._get_educator_assigned_children(user.id)
@@ -331,7 +355,7 @@ class IdentityResolver:
         if role_name in ['center_coordinator', 'educadora', 'coordinator']:
              return {'can_view_all_centers': False, 'scope': 'center', 'scope_id': user.tenant_id}
         
-        if role_name == 'padre':
+        if role_name in ('padre', 'parent'):
             return {
                 'can_view_all_centers': False,
                 'scope': 'child',

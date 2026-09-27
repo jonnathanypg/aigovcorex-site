@@ -92,20 +92,21 @@ def receive_whatsapp_message():
             attachment=attachment
         )
         _send_whatsapp_response(license_id, phone, response_text)
-        return jsonify({'status': 'handled_public_citizen', 'user_found': False}), 200
+        return jsonify({'status': 'handled_public_citizen', 'user_found': False, 'success': True}), 200
     
     # Process message through the AI orchestrator
     try:
         # Notify user we are thinking
         _send_whatsapp_typing(license_id, phone)
 
-        response_text = _process_ai_message(
+        ai_result = _process_ai_message(
             message=message,
             identity=identity,
             license_obj=license_obj,
             phone=phone,
             attachment=attachment
         )
+        response_text = ai_result.get('text', 'No pude procesar tu mensaje.')
         # Send response back via WhatsApp
         import re
         # Find all attachments: pattern [ATTACH_REPORT:url|filename]
@@ -158,10 +159,12 @@ def receive_whatsapp_message():
             )
         
         return jsonify({
-            'status': 'handled',
+            'status': 'handled_recursion_limit' if ai_result.get('error') == 'recursion_limit_reached' else 'handled',
             'user_found': True,
             'user_id': identity.get('user_id'),
-            'role': identity.get('role')
+            'role': identity.get('role'),
+            'success': ai_result.get('success', True),
+            'error': ai_result.get('error'),
         }), 200
         
     except Exception as e:
@@ -183,8 +186,13 @@ Para usar este servicio, tu número debe estar registrado en tu perfil de usuari
 Si eres un nuevo interesado, puedes visitar nuestra plataforma para más información."""
 
 
-def _process_ai_message(message: str, identity: dict, license_obj: License, phone: str, attachment: dict = None) -> str:
-    """Process the message through the AI orchestrator based on user permissions."""
+def _process_ai_message(message: str, identity: dict, license_obj: License, phone: str, attachment: dict = None) -> dict:
+    """Process the message through the AI orchestrator based on user permissions.
+
+    Retorna dict {'text', 'success', 'error'}: el texto de usuario no cambia,
+    pero success/error se propagan al log y a la respuesta HTTP (incluye
+    distinción de 'recursion_limit_reached').
+    """
     
     user_id = identity.get('user_id')
     tenant_id = identity.get('tenant_id')
@@ -225,8 +233,19 @@ def _process_ai_message(message: str, identity: dict, license_obj: License, phon
         channel='whatsapp',
         sender_identifier=phone
     )
-    
-    return response.get('response', 'No pude procesar tu mensaje.')
+
+    success = response.get('success', True)
+    error = response.get('error')
+    if error == 'recursion_limit_reached':
+        print(f"[WhatsApp Webhook] recursion_limit_reached user_id={user_id} role={role} phone={phone}")
+    elif not success:
+        print(f"[WhatsApp Webhook] process_message success=False error={error} user_id={user_id} role={role}")
+
+    return {
+        'text': response.get('response', 'No pude procesar tu mensaje.'),
+        'success': success,
+        'error': error,
+    }
 
 
 def _build_context_for_role(identity: dict, license_obj: License) -> str:
@@ -240,19 +259,19 @@ def _build_context_for_role(identity: dict, license_obj: License) -> str:
 Usuario: {user_name} (Administrador de Licencia)
 Permisos: Acceso completo a todos los centros y datos."""
 
-    elif role == 'center_coordinator':
+    elif role in ('center_coordinator', 'coordinator'):
         return f"""[CONTEXTO DEL SISTEMA]
 Usuario: {user_name} (Coordinador de Centro)
 Permisos: Acceso a datos de su centro únicamente.
 Centro ID: {permissions.get('scope_id')}"""
 
-    elif role == 'educadora':
+    elif role in ('educadora', 'educator'):
         return f"""[CONTEXTO DEL SISTEMA]
 Usuario: {user_name} (Educadora)
 Permisos: Consultas limitadas de su centro.
 Centro ID: {permissions.get('scope_id')}"""
 
-    elif role == 'padre':
+    elif role in ('padre', 'parent'):
         child_ids = identity.get('child_ids', [])
         return f"""[CONTEXTO DEL SISTEMA]
 Usuario: {user_name} (Padre/Madre)
@@ -329,6 +348,10 @@ INSTRUCCIONES CLAVE:
             channel='whatsapp_public',
             sender_identifier=phone
         )
+        if response.get('error') == 'recursion_limit_reached':
+            print(f"[WhatsApp Public Citizen] recursion_limit_reached phone={phone}")
+        elif not response.get('success', True):
+            print(f"[WhatsApp Public Citizen] process_message error={response.get('error')} phone={phone}")
         return response.get('response', f"¡Hola! Gracias por comunicarte con {license_obj.name}. ¿En qué podemos ayudarte hoy?")
 
     except Exception as e:

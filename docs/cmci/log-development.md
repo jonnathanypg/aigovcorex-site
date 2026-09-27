@@ -126,3 +126,13 @@
 ## 2026-09-27 — PROVISIÓN VPS MariaDB [DONE]
 **Archivos:** `backend/modules/early-childhood/scripts/cmci_provision.py` (6 pasos idempotentes, COMPILE_OK) + `IMPLEMETACION-Y-MEJORAS/DEPLOY_VPS_CMCI.md` (runbook post-`deploy.sh`: instala faltantes, backup, quita UNIQUEs legacy, create_all 7 tablas, seeds v1+EC, verificación `PROVISION_OK`, checklist pm2/health/priorización).
 **Nota:** MariaDB acepta `db.JSON` como LONGTEXT; nada que cambiar en modelos.
+
+## 2026-09-27 — INSTALACIÓN + PRUEBAS LOCALES [DONE]
+**Instalado:** Flask-CORS, PyMySQL, dateutil, phonenumbers, dotenv, pytz, Mail, bcrypt, email-validator, requests, reportlab, pydantic, edge-tts. LangChain no (fallback SimpleOrchestrator lo tolera).
+**Fix:** `config.py TestingConfig` + `SQLALCHEMY_ENGINE_OPTIONS = {}` → `BOOT_OK: Flask`. **Tests 46 passed**, tsc 0 errores nuevos.
+
+## 2026-09-27 — PROVISIÓN VPS MariaDB [DONE]
+`scripts/cmci_provision.py` (6 pasos) + runbook (este file movido a `docs/cmci/DEPLOY_VPS_CMCI.md`). MariaDB: `db.JSON`→LONGTEXT.
+
+## 2026-09-27 — LIMPIEZA REFERENCIA [DONE]
+Carpeta `IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/` + `captura-conversiaon-whatsapp.jpeg` + 2 Excels referencia fuera de git (gitignore + rm). Docs propios movidos a `docs/cmci/`. Seeds ya viven en `backend/.../seeds/cmci/`.

@@ -9,7 +9,7 @@ import { cmciService, type VulnRecord } from "@/services/cmci.service";
 export default function AdmisionPrintPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const [rec, setRec] = useState<VulnRecord | undefined>();
-  useEffect(() => { setRec(cmciService.getVuln(id)); }, [id]);
+  useEffect(() => { cmciService.getVuln(id).then(setRec).catch(() => setRec(undefined)); }, [id]);
   if (!rec) return <div className="p-6"><p>No encontrado.</p><PrintButton /></div>;
   const res = computeVulnerability(rec.scores, rec.hogar);
   return (

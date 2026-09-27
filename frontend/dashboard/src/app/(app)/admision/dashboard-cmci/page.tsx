@@ -8,8 +8,8 @@ import { cmciService } from "@/services/cmci.service";
 import { VULN_RANGES } from "@/lib/cmci/params";
 
 export default function DashboardCmciPage() {
-  const [d, setD] = useState<ReturnType<typeof cmciService.dashboard> | null>(null);
-  useEffect(() => { setD(cmciService.dashboard()); }, []);
+  const [d, setD] = useState<Awaited<ReturnType<typeof cmciService.dashboard>> | null>(null);
+  useEffect(() => { cmciService.dashboard().then(setD).catch(() => setD(null)); }, []);
   if (!d) return <p className="text-muted-foreground">Cargando…</p>;
   return (
     <div className="space-y-4">

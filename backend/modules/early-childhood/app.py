@@ -48,8 +48,6 @@ def create_app(config_name=None):
     from api.chat_upload import chat_upload_bp
     # Canonical Social AI module at backend/modules/social
     from social.api.social_programs import social_programs_bp
-    # F2 ML shadow explain (TODO fusión en api/cmci.py cuando F1 lo cree)
-    from api.cmci_ml import cmci_ml_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
@@ -65,7 +63,6 @@ def create_app(config_name=None):
     app.register_blueprint(public_chat_bp)
     app.register_blueprint(chat_upload_bp)
     app.register_blueprint(social_programs_bp, url_prefix='/api/social')
-    app.register_blueprint(cmci_ml_bp, url_prefix='/api/cmci')
     @app.route('/')
     def index():
         """Landing page"""

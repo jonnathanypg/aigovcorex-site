@@ -57,18 +57,22 @@ export function SocioeconomicForm() {
     const c = [...arr]; c[i] = Number.isFinite(v) ? v : 0; set(c);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!codigo || !nino) {
       toast({ title: "Faltan datos", description: "Código y niño/a obligatorios.", variant: "destructive" });
       return;
     }
-    const rec = cmciService.createSocio({
-      codigo, fecha, nino, nacimiento, cmci, representante, telefono,
-      total: r.total, clasificacion: r.clasificacion, perCapita: r.E19,
-      payload: { ...inputs, edadMeses: edad, resultado: r },
-    });
-    toast({ title: "Ficha guardada", description: `${codigo} — ${r.total.toFixed(1)} (${r.clasificacion})` });
-    router.push(`/admision/ficha-socioeconomica/${rec.id}`);
+    try {
+      const rec = await cmciService.createSocio({
+        codigo, fecha, nino, nacimiento, cmci, representante, telefono,
+        total: r.total, clasificacion: r.clasificacion, perCapita: r.E19,
+        payload: { ...inputs, edadMeses: edad, resultado: r },
+      });
+      toast({ title: "Ficha guardada", description: `${codigo} — ${r.total.toFixed(1)} (${r.clasificacion})` });
+      router.push(`/admision/ficha-socioeconomica/${rec.id}`);
+    } catch (e) {
+      toast({ title: "No se pudo guardar", description: e instanceof Error ? e.message : "Error backend (401/403/404).", variant: "destructive" });
+    }
   };
 
   return (

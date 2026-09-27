@@ -12,11 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function PriorizacionPage() {
   const { toast } = useToast();
-  const [rows, setRows] = useState<ReturnType<typeof cmciService.priorizacion>>([]);
-  useEffect(() => { setRows(cmciService.priorizacion()); }, []);
+  const [rows, setRows] = useState<Awaited<ReturnType<typeof cmciService.priorizacion>>>([]);
+  useEffect(() => { cmciService.priorizacion().then(setRows).catch(() => setRows([])); }, []);
 
-  const handleExport = () => {
-    const csv = cmciService.exportPriorizacionCSV();
+  const handleExport = async () => {
+    const csv = await cmciService.exportPriorizacionCSV(rows);
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

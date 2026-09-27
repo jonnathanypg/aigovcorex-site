@@ -7,7 +7,7 @@ import { cmciService, type SocioRecord } from "@/services/cmci.service";
 export default function FichaSocioeconomicaDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const [rec, setRec] = useState<SocioRecord | undefined>();
-  useEffect(() => { setRec(cmciService.getSocio(id)); }, [id]);
+  useEffect(() => { cmciService.getSocio(id).then(setRec).catch(() => setRec(undefined)); }, [id]);
   if (!rec) return <p className="text-muted-foreground">Registro no encontrado.</p>;
   const p = rec.payload as { resultado: { sub: Record<string, number>; E18: number; E19: number; E29: number; E30: number; E31: number; B54: number; B55: number; B56: number; B57: string; B58: string } };
   return (

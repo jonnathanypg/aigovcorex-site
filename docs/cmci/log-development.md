@@ -155,3 +155,12 @@ Carpeta `IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/` + `c
 **Ahora:** scoring exacto + API DB-first 26 rutas + ML shadow + frontend CMCI en KindiCore + 5 matrices + cron 22/24 + provision MariaDB. 135 archivos diff (incluye 2 commits previos decouple social).
 **Hallazgo:** `backend/.gitignore:61 *.xlsx` bloqueaba seed socioeconómico → `git add -f` + push `95b49d4`. Remoto: 0 referencia, seeds completos, sin secretos/basura.
 **Verde:** 46 passed, BOOT_OK, tsc 0 cmci. **Fuera de alcance local:** deploy VPS, PDF visual Javier, videos, corte real, ML n≥100.
+
+## 2026-09-27 — FIX WHATSAPP + RBAC [DONE]
+**Causa:** bucle tool-error → recursion_limit; `educadora` fuera de allowed_roles; tools sin filtro por rol. **Fix:** aliases ES/EN, `_filter_tools_by_role`, guarda anti-reintento (2 fallos → pregunta), E.164 + fallback 593, `recursion_limit` distinguido en logs. Prompts previos intactos. 46 passed.
+
+## 2026-09-27 — DB-FIRST + ML-FUSIÓN + FRONTEND-FETCH [DONE]
+`api/cmci.py` a SQL histórico (Y/Z en SQL), `cmci_ml.py` fusionado y borrado, `params_store` persiste con versión, frontend fetch real + cédula EC módulo-10 verificada. 46 passed, tsc 0 cmci. Pushes `e818d97`, `4797bd3`, `db05cc0`.
+
+## 2026-09-27 — SEED XLSX + LIMPIEZA REMOTA [DONE]
+`backend/.gitignore *.xlsx` bloqueaba seed socio → `add -f`, push `95b49d4`. `IMPLEMETACION-Y-MEJORAS/` eliminada del remoto (0 rastros, verificado `ls-tree`); docs en `docs/cmci/`. Push `f2869dd`.

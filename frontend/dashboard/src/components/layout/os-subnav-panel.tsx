@@ -35,7 +35,7 @@ export function OSSubNavPanel({ activeModule, isOpen, onClose, onNavigate }: OSS
           'os-subnav-panel print:hidden flex flex-col shrink-0 overflow-hidden transition-all duration-300 ease-in-out',
           // Desktop behavior: slide panel inside layout flow
           'hidden md:flex',
-          isOpen ? 'md:w-[240px] md:opacity-100' : 'md:w-0 md:opacity-0 pointer-events-none',
+          isOpen ? 'md:w-[264px] md:opacity-100' : 'md:w-0 md:opacity-0 pointer-events-none',
         )}
       >
         {/* Module Header */}

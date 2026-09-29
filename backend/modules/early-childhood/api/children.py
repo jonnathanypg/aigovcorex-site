@@ -157,6 +157,82 @@ def get_center_educators():
         return jsonify({'error': str(e)}), 500
 
 
+@children_bp.route('/search', methods=['GET'])
+@tenant_required
+def search_children():
+    """Autocomplete para fichas: filtra por nombre/letras a medida que se
+    escribe. ?q=texto&limit=10. Respeta tenant (o licencia si multi-centro).
+    Retorna id, nombre completo, cédula, nacimiento, familia y representante
+    principal para precargar la ficha."""
+    try:
+        from utils.role_helpers import is_multi_center_role, get_license_id_for_user
+        current_user = TenantContext.get_current_user()
+        q = (request.args.get('q') or request.args.get('search') or '').strip()
+        try:
+            limit = min(max(int(request.args.get('limit', 10)), 1), 25)
+        except (TypeError, ValueError):
+            limit = 10
+        if len(q) < 1:
+            return jsonify({'results': [], 'total': 0}), 200
+
+        if is_multi_center_role(current_user):
+            license_id = get_license_id_for_user(current_user)
+            if not license_id:
+                return jsonify({'error': 'No license assigned'}), 403
+            query = Child.query.join(Tenant).filter(Tenant.license_id == license_id)
+            requested_tenant = request.args.get('tenant_id')
+            if requested_tenant and requested_tenant != 'all':
+                query = query.filter(Child.tenant_id == requested_tenant)
+        elif current_user.role.name in ['educadora', 'educator']:
+            tenant_id = TenantContext.get_current_tenant_id()
+            query = Child.query.filter_by(tenant_id=tenant_id,
+                                          assigned_educator_id=current_user.id)
+        else:
+            tenant_id = TenantContext.get_current_tenant_id()
+            query = Child.query.filter_by(tenant_id=tenant_id)
+
+        like = f'%{q}%'
+        query = query.filter(
+            db.or_(
+                Child.first_name.ilike(like),
+                Child.last_name.ilike(like),
+                Child.cedula.ilike(like),
+                db.func.concat(Child.first_name, ' ', Child.last_name).ilike(like),
+                db.func.concat(Child.last_name, ' ', Child.first_name).ilike(like),
+            )
+        ).order_by(Child.last_name.asc(), Child.first_name.asc()).limit(limit)
+        rows = query.all()
+        results = []
+        for child in rows:
+            d = child.to_dict()
+            rep = None
+            try:
+                fam = child.family
+                if fam is not None:
+                    r = Representative.query.filter_by(family_id=fam.id).first()
+                    if r:
+                        rep = {'id': r.id, 'full_name': r.full_name,
+                               'relationship': r.relationship, 'phone': r.phone}
+            except Exception:
+                pass
+            results.append({
+                'id': child.id,
+                'full_name': d.get('full_name'),
+                'first_name': child.first_name,
+                'last_name': child.last_name,
+                'cedula': child.cedula,
+                'birth_date': d.get('birth_date'),
+                'age_display': d.get('age_display'),
+                'gender': child.gender,
+                'tenant_id': child.tenant_id,
+                'family_id': child.family_id,
+                'representative': rep,
+            })
+        return jsonify({'results': results, 'total': len(results)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @children_bp.route('/<int:child_id>', methods=['GET'])
 @tenant_required
 def get_child(child_id):
@@ -244,7 +320,48 @@ def get_child(child_id):
                 'birth_province': r.birth_province,
                 'nationality': r.nationality
             } for r in representatives]
-        
+
+        # Últimas fichas para precargar (vulnerabilidad + socioeconómica).
+        # ?include=assessments o siempre liviano: no rompe clientes viejos.
+        try:
+            from models.cmci import VulnerabilityAssessment, SocioeconomicAssessment
+            last_vuln = (VulnerabilityAssessment.query
+                         .filter_by(child_id=child.id)
+                         .order_by(VulnerabilityAssessment.assessed_at.desc(),
+                                   VulnerabilityAssessment.id.desc()).first())
+            last_socio = (SocioeconomicAssessment.query
+                          .filter_by(child_id=child.id)
+                          .order_by(SocioeconomicAssessment.assessed_at.desc(),
+                                    SocioeconomicAssessment.id.desc()).first())
+
+            def _ser_v(r):
+                if not r:
+                    return None
+                return {'id': r.id, 'code': r.code,
+                        'assessed_at': r.assessed_at.isoformat() if r.assessed_at else None,
+                        'total': r.total, 'level': getattr(r, 'level', None),
+                        'priority': getattr(r, 'priority', None),
+                        'semaphore': getattr(r, 'semaphore', None),
+                        'protection_alert': getattr(r, 'protection_alert', None),
+                        'status': getattr(r, 'status', None),
+                        'answers': r.answers, 'scores': r.scores,
+                        'subtotals': r.subtotals}
+
+            def _ser_s(r):
+                if not r:
+                    return None
+                return {'id': r.id, 'code': r.code,
+                        'assessed_at': r.assessed_at.isoformat() if r.assessed_at else None,
+                        'total': r.total, 'classification': getattr(r, 'classification', None),
+                        'per_capita': getattr(r, 'per_capita', None),
+                        'incomes': r.incomes, 'expenses': r.expenses,
+                        'subscores': r.subscores}
+            response['last_vulnerability'] = _ser_v(last_vuln)
+            response['last_socioeconomic'] = _ser_s(last_socio)
+        except Exception:
+            response['last_vulnerability'] = None
+            response['last_socioeconomic'] = None
+
         return jsonify(response), 200
         
     except Exception as e:

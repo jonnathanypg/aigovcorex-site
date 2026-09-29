@@ -73,6 +73,10 @@ api_bp.register_blueprint(geo_intelligence_bp)
 from api.channels_os import channels_os_bp
 api_bp.register_blueprint(channels_os_bp)
 
+# Channels OS Templates
+from api.channels_os_templates import channels_os_templates_bp
+api_bp.register_blueprint(channels_os_templates_bp)
+
 # CMCI F1: fichas vulnerabilidad + socioeconómica (una sola vez; /cmci -> /api/cmci/*)
 from api.cmci import cmci_bp
 api_bp.register_blueprint(cmci_bp)

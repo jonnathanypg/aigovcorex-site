@@ -29,7 +29,7 @@ export default function DocumentosRagPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { name: 'Manual de Operaciones CDI 2026.pdf', size: '4.2 MB', vectors: '1,420 chunks', date: '12 Sep 2026' },
+          { name: 'Manual de Operaciones 2026.pdf', size: '4.2 MB', vectors: '1,420 chunks', date: '12 Sep 2026' },
           { name: 'Normativa MIES Salud y Nutrición.docx', size: '1.8 MB', vectors: '680 chunks', date: '08 Sep 2026' },
           { name: 'Protocolo de Emergencias Infantiles.pdf', size: '2.5 MB', vectors: '920 chunks', date: '01 Sep 2026' },
         ].map((doc, i) => (

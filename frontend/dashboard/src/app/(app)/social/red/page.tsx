@@ -24,7 +24,7 @@ export default function RedInterinstitucionalPage() {
           { name: 'Banco Interamericano de Desarrollo (BID)', type: 'Organismo Multilateral', programs: 2, role: 'Financiador & Cooperante', color: '#8b5cf6' },
           { name: 'Ministerio de Inclusión Económica y Social (MIES)', type: 'Gobierno Central', programs: 5, role: 'Rector de Política Pública', color: '#0ea5e9' },
           { name: 'GAD Municipal de Guayaquil', type: 'Gobierno Autónomo Descentralizado', programs: 3, role: 'Ejecutor Territorial', color: '#10b981' },
-          { name: 'Fundación Vida y Esperanza', type: 'Organización Sin Fines de Lucro', programs: 1, role: 'Operador de CDI', color: '#f97316' },
+          { name: 'Fundación Vida y Esperanza', type: 'Organización Sin Fines de Lucro', programs: 1, role: 'Operador del centro', color: '#f97316' },
         ].map((org, i) => (
           <div key={i} className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-3">
             <div className="flex items-start justify-between">

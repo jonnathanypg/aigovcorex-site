@@ -14,7 +14,8 @@ import {
   ArrowRight,
   TrendingUp,
   RefreshCw,
-  FileText
+  FileText,
+  Inbox
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -131,29 +132,29 @@ export default function CanalesDashboardPage() {
 
       {/* Quick Nav Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link href="/canales/whatsapp" className="group">
-          <Card className="border border-white/10 bg-white/[0.02] hover:bg-emerald-500/[0.04] hover:border-emerald-500/30 transition-all p-5 h-full">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
-                <MessageSquare className="w-6 h-6" />
-              </div>
-              <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
-            </div>
-            <h3 className="text-white font-bold text-base">WhatsApp Institucional</h3>
-            <p className="text-xs text-white/50 mt-1">Conecta sesiones Baileys por QR, configura números admin y webhook.</p>
-          </Card>
-        </Link>
-
-        <Link href="/canales/telegram" className="group">
+        <Link href="/canales/bandeja" className="group">
           <Card className="border border-white/10 bg-white/[0.02] hover:bg-sky-500/[0.04] hover:border-sky-500/30 transition-all p-5 h-full">
             <div className="flex items-center justify-between mb-3">
               <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
-                <Send className="w-6 h-6" />
+                <Inbox className="w-6 h-6" />
               </div>
               <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-sky-400 group-hover:translate-x-1 transition-all" />
             </div>
-            <h3 className="text-white font-bold text-base">Telegram Oficial</h3>
-            <p className="text-xs text-white/50 mt-1">Vincula bots mediante Token, asigna comandos y enlaza cuentas de personal.</p>
+            <h3 className="text-white font-bold text-base">Bandeja Unificada</h3>
+            <p className="text-xs text-white/50 mt-1">Inbox estilo aikrofy: 3 columnas, filtros, handover IA/humano, sidebar contacto.</p>
+          </Card>
+        </Link>
+
+        <Link href="/canales/conexiones" className="group">
+          <Card className="border border-white/10 bg-white/[0.02] hover:bg-emerald-500/[0.04] hover:border-emerald-500/30 transition-all p-5 h-full">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+                <Network className="w-6 h-6" />
+              </div>
+              <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+            </div>
+            <h3 className="text-white font-bold text-base">Conexiones de Canal</h3>
+            <p className="text-xs text-white/50 mt-1">WhatsApp/Telegram multi-tenant con herencia a programas y aislamiento de datos.</p>
           </Card>
         </Link>
 
@@ -166,7 +167,7 @@ export default function CanalesDashboardPage() {
               <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-violet-400 group-hover:translate-x-1 transition-all" />
             </div>
             <h3 className="text-white font-bold text-base">Árbol de Herencias</h3>
-            <p className="text-xs text-white/50 mt-1">Permite a los subprogramas usar el canal matriz sin costo adicional de líneas.</p>
+            <p className="text-xs text-white/50 mt-1">Visualiza y gestiona cómo los canales matriz se heredan a subprogramas.</p>
           </Card>
         </Link>
       </div>
@@ -185,7 +186,7 @@ export default function CanalesDashboardPage() {
         <CardContent>
           {channels.length === 0 ? (
             <div className="text-center py-8 text-xs text-white/40">
-              No hay canales registrados. Ve a <Link href="/canales/whatsapp" className="text-emerald-400 underline">WhatsApp</Link> o <Link href="/canales/telegram" className="text-sky-400 underline">Telegram</Link> para conectar el primero.
+              No hay canales registrados. Ve a <Link href="/canales/conexiones" className="text-violet-400 underline">Conexiones</Link> para crear el primero.
             </div>
           ) : (
             <div className="space-y-3">

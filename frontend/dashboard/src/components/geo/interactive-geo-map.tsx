@@ -303,7 +303,7 @@ export function InteractiveGeoMap() {
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-              <span className="text-white/80">Centros CDI / Puntos Operativos</span>
+              <span className="text-white/80">Centros / Puntos operativos</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />

@@ -13,7 +13,7 @@ from models.application import Application
 import os
 from datetime import datetime
 
-documents_bp = Blueprint('documents', __name__, url_prefix='/api/documents')
+documents_bp = Blueprint('documents', __name__, url_prefix='/documents')
 
 # Configuración de uploads
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'documents')

@@ -17,7 +17,7 @@ export default function GeoTrazabilidadPage() {
         {[
           { id: 'TRZ-2026-001', prog: 'Programa Nutrición Integral Costa', actor: 'BID → MIES', status: 'Desembolso Validado', amount: '$1,200,000' },
           { id: 'TRZ-2026-002', prog: 'Atención Primera Infancia Guasmo', actor: 'GAD Guayaquil → Fundación Vida', status: 'Operación Activa', amount: '$350,000' },
-          { id: 'TRZ-2026-003', prog: 'KindiCore AI CDI Despliegue', actor: 'Gobierno → 12 Centros', status: 'En Ejecución', amount: '1,450 Niños' },
+          { id: 'TRZ-2026-003', prog: 'KindiCore AI Despliegue', actor: 'Gobierno → 12 Centros', status: 'En Ejecución', amount: '1,450 Niños' },
         ].map((item, i) => (
           <div key={i} className="p-4 rounded-xl bg-zinc-900/60 border border-white/10 flex items-center justify-between">
             <div>

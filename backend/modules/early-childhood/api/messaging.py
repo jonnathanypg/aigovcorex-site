@@ -14,7 +14,7 @@ from models.child import Child, Representative
 from models.license import License, LicenseAdmin
 from models.tenant import Tenant
 
-messaging_bp = Blueprint('messaging', __name__, url_prefix='/api/messages')
+messaging_bp = Blueprint('messaging', __name__, url_prefix='/messages')
 
 WHATSAPP_API_URL = os.getenv('WHATSAPP_API_URL', 'http://localhost:3001')
 

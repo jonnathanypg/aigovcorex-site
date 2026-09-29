@@ -2,6 +2,7 @@ from utils.role_helpers import is_multi_center_role
 """
 Telegram Webhook API
 Handles incoming messages from Telegram Bot API
+Supports both legacy License-based channels and OS ChannelConfig-based channels
 """
 from flask import Blueprint, request, jsonify
 import requests
@@ -16,6 +17,7 @@ from models.user import User
 from models.license import License, LicenseAdmin
 from models.child import Child, Representative
 from models.telegram_update import ProcessedTelegramUpdate
+from models.channel_config import ChannelConfig, ChannelConversation, ChannelMessage
 from services.identity_resolver import IdentityResolver
 try:
     from agents.langgraph_orchestrator import LangGraphOrchestrator
@@ -26,7 +28,62 @@ except Exception:
 # Format: { chat_id: { "step": "awaiting_parent_cedula"|"awaiting_child_cedula", "parent_cedula": "...", "expires": datetime } }
 VERIFICATION_CACHE = {}
 
+
+def _persist_incoming_message_os(channel, external_id, contact_name, contact_phone, role, content, channel_type, media_url=None, media_type=None):
+    """Upsert conversación + guarda mensaje entrante para canales OS (Telegram)."""
+    try:
+        conv = ChannelConversation.query.filter_by(
+            channel_id=channel.id, external_id=external_id
+        ).first()
+        if not conv:
+            conv = ChannelConversation(
+                channel_id=channel.id,
+                external_id=external_id,
+                contact_name=contact_name,
+                contact_phone=contact_phone,
+                conversation_type='support',
+                status='open',
+                is_ai_active=True,
+                handover_status='bot_active',
+            )
+            db.session.add(conv)
+            db.session.flush()
+        conv.last_message_at = db.func.now()
+        conv.messages_count = (conv.messages_count or 0) + 1
+        conv.contact_name = contact_name or conv.contact_name
+        conv.contact_phone = contact_phone or conv.contact_phone
+
+        msg = ChannelMessage(
+            conversation_id=conv.id,
+            role=role,
+            content=content,
+            channel=channel_type,
+            media_url=media_url,
+            media_type=media_type,
+        )
+        db.session.add(msg)
+        db.session.commit()
+        return conv.id
+    except Exception as e:
+        print(f'[Telegram Webhook OS] Error persistiendo mensaje entrante: {e}')
+        db.session.rollback()
+        return None
+
+
+def _find_os_channel_by_chat_id(chat_id: str):
+    """Find OS Telegram channel that has a conversation with this chat_id."""
+    conv = ChannelConversation.query.join(ChannelConfig).filter(
+        ChannelConversation.external_id == chat_id,
+        ChannelConfig.channel_type == 'telegram',
+        ChannelConfig.is_active.is_(True)
+    ).first()
+    if conv:
+        return conv.channel
+    return None
+
+
 telegram_webhook_bp = Blueprint('telegram_webhook', __name__, url_prefix='/webhooks')
+
 
 @telegram_webhook_bp.route('/telegram', methods=['POST'])
 def receive_telegram_message():
@@ -156,7 +213,48 @@ def receive_telegram_message():
         
         return jsonify({'status': 'contact_processed'}), 200
 
-    
+    # Check for OS ChannelConfig-based channel first (by existing conversation)
+    os_channel = _find_os_channel_by_chat_id(chat_id)
+    if os_channel:
+        # OS Channel flow: persist incoming message
+        from_user = message_data.get('from', {})
+        contact_name = f"{from_user.get('first_name', '')} {from_user.get('last_name', '')}".strip() or from_user.get('username')
+        
+        conv_id = _persist_incoming_message_os(
+            channel=os_channel,
+            external_id=chat_id,
+            contact_name=contact_name,
+            contact_phone=None,
+            role='user',
+            content=text,
+            channel_type='telegram',
+        )
+        
+        if conv_id:
+            # Process through AI orchestrator for OS channels
+            conversation = ChannelConversation.query.get(conv_id)
+            if conversation and conversation.is_ai_active:
+                from services.voice_service import VoiceService
+                ai_response = _process_with_ai_orchestrator(
+                    channel=os_channel,
+                    conversation=conversation,
+                    user_message=text,
+                    contact_name=contact_name
+                )
+                # Send AI response via Telegram
+                sent = _send_telegram_response(os_channel, chat_id, ai_response)
+                if sent:
+                    _persist_incoming_message_os(
+                        channel=os_channel,
+                        external_id=chat_id,
+                        contact_name=contact_name,
+                        contact_phone=None,
+                        role='assistant',
+                        content=ai_response,
+                        channel_type='telegram',
+                    )
+            return jsonify({'status': 'handled_os_channel', 'conversation_id': conv_id, 'success': True}), 200
+
     if not text:
         return jsonify({'status': 'ignored', 'reason': 'no_text'}), 200
     
@@ -297,6 +395,7 @@ def receive_telegram_message():
     # Find the license associated with this user to get the Agent Config and Bot Token
     # We need the License object to pass to orchestrator and to get the correct Bot Token for reply
     license_id = _get_license_id_for_user(user)
+
     license_obj = License.query.get(license_id) if license_id else None
     
     if not license_obj:
@@ -403,7 +502,6 @@ def _process_ai_message(message: str, identity: dict, license_id: int, chat_id: 
     )
     
     return response.get('response', 'Sin respuesta.')
-
 
 
 def _link_user_by_phone(phone, chat_id):
@@ -535,6 +633,7 @@ def _split_message(text: str, max_length: int) -> list:
     
     return chunks if chunks else [text[:max_length]]
 
+
 def _send_telegram_voice(chat_id, audio_path, bot_token):
     """Send a voice note to Telegram."""
     if not bot_token:
@@ -549,6 +648,7 @@ def _send_telegram_voice(chat_id, audio_path, bot_token):
     except Exception as e:
         print(f"[Telegram Webhook] Failed to send voice: {e}")
 
+
 def _send_telegram_typing(chat_id, bot_token):
     """Send 'typing' action to Telegram."""
     if not bot_token:
@@ -561,3 +661,7 @@ def _send_telegram_typing(chat_id, bot_token):
         )
     except Exception as e:
         print(f"[Telegram Webhook] Failed to send typing action: {e}")
+
+
+# Import requests at module level for use in helper functions
+import requests

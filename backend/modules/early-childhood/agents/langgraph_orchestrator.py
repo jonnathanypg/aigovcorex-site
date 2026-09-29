@@ -82,8 +82,11 @@ class LangGraphOrchestrator:
         # Initialize LLM
         self.llm = self._init_llm()
         
-        # Get tools
-        self.tools = get_all_tools()
+        # Get tools (filtradas por rol: public_citizen/padre sin escritura)
+        self.tools = self._filter_tools_by_role(get_all_tools())
+
+        # Límite determinista de reintentos de tools (además del recursion_limit=15 del grafo)
+        self.max_tool_retries = 2
         
         # Bind tools to LLM
         self.llm_with_tools = self.llm.bind_tools(self.tools)
@@ -182,9 +185,78 @@ class LangGraphOrchestrator:
         
         return workflow.compile()
         
+    def _filter_tools_by_role(self, tools: list) -> list:
+        """Filtra herramientas de escritura según el rol (anti-bucle WhatsApp).
+
+        public_citizen/padre (alias parent): sin SendWhatsApp/SendEmail ni
+        Manage* de escritura. Conserva lectura (consultas, reportes, contactos).
+        """
+        role = (self.role or '').lower()
+        if role not in ('public_citizen', 'padre', 'parent'):
+            return tools
+        blocked_prefixes = ('send_whatsapp', 'send_email', 'manage_')
+        filtered = [t for t in tools if not (t.name or '').lower().startswith(blocked_prefixes)]
+        removed = len(tools) - len(filtered)
+        self.logger.info(f"🔒 Tools filtradas por rol '{self.role}': {len(filtered)} activas ({removed} escritura bloqueadas)")
+        return filtered
+
+    @staticmethod
+    def _tool_result_failed(content) -> bool:
+        """True si un ToolMessage indica success==False o error de ejecución."""
+        if isinstance(content, dict):
+            return content.get('success') is False
+        text = str(content or '')
+        return ("'success': False" in text or '"success": false' in text
+                or '"success": False' in text or text.strip().startswith('Error:'))
+
+    def _is_repeated_tool_failure(self, messages) -> bool:
+        """Guarda determinista: mismo tool + mismos args falló max_tool_retries veces.
+
+        Si las últimas `max_tool_retries` invocaciones son idénticas
+        (nombre + args normalizados) y cada una fue seguida de un ToolMessage
+        con success==False, devuelve True para cortar el bucle sin re-invocar.
+        """
+        try:
+            status_by_call_id = {}
+            for m in messages:
+                if isinstance(m, ToolMessage) and getattr(m, 'tool_call_id', None):
+                    status_by_call_id[m.tool_call_id] = self._tool_result_failed(m.content)
+            invocations = []  # (name, args_key, failed_or_None)
+            for m in messages:
+                tool_calls = getattr(m, 'tool_calls', None) or []
+                for tc in tool_calls:
+                    name = tc.get('name', '')
+                    try:
+                        args_key = str(sorted((tc.get('args') or {}).items()))
+                    except Exception:
+                        args_key = str(tc.get('args'))
+                    failed = status_by_call_id.get(tc.get('id'))
+                    invocations.append((name, args_key, failed))
+            n = self.max_tool_retries
+            if len(invocations) < n:
+                return False
+            recent = invocations[-n:]
+            same_call = all((r[0], r[1]) == (recent[0][0], recent[0][1]) for r in recent)
+            all_failed = all(r[2] is True for r in recent)
+            return same_call and all_failed
+        except Exception:
+            return False
+
     def _agent_node(self, state: AgentState) -> AgentState:
         """Agent node that calls the LLM"""
         messages = state["messages"]
+        # Guarda determinista anti-bucle: no re-invocar el mismo tool fallido,
+        # responder con pregunta aclaratoria (centro/destinatario/contenido).
+        if self._is_repeated_tool_failure(messages):
+            self.logger.warning("⛔ Bucle de tools detectado: mismo tool+args falló 2 veces. Cortando sin re-invocar.")
+            return {
+                "messages": [AIMessage(content=(
+                    "No pude completar el envío con los datos disponibles, "
+                    "así que prefiero no seguir intentándolo a ciegas. "
+                    "¿A qué centro o destinatario deseas enviar el mensaje "
+                    "y cuál es el contenido exacto?"
+                ))]
+            }
         self.logger.info(f"🤔 Thinking with {len(messages)} messages context...")
         
         response = self.llm_with_tools.invoke(messages)
@@ -206,6 +278,10 @@ class LangGraphOrchestrator:
     def _should_use_tools(self, state: AgentState) -> str:
         """Determine if tools should be used"""
         messages = state["messages"]
+        # Red de seguridad: si el LLM igual emite el tool fallido repetido, ir a END.
+        if self._is_repeated_tool_failure(messages):
+            self.logger.warning("⛔ _should_use_tools: bucle detectado → END sin re-invocar.")
+            return END
         last_message = messages[-1]
 
         if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
@@ -298,10 +374,12 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
 - PROHIBIDO usar nombres de variables internas o de base de datos (ej: `tenant_id`, `child_id`, `snake_case`).
 - Usa siempre nombres amigables para el usuario. Ejemplo: "el resumen del niño" en lugar de "child_summary".
 
-**REGLA #2 - SÉ PROACTIVO:**
-- Cuando el usuario diga "hazlo", "procede", etc., EJECUTA LA HERRAMIENTA INMEDIATAMENTE sin preguntar de nuevo.
+**REGLA #2 - SÉ PROACTIVO CON DATOS COMPLETOS:**
+- Cuando el usuario diga "hazlo", "procede", "Opción 1", etc., ejecuta la herramienta correspondiente SI dispones de los datos requeridos (destinatario, teléfono, nombre o datos específicos).
+- Si el usuario selecciona una opción (ej: "Opción 1: Enviar mensajes a equipos") pero NO hay destinatario o número específico definido aún, o la herramienta devuelve un error indicando falta de parámetros, NO intentes llamar herramientas a ciegas repetidamente. En su lugar, responde amablemente al usuario pidiéndole la confirmación o el detalle que falta (ej: "¿A qué centro o destinatario deseas enviar el mensaje y cuál es el contenido exacto?").
 
-**REGLA #3 - HONESTIDAD TÉCNICA:**
+**REGLA #3 - HONESTIDAD TÉCNICA Y LÍMITE DE REINTENTOS:**
+- Si una herramienta falla o no devuelve datos, explica la situación con naturalidad. NUNCA reintentes llamar herramientas repetidamente en bucle con los mismos parámetros erróneos.
 - Si no hay datos, di simplemente que no existen registros para ese periodo. No inventes excusas técnicas.
 """
 

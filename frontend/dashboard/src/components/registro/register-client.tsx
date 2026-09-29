@@ -20,7 +20,10 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, FileEdit, Trash2, UserPlus, Loader2, Users, TrendingUp, FileDown } from "lucide-react";
+import { MoreHorizontal, FileEdit, Trash2, UserPlus, Loader2, Users, TrendingUp, FileDown, Eye, Printer } from "lucide-react";
+import { Progress } from "../ui/progress";
+import { completeness } from "@/lib/cmci/engine";
+import Link from "next/link";
 import { Input } from "../ui/input";
 import { useRole } from "@/hooks/use-role";
 import { CreateEditChildDialog } from "./create-edit-child-dialog";
@@ -68,6 +71,23 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("activo");
+    // F3 CMCI: tabs Activos|Egresados|Todos + filtro incompletos + Ver read-only
+    const [tab, setTab] = useState<"activos" | "egresados" | "todos">("activos");
+    const [onlyIncomplete, setOnlyIncomplete] = useState(false);
+    const [viewChild, setViewChild] = useState<Child | null>(null);
+
+    /** Completitud §10.4 heurística cliente (TODO F1-backend: profile_completeness real con IDII/tomas vigentes). */
+    const getCompleteness = (r: Child) => completeness({
+        vuln: !!(r.cedula && r.enrollment_date),
+        socio: !!(r.assigned_group && r.enrollment_date),
+        idii: r.status === "activo" && !!r.assigned_group,
+        medica: !!(r.cedula && r.age_months > 0),
+        postulacion: !!r.enrollment_date,
+    });
+
+    useEffect(() => {
+        setStatusFilter(tab === "activos" ? "activo" : tab === "egresados" ? "egresado" : "all");
+    }, [tab]);
 
     // Edit Dialog State
     const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -197,10 +217,13 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
     const filteredRecords = records.filter(
         (record) => {
             const searchLower = filter.toLowerCase();
-            return (
+            const matchesSearch = (
                 record.full_name.toLowerCase().includes(searchLower) ||
                 (record.cedula && record.cedula.includes(searchLower))
             );
+            if (!matchesSearch) return false;
+            if (onlyIncomplete) return !getCompleteness(record).complete;
+            return true;
         }
     );
 
@@ -217,6 +240,17 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
     return (
         <Card>
             <CardContent className="pt-6">
+                {/* F3 Tabs Activos|Egresados|Todos */}
+                <div className="flex gap-2 mb-4">
+                    {(["activos", "egresados", "todos"] as const).map((t) => (
+                        <Button key={t} variant={tab === t ? "default" : "outline"} size="sm" onClick={() => setTab(t)}>
+                            {t === "activos" ? "Activos" : t === "egresados" ? "Egresados" : "Todos"}
+                        </Button>
+                    ))}
+                    <Button variant={onlyIncomplete ? "destructive" : "ghost"} size="sm" onClick={() => setOnlyIncomplete((v) => !v)} className="ml-auto">
+                        {onlyIncomplete ? "Mostrando incompletos ✕" : "Filtrar incompletos"}
+                    </Button>
+                </div>
                 <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
                     <div className="flex flex-col sm:flex-row gap-2 w-full md:max-w-xl">
                         <Input
@@ -257,6 +291,7 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                 <TableHead>Cédula Identidad</TableHead>
                                 <TableHead>Nombre Completo</TableHead>
                                 <TableHead>Edad</TableHead>
+                                <TableHead>Completitud</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
@@ -264,9 +299,17 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                         <TableBody>
                             {filteredRecords.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-4">No se encontraron registros</TableCell>
+                                    <TableCell colSpan={6} className="text-center py-4">No se encontraron registros</TableCell>
                                 </TableRow>
-                            ) : filteredRecords.map((record) => (
+                            ) : filteredRecords.map((record) => {
+                                const comp = getCompleteness(record);
+                                const compCell = (
+                                    <div className="flex items-center gap-2 min-w-[120px]">
+                                        <Progress value={comp.pct} className={comp.complete ? "[&>div]:bg-green-600" : "[&>div]:bg-red-500"} />
+                                        <span className={comp.complete ? "text-green-600 text-xs font-bold" : "text-red-600 text-xs font-bold"}>{comp.pct}%</span>
+                                    </div>
+                                );
+                                return (
                                 <React.Fragment key={record.id}>
                                     <TableRow className="md:hidden flex flex-col p-4 space-y-2 border-b border-border/10">
                                         <TableCell>
@@ -274,25 +317,30 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                             <div className="text-sm text-muted-foreground">{record.cedula || 'S/C'}</div>
                                         </TableCell>
                                         <TableCell><span className="font-semibold md:hidden mr-2">Edad:</span>{record.age_display}</TableCell>
+                                        <TableCell><span className="font-semibold md:hidden mr-2">Completitud:</span>{compCell}</TableCell>
                                         <TableCell>
                                             <Badge variant={statusVariantMap[record.status] || 'default'}>
                                                 {statusLabelMap[record.status] || record.status}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-left md:text-right">
-                                            {!readOnly && (
-                                                <div className="flex gap-2 mt-2">
+                                            <div className="flex gap-2 mt-2">
+                                                <Button variant="outline" size="sm" onClick={() => setViewChild(record)}>
+                                                    <Eye className="mr-1 h-3 w-3" /> Ver
+                                                </Button>
+                                                {!readOnly && (
                                                     <Button variant="outline" size="sm" onClick={() => openEdit(record)}>
                                                         Editar
                                                     </Button>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                     <TableRow className="hidden md:table-row hover:bg-white/5">
                                         <TableCell className="font-medium">{record.cedula || 'S/C'}</TableCell>
                                         <TableCell>{record.full_name}</TableCell>
                                         <TableCell>{record.age_display}</TableCell>
+                                        <TableCell>{compCell}</TableCell>
                                         <TableCell>
                                             <Badge variant={statusVariantMap[record.status] || 'default'}>
                                                 {statusLabelMap[record.status] || record.status}
@@ -309,6 +357,9 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="bg-background/80 backdrop-blur-lg border-border/30">
                                                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => setViewChild(record)}>
+                                                            <Eye className="mr-2 h-4 w-4" /> Ver ficha (solo lectura)
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => openEdit(record)}>
                                                             <FileEdit className="mr-2 h-4 w-4" /> Editar Información
                                                         </DropdownMenuItem>
@@ -331,11 +382,36 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                         </TableCell>
                                     </TableRow>
                                 </React.Fragment>
-                            ))}
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </div>
             </CardContent>
+
+            {/* F3 Ver read-only separado de Editar */}
+            <Dialog open={!!viewChild} onOpenChange={(o) => !o && setViewChild(null)}>
+                <DialogContent className="sm:max-w-[520px]">
+                    <DialogHeader>
+                        <DialogTitle>Ficha — {viewChild?.full_name}</DialogTitle>
+                        <DialogDescription>Solo lectura. Para modificar use Editar.</DialogDescription>
+                    </DialogHeader>
+                    {viewChild && (
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div><span className="text-muted-foreground block text-xs uppercase">Cédula</span>{viewChild.cedula || "S/C"}</div>
+                            <div><span className="text-muted-foreground block text-xs uppercase">Edad</span>{viewChild.age_display}</div>
+                            <div><span className="text-muted-foreground block text-xs uppercase">Estado</span>{statusLabelMap[viewChild.status] || viewChild.status}</div>
+                            <div><span className="text-muted-foreground block text-xs uppercase">Grupo</span>{viewChild.assigned_group || "—"}</div>
+                            <div><span className="text-muted-foreground block text-xs uppercase">Ingreso</span>{viewChild.enrollment_date}</div>
+                            <div><span className="text-muted-foreground block text-xs uppercase">Completitud</span>{getCompleteness(viewChild).pct}% {getCompleteness(viewChild).complete ? "(completo)" : "(incompleto: salud + IDII + tomas vigentes)"}</div>
+                            <div className="col-span-2 flex gap-2 pt-2">
+                                <Link href={`/registro/${viewChild.id}/print`}><Button variant="outline" size="sm"><Printer className="mr-1 h-3 w-3" /> Imprimir ficha</Button></Link>
+                                {!readOnly && <Button size="sm" onClick={() => { openEdit(viewChild); setViewChild(null); }}>Editar</Button>}
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
 
             <CreateEditChildDialog
                 open={isEditDialogOpen}
@@ -388,3 +464,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";

@@ -83,7 +83,7 @@ export default function BeneficiariosSocialPage() {
         phone: '+593991238899',
         whatsapp_phone: '+593991238899',
         address: 'Isla Trinitaria, Coop. 25 de Julio, Guayaquil',
-        program_name: 'Atención Primera Infancia CDI',
+        program_name: 'Atención Primera Infancia',
         intake_channel: 'langgraph_agent',
         status: 'active',
         eligibility_score: 88,
@@ -94,7 +94,7 @@ export default function BeneficiariosSocialPage() {
         form_data: {
           edad_meses: 18,
           madre_trabajadora: true,
-          centro_cercano_solicitado: 'CDI Semillitas del Futuro',
+          centro_cercano_solicitado: 'Centro Semillitas del Futuro',
           lactancia_materna: false,
           ingesta_proteica_semanal: '1-2 veces',
         },

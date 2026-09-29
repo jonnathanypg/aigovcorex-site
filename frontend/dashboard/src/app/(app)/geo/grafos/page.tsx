@@ -20,7 +20,7 @@ export default function GeoGrafosPage() {
             { source: 'Banco Interamericano de Desarrollo (BID)', rel: 'Financia Programa IDII', target: 'MIES Ecuador (Nivel Nacional)', color: '#8b5cf6' },
             { source: 'MIES Ecuador (Nivel Nacional)', rel: 'Convenio de Cooperación', target: 'GAD Municipal de Guayaquil', color: '#0ea5e9' },
             { source: 'GAD Municipal de Guayaquil', rel: 'Opera y Supervisa', target: 'Fundación Vida y Esperanza (ONG)', color: '#10b981' },
-            { source: 'Fundación Vida y Esperanza (ONG)', rel: 'Administra Centro', target: 'CDI Huellitas de Amor (Guasmo Sur)', color: '#f97316' }
+            { source: 'Fundación Vida y Esperanza (ONG)', rel: 'Administra Centro', target: 'Centro Huellitas de Amor (Guasmo Sur)', color: '#f97316' }
           ].map((edge, i) => (
             <div key={i} className="p-4 rounded-xl bg-white/3 border border-white/6 flex flex-col md:flex-row md:items-center justify-between gap-2">
               <span className="font-semibold text-white text-xs">{edge.source}</span>

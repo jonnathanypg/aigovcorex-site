@@ -816,8 +816,14 @@ def _generate_schema_via_llm(program_name: str, prompt_text: str) -> dict | None
         return None
 
 
-def _calculate_eligibility_score(form_data: dict, rules: list) -> tuple:
-    """Calcula el score de elegibilidad (0 a 100) en base a las reglas configuradas"""
+def _calculate_eligibility_score(form_data: dict, rules: list, program_id=None) -> tuple:
+    """Calcula el score de elegibilidad (0 a 100) en base a las reglas configuradas.
+
+    `program_id` es opcional (default None) para no cambiar la firma de los
+    callers existentes; solo da contexto de trazabilidad al shadow ML (F2).
+    El score retornado es 100% determinista: el ML shadow solo informa
+    en `_calculate_eligibility_score.last_ml_shadow` y jamás lo modifica.
+    """
     score = 0.0
     notes = []
     if not rules or not isinstance(rules, list):
@@ -855,7 +861,49 @@ def _calculate_eligibility_score(form_data: dict, rules: list) -> tuple:
             notes.append(f"+{points:.0f} pts por criterio en {field_id}")
 
     final_score = min(100.0, max(0.0, score))
+    _attach_ml_shadow(program_id, form_data, final_score)
     return final_score, "; ".join(notes) or "Sin criterios específicos cumplidos."
+
+
+def _load_ml_calibrate():
+    """Import lazy del calibrador shadow F2 (multi-ruta; None si no disponible)."""
+    try:
+        from services.ml_calibrator import calibrate
+        return calibrate
+    except ImportError:
+        pass
+    try:  # fallback por ubicación de archivo, sin depender de sys.path
+        import importlib.util
+        import os
+        here = os.path.dirname(os.path.abspath(__file__))
+        cand = os.path.normpath(os.path.join(
+            here, '..', '..', 'early-childhood', 'services', 'ml_calibrator.py'))
+        if os.path.isfile(cand):
+            spec = importlib.util.spec_from_file_location(
+                'cmci_ml_calibrator_shadow', cand)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod.calibrate
+    except Exception:
+        pass
+    return None
+
+
+def _attach_ml_shadow(program_id, form_data, deterministic_score):
+    """Shadow ML post-score F2: informa sin alterar. Nunca lanza excepciones."""
+    _calculate_eligibility_score.last_ml_shadow = {"mode": "shadow", "proba": None}
+    try:
+        calibrate = _load_ml_calibrate()
+        if calibrate is None:
+            _calculate_eligibility_score.last_ml_shadow = {
+                "mode": "shadow", "proba": None, "reason": "sin_calibrador"}
+            return
+        _, info = calibrate(program_id, form_data or {}, deterministic_score)
+        _calculate_eligibility_score.last_ml_shadow = info
+    except Exception as e:
+        logger.warning(f"ML shadow hook fallo ({e}); score determinista intacto")
+        _calculate_eligibility_score.last_ml_shadow = {
+            "mode": "shadow", "proba": None, "reason": "excepcion_hook"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1304,7 +1352,9 @@ def submit_program_form(program_id: int):
 
         # Calcular score de elegibilidad con las reglas configuradas
         rules = form_def.eligibility_rules if form_def else []
-        score, notes = _calculate_eligibility_score(form_data, rules)
+        score, notes = _calculate_eligibility_score(form_data, rules, program_id)
+        ml_shadow = getattr(_calculate_eligibility_score,
+                            'last_ml_shadow', None) or {"mode": "shadow", "proba": None}
 
         beneficiary = ProgramBeneficiary(
             program_id=program.id,
@@ -1332,6 +1382,7 @@ def submit_program_form(program_id: int):
             'beneficiary_id': beneficiary.id,
             'eligibility_score': score,
             'status': beneficiary.status,
+            'ml_shadow': ml_shadow,  # F2 informativo: no afecta score ni status
             'data': beneficiary.to_dict()
         }), 201
 
@@ -1425,7 +1476,9 @@ def conversational_step(program_id: int):
         if not remaining_fields:
             # Calcular score de elegibilidad y guardar en DB
             rules = form_def.eligibility_rules or []
-            score, notes = _calculate_eligibility_score(current_data, rules)
+            score, notes = _calculate_eligibility_score(current_data, rules, program_id)
+            ml_shadow = getattr(_calculate_eligibility_score,
+                                'last_ml_shadow', None) or {"mode": "shadow", "proba": None}
 
             beneficiary = ProgramBeneficiary(
                 program_id=program.id,
@@ -1450,6 +1503,7 @@ def conversational_step(program_id: int):
                 'completed': True,
                 'response': success_response,
                 'beneficiary_id': beneficiary.id,
+                'ml_shadow': ml_shadow,  # F2 informativo: no afecta score ni status
                 'collected_data': current_data
             }), 200
 
@@ -1508,3 +1562,195 @@ def get_public_program_form(program_id: int):
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6. WIZARD CMCI F4 — 33+7 preguntas WhatsApp → ProgramFormDefinition
+# (Fase 4 del plan. Usa SMART catalog + generate via LLM + validate
+# _validate_field_value de este mismo módulo. Sin firma electrónica.)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Catálogo inline (espejo de services/cmci_wizard.py para el módulo canónico;
+# la fuente de verdad de preguntas vive en early-childhood/services/cmci_wizard.py).
+_CMCI_WIZARD_QUESTIONS = [
+    # 33 vulnerabilidad §3.1 (id, label, type, prompt)
+    ('vuln_I11_percapita', 'Ingreso per-cápita del hogar ($)', 'currency',
+     '¿A cuánto asciende el ingreso total mensual de su hogar? (solo el número, ejemplo 750)'),
+    ('vuln_I12_insercion', 'Inserción laboral de los cuidadores', 'select',
+     '¿Los cuidadores tienen empleo formal, informal o están desempleados?'),
+    ('vuln_I13_estabilidad', 'Estabilidad de ingresos', 'select',
+     '¿Sus ingresos son estables, variables, ocasionales o no tienen ingresos?'),
+    ('vuln_I14_dependencia', 'Dependencia económica', 'currency',
+     '¿Cuántas personas dependen de cada persona que genera ingresos? (solo el número)'),
+    ('vuln_I15_registro_social', 'Registro social', 'select',
+     '¿Su hogar consta en el registro social? (sin dato / vulnerabilidad / pobreza / extrema)'),
+    ('vuln_I21_estructura', 'Estructura y jefatura del hogar', 'select',
+     '¿Cómo está conformado su hogar? (biparental / monoparental con apoyo / sin apoyo / terceros)'),
+    ('vuln_I22_nna', 'NNA dependientes', 'number',
+     '¿Cuántos niños, niñas o adolescentes dependen de usted? (solo el número)'),
+    ('vuln_I23_adicionales', 'Adicionales dependientes', 'number',
+     '¿Cuántas personas adicionales dependen de su hogar? (solo el número)'),
+    ('vuln_I31_laboral_principal', 'Situación laboral principal', 'select',
+     '¿El cuidador principal tiene empleo formal, informal, busca empleo o no busca?'),
+    ('vuln_I32_segundo_cuidador', 'Segundo cuidador', 'select',
+     '¿El segundo cuidador trabaja? (formal / informal / desempleado / no aplica)'),
+    ('vuln_I33_horario', 'Compatibilidad de horario', 'select',
+     '¿Su horario laboral es compatible con el cuidado del niño? (sí / parcial / no)'),
+    ('vuln_I34_estudios', 'Estudios del cuidador principal', 'select',
+     '¿Nivel de estudios del cuidador principal? (sin instrucción / primaria / secundaria / superior)'),
+    ('vuln_I41_cuidador', 'Cuidador permanente', 'select',
+     '¿Quién cuida permanentemente al niño? (madre / padre / abuelos / terceros / nadie)'),
+    ('vuln_I42_fragilidad', 'Fragilidad del arreglo', 'select',
+     '¿El arreglo de cuidado es estable o frágil? (estable / parcial / frágil / sin arreglo)'),
+    ('vuln_I43_horas_sin_cuidador', 'Horas sin cuidador', 'select',
+     '¿Cuántas horas al día el niño queda sin cuidador? (ninguna / 1-2h / 3-4h / 5h o más)'),
+    ('vuln_I44_riesgo_interrupcion', 'Riesgo de interrupción', 'select',
+     '¿Existe riesgo de que el cuidado se interrumpa? (no / leve / moderado / alto)'),
+    ('vuln_I45_acceso_cuidado', 'Acceso a cuidado infantil', 'select',
+     '¿El niño accede a servicio de cuidado? (sí CMCI / sí otro / lista espera / no)'),
+    ('vuln_I51_tenencia', 'Tenencia de vivienda', 'select',
+     '¿Su vivienda es propia, arrendada, prestada o inestable?'),
+    ('vuln_I52_hacinamiento', 'Hacinamiento', 'currency',
+     '¿Cuántas personas duermen por dormitorio? (solo el número, ejemplo 3)'),
+    ('vuln_I53_servicios', 'Servicios básicos', 'select',
+     '¿Con cuántos servicios básicos cuenta? (3 servicios / 2 servicios / 1 o ninguno)'),
+    ('vuln_I54_riesgo_fisico', 'Riesgo físico/ambiental', 'select',
+     '¿Su vivienda está en zona de riesgo? (no / leve / moderado / alto)'),
+    ('vuln_I61_necesidad_nino', 'Necesidad especial del niño', 'select',
+     '¿El niño tiene necesidad especial o discapacidad? (no / leve / moderada / severa)'),
+    ('vuln_I62_barrera_cuidador', 'Barrera de salud del cuidador', 'select',
+     '¿El cuidador tiene limitación de salud? (no / leve / moderada / severa)'),
+    ('vuln_I63_cronica', 'Enfermedad crónica en el hogar', 'select',
+     '¿Alguien tiene enfermedad crónica o catastrófica? (no / controlada / parcial / grave)'),
+    ('vuln_I64_acceso_salud', 'Acceso a salud', 'select',
+     '¿Acceden a centro de salud cuando lo necesitan? (siempre / a veces / rara vez / nunca)'),
+    ('vuln_I71_violencia', 'Violencia intrafamiliar', 'select',
+     '¿Existe violencia en el hogar? (no / observación / claro-derivación). Es confidencial.'),
+    ('vuln_I72_negligencia', 'Negligencia en el cuidado', 'select',
+     '¿El niño recibe cuidado adecuado siempre? (sí / observación / no-derivación)'),
+    ('vuln_I73_redes_proteccion', 'Redes de protección', 'select',
+     '¿Cuenta con redes de protección? (sí / parcial / no)'),
+    ('vuln_I74_movilidad', 'Movilidad humana', 'select',
+     '¿Su hogar está en movilidad humana? (no aplica / regularización / alta vulnerabilidad)'),
+    ('vuln_I75_otro_riesgo', 'Otro riesgo', 'select',
+     '¿Existe otro riesgo en el hogar? (no / observación / claro-derivación)'),
+    ('vuln_I81_familiares', 'Familiares de apoyo', 'select',
+     '¿Tiene familiares que puedan apoyarle? (siempre / a veces / rara vez / nunca)'),
+    ('vuln_I82_frecuencia', 'Frecuencia del apoyo', 'select',
+     '¿Con qué frecuencia recibe apoyo? (siempre / a veces / rara vez / nunca)'),
+    ('vuln_I83_comunitario', 'Apoyo comunitario', 'select',
+     '¿Su comunidad le apoya? (siempre / a veces / rara vez / nunca)'),
+    # 7 socioeconómicas §3.2
+    ('socio_ingreso', 'Ingreso familiar mensual y per-cápita ($)', 'currency',
+     '¿A cuánto asciende el ingreso mensual total de su hogar? (solo el número)'),
+    ('socio_composicion', 'Composición y dependencia', 'text',
+     '¿Cuántas personas viven en su hogar y cuántas generan ingresos? (ejemplo: 6 personas, 2 generan ingresos)'),
+    ('socio_laboral', 'Situación laboral (B64)', 'select',
+     '¿Su situación laboral es empleo formal, jubilado, empleo informal, trabajo independiente o desempleo?'),
+    ('socio_vivienda', 'Vivienda: tenencia y tipo (B65)', 'select',
+     '¿Su vivienda es propia, arrendada, prestada/cedida o anticresis? ¿Casa o departamento?'),
+    ('socio_servicios', 'Cobertura servicios (B55)', 'text',
+     '¿Cuenta con agua, luz, saneamiento, recolección, internet, teléfono? Dígame cuáles SÍ tiene.'),
+    ('socio_gastos', 'Gastos mensuales (E31)', 'currency',
+     '¿Cuánto gasta al mes en total? (solo el número)'),
+    ('socio_educacion', 'Nivel educativo (B68)', 'select',
+     '¿Su nivel educativo? (sin escolaridad / primaria / secundaria / bachillerato / técnico / universitario / posgrado)'),
+]
+
+
+def _cmci_wizard_schema(program_name='CMCI Ficha Integral'):
+    """Schema 33+7 listo para ProgramFormDefinition (fallback determinista)."""
+    fields = [{'id': qid, 'label': label, 'type': ftype, 'required': True,
+               'conversational_prompt': prompt,
+               'section_id': 'vulnerabilidad' if qid.startswith('vuln_') else 'socioeconomico'}
+              for qid, label, ftype, prompt in _CMCI_WIZARD_QUESTIONS]
+    return {
+        'form_title': f'Ficha integral CMCI: {program_name}',
+        'form_description': 'Wizard conversacional WhatsApp: 33 vulnerabilidad + 7 socioeconómicas.',
+        'sections': [
+            {'id': 'vulnerabilidad', 'title': '1. Valoración de vulnerabilidad (33)',
+             'description': 'Entorno + redes + vivienda + comunitario',
+             'field_ids': [f['id'] for f in fields if f['section_id'] == 'vulnerabilidad']},
+            {'id': 'socioeconomico', 'title': '2. Situación socioeconómica (7)',
+             'description': 'Ingresos del hogar y per-cápita',
+             'field_ids': [f['id'] for f in fields if f['section_id'] == 'socioeconomico']},
+        ],
+        'fields': fields,
+        'eligibility_rules': [],
+        'conversational_instructions': (
+            'Guía WhatsApp CMCI: una pregunta a la vez con conversational_prompt; '
+            'valida cada dato con _validate_field_value antes de avanzar. Tono cercano ecuatoriano.'
+        ),
+        'success_message': '¡Gracias! Su ficha CMCI fue registrada. El educador validará los pendientes.',
+    }
+
+
+@social_programs_bp.route('/programs/<int:program_id>/wizard-cmci', methods=['POST'])
+@jwt_required()
+def wizard_cmci_generate(program_id: int):
+    """
+    F4: genera el wizard CMCI 33+7 en el ProgramFormDefinition.
+    LLM primero (respeta detalle), fallback determinista después.
+    Cada pregunta usa conversational_prompt y se valida con _validate_field_value.
+    """
+    try:
+        program = SocialProgram.query.get_or_404(program_id)
+        data = request.get_json() or {}
+        prompt_text = data.get('prompt') or program.description or program.name
+        schema = _generate_schema_via_llm(f"CMCI {program.name}", prompt_text)
+        # El LLM debe cubrir las 40 preguntas; si trae menos de 35 fields, fallback CMCI
+        if not schema or len(schema.get('fields', [])) < 35:
+            schema = _cmci_wizard_schema(program.name)
+        form_def = program.form_definition
+        if not form_def:
+            form_def = ProgramFormDefinition(program_id=program.id, fields=[])
+            db.session.add(form_def)
+        form_def.form_title = schema.get('form_title', f'Ficha CMCI: {program.name}')
+        form_def.form_description = schema.get('form_description', prompt_text)
+        form_def.fields = schema.get('fields', [])
+        form_def.eligibility_rules = schema.get('eligibility_rules', [])
+        form_def.conversational_instructions = schema.get('conversational_instructions', '')
+        form_def.success_message = schema.get('success_message', 'Ficha CMCI registrada.')
+        form_def.version = (form_def.version or 1) + 1
+        db.session.flush()
+        _set_form_sections(form_def, schema.get('sections', []))
+        db.session.commit()
+        payload = form_def.to_dict()
+        payload['sections'] = _get_form_sections(form_def)
+        payload['wizard_count'] = len(payload.get('fields', []))
+        return jsonify({'success': True,
+                        'message': f"Wizard CMCI generado ({payload['wizard_count']} preguntas)",
+                        'data': payload}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"wizard_cmci error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@social_programs_bp.route('/programs/<int:program_id>/wizard-cmci/validate', methods=['POST'])
+@jwt_required()
+def wizard_cmci_validate(program_id: int):
+    """F4: valida UNA respuesta del wizard con _validate_field_value (no avanza si falla)."""
+    try:
+        program = SocialProgram.query.get_or_404(program_id)
+        data = request.get_json() or {}
+        field_id, answer = data.get('field_id'), data.get('answer', '')
+        form_def = program.form_definition
+        fields = (form_def.fields if form_def and form_def.fields else [])
+        field = next((f for f in fields if f.get('id') == field_id), None)
+        if not field:
+            field = next(({'id': q[0], 'label': q[1], 'type': q[2],
+                           'required': True, 'conversational_prompt': q[3]}
+                          for q in _CMCI_WIZARD_QUESTIONS if q[0] == field_id), None)
+        if not field:
+            return jsonify({'success': False, 'error': f'Pregunta desconocida: {field_id}'}), 404
+        ok, cleaned, hint = _validate_field_value(field, answer)
+        if not ok:
+            retry = _generate_human_conversational_retry(program.name, field, answer, hint)
+            return jsonify({'success': True, 'valid': False, 'hint': hint,
+                            'response': retry, 'field_id': field_id}), 200
+        return jsonify({'success': True, 'valid': True, 'cleaned': cleaned,
+                        'field_id': field_id}), 200
+    except Exception as e:
+        logger.error(f"wizard_cmci_validate error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -30,7 +30,7 @@ export function OSModuleRail({ activeModule, onModuleChange }: OSModuleRailProps
 
   return (
     <div
-      className="os-module-rail flex flex-col items-center py-3 gap-1 shrink-0"
+      className="os-module-rail print:hidden flex flex-col items-center py-3 gap-1 shrink-0"
       style={{ width: '72px', minHeight: '100%' }}
     >
       {/* OS Logo */}

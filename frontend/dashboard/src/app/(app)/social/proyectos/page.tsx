@@ -22,7 +22,7 @@ export default function ProyectosActivosPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
           { name: 'Reducción DCI Guasmo 2026', org: 'BID + GAD Guayaquil', budget: '$450,000', progress: 65, status: 'En Ejecución' },
-          { name: 'Equipamiento Tecnológico CDIs Litoral', org: 'MIES + Fundación Vida', budget: '$180,000', progress: 90, status: 'Fase Final' },
+          { name: 'Equipamiento Tecnológico Litoral', org: 'MIES + Fundación Vida', budget: '$180,000', progress: 90, status: 'Fase Final' },
           { name: 'Seguimiento Nutricional Rural Daule', org: 'GAD Daule + MIES', budget: '$95,000', progress: 30, status: 'Inicio' },
         ].map((p, i) => (
           <div key={i} className="p-5 rounded-2xl bg-zinc-900/60 border border-white/10 space-y-3">

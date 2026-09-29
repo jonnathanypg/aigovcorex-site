@@ -442,3 +442,31 @@ textarea:focus {
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
+/* ════════════════════════════════════
+   🖨️ F3 CMCI — Impresión oficial A4
+   Fichas portrait · matrices landscape · sin firma electrónica
+   ════════════════════════════════════ */
+.print-only { display: none; }
+.print-sheet { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 11pt; line-height: 1.4; color: #000; }
+.print-sheet h1 { font-size: 16pt; }
+.print-sheet h2 { font-size: 11pt; }
+.print-sheet table { page-break-inside: avoid; border-collapse: collapse; width: 100%; }
+.print-sheet thead { display: table-header-group; }
+.print-sheet tr { page-break-inside: avoid; }
+.print-sheet .print-row-alt { background: #f3f4f6; }
+@media print {
+  .os-module-rail, .os-subnav-panel, .os-bottom-nav, .app-header,
+  .os-shell-root > div:first-child, header.app-header { display: none !important; }
+  body { background: #fff !important; animation: none; }
+  body * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .print-sheet { box-shadow: none !important; margin: 0 !important; max-width: none !important; font-size: 11pt; }
+  .print-only { display: block; }
+  thead { display: table-header-group; }
+  table { page-break-inside: avoid; }
+  tr { page-break-inside: avoid; }
+  .print-row-alt { background: #f3f4f6 !important; }
+  @page { size: A4 portrait; margin: 12mm; }
+  .print-landscape { page: landscape-sheet; }
+  @page landscape-sheet { size: A4 landscape; margin: 12mm; }
+}
+

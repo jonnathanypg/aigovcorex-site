@@ -36,7 +36,7 @@ const checklistItems = [
     {
         key: 'dashboard',
         title: 'Explorar el Dashboard',
-        desc: 'Conoce los KPIs y métricas generales del CDI',
+        desc: 'Conoce los KPIs y métricas generales del centro',
         href: '/dashboard',
         icon: LayoutDashboard,
     },

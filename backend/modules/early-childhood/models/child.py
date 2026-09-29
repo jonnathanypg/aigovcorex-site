@@ -68,7 +68,7 @@ class Representative(db.Model, BaseModel):
     family_id = db.Column(db.Integer, db.ForeignKey('families.id', ondelete='CASCADE'), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    cedula = db.Column(db.String(10), unique=True)
+    cedula = db.Column(db.String(10))
     relationship = db.Column(db.Enum('madre', 'padre', 'abuelo', 'abuela', 'tio', 'tia', 'tutor_legal', 'otro', name='relationship_enum'), nullable=False)
     phone = db.Column(db.String(20))
     email = db.Column(db.String(255))
@@ -83,6 +83,8 @@ class Representative(db.Model, BaseModel):
     
     __table_args__ = (
         db.Index('idx_rep_family', 'family_id'),
+        db.Index('idx_rep_cedula', 'cedula'),
+        db.UniqueConstraint('family_id', 'cedula', name='uq_rep_family_cedula'),
     )
     
     @property
@@ -103,7 +105,7 @@ class Child(db.Model, BaseModel):
     family_id = db.Column(db.Integer, db.ForeignKey('families.id'), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    cedula = db.Column(db.String(10), unique=True)
+    cedula = db.Column(db.String(10))
     birth_date = db.Column(db.Date, nullable=False)
     gender = db.Column(db.Enum('masculino', 'femenino', name='gender_enum'), nullable=False)
     birth_weight = db.Column(db.Numeric(5, 2))
@@ -127,6 +129,8 @@ class Child(db.Model, BaseModel):
     
     __table_args__ = (
         db.Index('idx_child_tenant', 'tenant_id'),
+        db.Index('idx_child_cedula', 'cedula'),
+        db.UniqueConstraint('tenant_id', 'cedula', name='uq_child_tenant_cedula'),
         db.Index('idx_child_status', 'status'),
         db.Index('idx_child_educator', 'assigned_educator_id'),
     )

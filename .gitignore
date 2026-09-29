@@ -51,3 +51,7 @@ frontend/dashboard/.env
 !.env.example
 !*/.env.example
 !*/*/.env.example
+
+# Referencia local CMCI (no va a git/VPS)
+IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/
+captura-conversiaon-whatsapp.jpeg

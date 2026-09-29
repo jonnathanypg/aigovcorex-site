@@ -44,7 +44,7 @@ export default function ConfigIaPage() {
             <Label className="text-xs text-white/70">System Prompt Maestro</Label>
             <Textarea
               rows={5}
-              defaultValue="Eres el Agente Orquestador Omnisciente de AI GovCoreX. Tu misión es coordinar la atención ciudadana, validar postulaciones de programas sociales y supervisar el bienestar integral en los centros CDI con empatía, precisión y apego estricto a las normativas públicas."
+              defaultValue="Eres el Agente Orquestador Omnisciente de AI GovCoreX. Tu misión es coordinar la atención ciudadana, validar postulaciones de programas sociales y supervisar el bienestar integral en los centros con empatía, precisión y apego estricto a las normativas públicas."
               className="bg-white/5 border-white/10 text-white text-xs"
             />
           </div>

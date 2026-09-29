@@ -29,7 +29,7 @@ const TOUR_STEPS: TourStep[] = [
         targetId: 'onboarding-nav-dashboard',
         route: '/dashboard',
         titleKey: 'Panel Principal',
-        descKey: 'Visualiza KPIs globales del CDI: asistencia, alertas nutricionales, postulaciones recientes y tendencias de desarrollo infantil en tiempo real.',
+        descKey: 'Visualiza KPIs globales del centro: asistencia, alertas nutricionales, postulaciones recientes y tendencias de desarrollo infantil en tiempo real.',
         placement: 'right',
     },
     {

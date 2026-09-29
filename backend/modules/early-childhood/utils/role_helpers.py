@@ -58,3 +58,64 @@ def get_tenant_ids_for_user(user):
     elif user.tenant_id:
         return [user.tenant_id]
     return []
+
+
+# ── F5 · Matriz RBAC CMCI (§10.7 plan; sin firma electrónica: la
+# aprobación es firma física sobre papel impreso, fuera del sistema) ──
+# Central global (lectura todo) / Coordinadora revisa en papel (lectura
+# centro, no crea fichas) / Educadora crea / Auxiliar apoyo (crea) /
+# Catering solo menú+ingesta diaria.
+# Nombres tolerantes a variantes ES/EN (coordinator/coordinadora...).
+
+def _role_name(user):
+    role = getattr(user, "role", None)
+    return (getattr(role, "name", "") or "").lower()
+
+
+def is_central_global(user):
+    """Central DASE/MDH + admins: visibilidad global (lectura)."""
+    return _role_name(user) in (
+        "super_admin", "license_admin", "supervisor", "admin",
+        "central", "central_dase", "central_mdh", "coordinador_general",
+    )
+
+
+def is_coordinadora(user):
+    return _role_name(user) in ("coordinator", "coordinadora",
+                                "coordinadora_centro")
+
+
+def is_educadora(user):
+    return _role_name(user) in ("educadora", "educador", "teacher")
+
+
+def is_auxiliar(user):
+    rn = _role_name(user)
+    return rn.startswith("auxiliar") or rn in ("asistente", "assistant",
+                                               "auxiliar_parvulos",
+                                               "auxiliar_servicios")
+
+
+def is_catering(user):
+    rn = _role_name(user)
+    return rn.startswith("catering") or rn in ("cocina", "alimentacion")
+
+
+def is_admin_override(user):
+    """super/license admin: bypass operativo (evita lockout)."""
+    return _role_name(user) in ("super_admin", "license_admin")
+
+
+def can_create_ficha(user):
+    """Educadora crea, Auxiliar apoya (crea), admin override. Coordinadora
+    revisa en papel impreso (no crea en sistema); Central solo lectura;
+    Catering solo menú/ingesta."""
+    if is_admin_override(user):
+        return True
+    return is_educadora(user) or is_auxiliar(user)
+
+
+def can_view_cmci_global(user):
+    """Central ve todos los centros; resto solo su tenant."""
+    return is_central_global(user) or is_admin_override(user) \
+        or is_multi_center_role(user)

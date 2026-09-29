@@ -61,9 +61,9 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
   const currentMod = OS_MODULES.find(m => m.id === activeModule);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="os-shell-root flex h-screen w-full overflow-hidden bg-background">
       {/* ── Level 1: Module Rail (Desktop) ── */}
-      <div className="hidden md:flex flex-col">
+      <div className="hidden md:flex flex-col print:hidden">
         <OSModuleRail activeModule={activeModule} onModuleChange={handleModuleChange} />
       </div>
 

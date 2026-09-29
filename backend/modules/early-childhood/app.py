@@ -41,6 +41,7 @@ def create_app(config_name=None):
     from api.educator import educator_bp
     from api.whatsapp_webhook import whatsapp_webhook_bp
     from api.telegram_webhook import telegram_webhook_bp
+    from api.channels_os_webhook import channels_os_webhook_bp
     from api.knowledge import knowledge_bp
     from api.reports import reports_bp
     from api.voice import voice_bp
@@ -57,8 +58,8 @@ def create_app(config_name=None):
     app.register_blueprint(educator_bp)
     app.register_blueprint(whatsapp_webhook_bp)
     app.register_blueprint(telegram_webhook_bp)
+    app.register_blueprint(channels_os_webhook_bp)
     app.register_blueprint(knowledge_bp)
-    app.register_blueprint(reports_bp, url_prefix='/api')
     app.register_blueprint(voice_bp, url_prefix='/api/voice')
     app.register_blueprint(public_chat_bp)
     app.register_blueprint(chat_upload_bp)
@@ -185,6 +186,22 @@ def create_app(config_name=None):
             # Set default modules for existing licenses that have null
             try:
                 db.session.execute(text("UPDATE licenses SET enabled_modules = '[\"kindicore\",\"social\",\"geo\",\"channels\",\"copilot\"]' WHERE enabled_modules IS NULL"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            # CMCI Fase 0: Tenant.cmci_code + country_iso (idempotente: try/except por columna)
+            for col_sql in [
+                "ALTER TABLE tenants ADD COLUMN cmci_code VARCHAR(10) NULL",
+                "ALTER TABLE tenants ADD COLUMN country_iso VARCHAR(5) NULL DEFAULT 'EC'",
+            ]:
+                try:
+                    db.session.execute(text(col_sql))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            try:
+                db.session.execute(text("UPDATE tenants SET country_iso = 'EC' WHERE country_iso IS NULL"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()

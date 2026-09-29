@@ -10,17 +10,27 @@ from models.user import User
 
 class TenantContext:
     """Tenant context manager"""
-    
+
     @staticmethod
     def get_current_tenant_id():
         """Get current tenant ID from request context"""
         return getattr(g, 'tenant_id', None)
-    
+
     @staticmethod
     def get_current_user():
         """Get current user from request context"""
         return getattr(g, 'current_user', None)
-    
+
+    @staticmethod
+    def get_current_cmci_code():
+        """F5: código centro BH/GU/OR (= site_code) desde JWT o tenant."""
+        return getattr(g, 'cmci_code', None) or getattr(g, 'site_code', None)
+
+    @staticmethod
+    def get_current_country_iso():
+        """F5: país del tenant (default EC, multi-país desde F0)."""
+        return getattr(g, 'country_iso', 'EC') or 'EC'
+
     @staticmethod
     def set_tenant_context(user):
         """Set tenant context for current request"""
@@ -56,6 +66,27 @@ def tenant_required(f):
             
             # Set tenant context
             TenantContext.set_tenant_context(user)
+
+            # F5: cmci_code/site_code + country_iso desde claims JWT
+            # (inyectados en login/refresh) con fallback a tenant DB.
+            try:
+                from flask_jwt_extended import get_jwt
+                claims = get_jwt()
+            except Exception:
+                claims = {}
+            cmci_code = claims.get('cmci_code') or claims.get('site_code')
+            country_iso = claims.get('country_iso')
+            if not cmci_code or not country_iso:
+                tenant = getattr(user, 'tenant', None)
+                if tenant is not None:
+                    try:
+                        cmci_code = cmci_code or getattr(tenant, 'cmci_code', None)
+                        country_iso = country_iso or getattr(tenant, 'country_iso', None)
+                    except Exception:
+                        pass
+            g.cmci_code = cmci_code
+            g.site_code = claims.get('site_code') or cmci_code
+            g.country_iso = country_iso or 'EC'
             
         except Exception as e:
             return jsonify({'error': f'Error de autenticación: {str(e)}'}), 401

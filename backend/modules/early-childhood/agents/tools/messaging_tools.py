@@ -20,12 +20,25 @@ def check_messaging_permission(user_id: int) -> bool:
     """Check if user has permission to use messaging tools"""
     if not user_id:
         return False
-    user = User.query.get(user_id)
-    if not user or not user.role:
-        return False
-    # Only staff roles allowed
-    allowed_roles = ['license_admin', 'center_coordinator', 'educator', 'admin', 'worker', 'super_admin']
-    return user.role.name in allowed_roles
+    try:
+        from services.identity_resolver import IdentityResolver
+        user = IdentityResolver.get_user_or_virtual(user_id)
+        if not user or not user.role:
+            return False
+        # Only staff roles allowed (incluye aliases ES/EN: educator/educadora, center_coordinator/coordinator)
+        allowed_roles = ['license_admin', 'center_coordinator', 'coordinator', 'educator', 'educadora', 'admin', 'worker', 'super_admin']
+        return user.role.name in allowed_roles
+    except Exception:
+        try:
+            db.session.rollback()
+            user = User.query.get(user_id)
+            if not user or not user.role:
+                return False
+            allowed_roles = ['license_admin', 'center_coordinator', 'coordinator', 'educator', 'educadora', 'admin', 'worker', 'super_admin']
+            return user.role.name in allowed_roles
+        except Exception:
+            return False
+
 
 
 def normalize_search_term(term: str) -> list:
@@ -203,19 +216,20 @@ class SendWhatsAppMessageTool(BaseTool):
                     except Exception as e:
                         pass
                 
-                # Resolve license_id from tenant or user (for license_admin)
-                license_id = None
-                if tenant_id:
-                    tenant = Tenant.query.get(tenant_id)
-                    if not tenant:
-                        return {'success': False, 'error': 'Centro no encontrado.'}
-                    license_id = str(tenant.license_id)
-                elif user_id:
-                    # License admin: resolve license directly
-                    from models.license import LicenseAdmin
-                    lic_admin = LicenseAdmin.query.filter_by(user_id=user_id, is_active=True).first()
-                    if lic_admin:
-                        license_id = str(lic_admin.license_id)
+                # Resolve license_id from kwargs, tenant or user (for license_admin)
+                license_id = kwargs.get('license_id')
+                if not license_id:
+                    if tenant_id:
+                        tenant = Tenant.query.get(tenant_id)
+                        if not tenant:
+                            return {'success': False, 'error': 'Centro no encontrado.'}
+                        license_id = str(tenant.license_id)
+                    elif user_id:
+                        # License admin: resolve license directly
+                        from models.license import LicenseAdmin
+                        lic_admin = LicenseAdmin.query.filter_by(user_id=user_id, is_active=True).first()
+                        if lic_admin:
+                            license_id = str(lic_admin.license_id)
                 
                 if not license_id:
                     return {'success': False, 'error': 'No se pudo determinar la licencia para enviar el mensaje.'}

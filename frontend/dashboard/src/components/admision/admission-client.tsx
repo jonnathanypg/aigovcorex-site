@@ -49,6 +49,9 @@ export function AdmissionClient() {
     const [filter, setFilter] = useState("");
     const [isLoading, setIsLoading] = useState(true);
 
+    // Tabs: Admisiones (approved/pending/waitlist) | Rechazados
+    const [tab, setTab] = useState<"admisiones" | "rechazados">("admisiones");
+
     // State for dialogs
     const [viewId, setViewId] = useState<number | null>(null);
     const [editId, setEditId] = useState<number | null>(null);
@@ -117,14 +120,23 @@ export function AdmissionClient() {
         }
     };
 
+    // Filter by tab + search
     const filteredAdmissions = admissions.filter(
         (admission) => {
             const q = filter.toLowerCase();
             const statusLabel = statusLabelMap[admission.status] || admission.status;
-            return admission.child_name.toLowerCase().includes(q) ||
+            const matchesSearch = admission.child_name.toLowerCase().includes(q) ||
                 admission.child_cedula?.toLowerCase().includes(q) ||
                 String(admission.id).includes(filter) ||
                 statusLabel.toLowerCase().includes(q);
+
+            if (tab === "admisiones") {
+                // Show approved, pending, waitlist
+                return matchesSearch && admission.status !== "rejected";
+            } else {
+                // Rechazados tab
+                return matchesSearch && admission.status === "rejected";
+            }
         }
     );
 
@@ -183,6 +195,15 @@ export function AdmissionClient() {
     return (
         <Card>
             <CardContent className="pt-6">
+                {/* Tabs: Admisiones | Rechazados */}
+                <div className="flex gap-2 mb-4">
+                    {(["admisiones", "rechazados"] as const).map((t) => (
+                        <Button key={t} variant={tab === t ? "default" : "outline"} size="sm" onClick={() => setTab(t)}>
+                            {t === "admisiones" ? "Admisiones" : "Rechazados"}
+                        </Button>
+                    ))}
+                </div>
+
                 <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
                     <Input
                         placeholder="Buscar por nombre, cédula, ID o estado..."

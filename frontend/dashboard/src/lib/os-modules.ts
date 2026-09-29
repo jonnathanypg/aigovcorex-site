@@ -7,6 +7,7 @@ import {
   ClipboardList, UserCheck, Network, Radio,
   BookOpen, Layers, Mic, FileText,
   Scan, AlertTriangle, Users, Shield,
+  Inbox,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -60,12 +61,22 @@ export const OS_MODULES: OSModule[] = [
     requiredRoles: ['super_admin','license_admin','supervisor','coordinator','center_coordinator','educator','educadora','doctor','nutritionist','psychologist','social_worker','administrative'],
     sections: [
       {
-        title: 'Operaciones CDI',
+        title: 'Operaciones',
         items: [
           { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
           { label: 'Registro de Niños', href: '/registro', icon: Baby },
           { label: 'Admisión', href: '/admision', icon: ClipboardList },
           { label: 'Asistencia', href: '/asistencia', icon: UserCheck },
+        ],
+      },
+      {
+        title: 'Valoración',
+        items: [
+          { label: 'Ficha Vulnerabilidad', href: '/admision/ficha-vulnerabilidad/nueva', icon: Shield },
+          { label: 'Ficha Socioeconómica', href: '/admision/ficha-socioeconomica/nueva', icon: FileText },
+          { label: 'Priorización', href: '/admision/priorizacion', icon: AlertTriangle },
+          { label: 'Métricas e indicadores', href: '/admision/dashboard-cmci', icon: LayoutGrid },
+          { label: 'Biblioteca Documental', href: '/biblioteca', icon: BookOpen },
         ],
       },
       {
@@ -85,7 +96,7 @@ export const OS_MODULES: OSModule[] = [
           { label: 'Operaciones', href: '/operaciones', icon: LayoutGrid },
           { label: 'Carga Masiva', href: '/ingestion', icon: Layers },
           { label: 'Notificaciones', href: '/notificaciones', icon: AlertTriangle },
-          { label: 'Base de Conocimiento', href: '/knowledge', icon: BookOpen },
+          { label: 'Conocimiento', href: '/knowledge', icon: BookOpen },
         ],
       },
     ],
@@ -166,40 +177,41 @@ export const OS_MODULES: OSModule[] = [
       },
     ],
   },
-  {
-    id: 'channels',
-    label: 'Canales',
-    shortLabel: 'Canales',
-    icon: MessageSquare,
-    color: '#8b5cf6',
-    bgClass: 'bg-violet-500/10',
-    borderClass: 'border-violet-500/30',
-    textClass: 'text-violet-400',
-    glowClass: 'glow-channels',
-    badgeLabel: 'COMM',
-    badgeColor: 'bg-violet-500/20 text-violet-300',
-    href: '/canales/dashboard',
-    requiredRoles: ['super_admin','license_admin','supervisor','coordinator'],
-    sections: [
-      {
-        title: 'Mensajería',
-        items: [
-          { label: 'Dashboard Canales', href: '/canales/dashboard', icon: LayoutGrid },
-          { label: 'WhatsApp', href: '/canales/whatsapp', icon: MessageSquare },
-          { label: 'Telegram', href: '/canales/telegram', icon: MessageSquare },
-          { label: 'Conversaciones', href: '/canales/conversaciones', icon: Radio },
-        ],
-      },
-      {
-        title: 'Configuración',
-        items: [
-          { label: 'Conexiones', href: '/canales/conexiones', icon: Network },
-          { label: 'Herencias de Canal', href: '/canales/herencias', icon: Layers },
-          { label: 'Plantillas', href: '/canales/plantillas', icon: FileText },
-        ],
-      },
-    ],
-  },
+{
+      id: 'channels',
+      label: 'Canales',
+      shortLabel: 'Canales',
+      icon: MessageSquare,
+      color: '#8b5cf6',
+      bgClass: 'bg-violet-500/10',
+      borderClass: 'border-violet-500/30',
+      textClass: 'text-violet-400',
+      glowClass: 'glow-channels',
+      badgeLabel: 'COMM',
+      badgeColor: 'bg-violet-500/20 text-violet-300',
+      href: '/canales/dashboard',
+      // On/off por licencia: visible solo si 'channels' ∈ License.enabled_modules
+      // (ver LicenseContext.hasModule + OSModuleRail/OSBottomNav/AppHeader).
+      // Super_admin siempre lo ve; el resto depende del flag de su licencia/centro.
+      requiredRoles: ['super_admin','license_admin','supervisor','coordinator'],
+      sections: [
+        {
+          title: 'Mensajería',
+          items: [
+            { label: 'Dashboard Canales', href: '/canales/dashboard', icon: LayoutGrid },
+            { label: 'Bandeja Unificada', href: '/canales/bandeja', icon: Inbox },
+          ],
+        },
+        {
+          title: 'Configuración',
+          items: [
+            { label: 'Conexiones', href: '/canales/conexiones', icon: Network },
+            { label: 'Herencias de Canal', href: '/canales/herencias', icon: Layers },
+            { label: 'Plantillas', href: '/canales/plantillas', icon: FileText },
+          ],
+        },
+      ],
+    },
   {
     id: 'copilot',
     label: 'Copiloto RAG',
@@ -236,6 +248,12 @@ export const OS_MODULES: OSModule[] = [
 
 export function getModuleById(id: ModuleId): OSModule | undefined {
   return OS_MODULES.find(m => m.id === id);
+}
+
+/** On/off del módulo Canales por licencia: reutiliza License.enabled_modules. */
+export function isChannelsModuleEnabled(enabledModules: string[] | undefined | null): boolean {
+  if (!enabledModules) return true; // fallback legacy: visible
+  return enabledModules.includes('channels');
 }
 
 export function getModuleByRoute(pathname: string): OSModule | undefined {

@@ -111,7 +111,7 @@ export function CreateCenterDialog({ open, onOpenChange, onSuccess }: CreateCent
                                 value={formData.name}
                                 onChange={handleChange}
                                 required
-                                placeholder="Ej: CDI Los Pitufos"
+                                placeholder="Ej: Centro Los Pitufos"
                             />
                         </div>
                         <div className="space-y-2">

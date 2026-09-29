@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, CalendarCheck, Baby, Stethoscope, Loader2, Plus, FileSpreadsheet, Table2, Trash2, Globe } from "lucide-react";
+import { Download, FileText, CalendarCheck, Baby, Stethoscope, Loader2, Plus, FileSpreadsheet, Table2, Trash2, Globe, Eye } from "lucide-react";
 import { reportsService, type Report } from "@/services/reports.service";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -320,6 +320,16 @@ export function ReportsClient({ tenantId }: ReportsClientProps) {
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Descargar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={`/reportes/print?reportId=${report.id}`}>
+                        <Eye className="mr-1 h-4 w-4" />
+                        Vista previa
+                      </a>
                     </Button>
 
                     <AlertDialog open={reportToDelete === report.id} onOpenChange={(open) => open ? setReportToDelete(report.id) : setReportToDelete(null)}>

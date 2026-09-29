@@ -49,9 +49,15 @@ export const childrenService = {
         return data.children;
     },
 
-    async getById(id: number): Promise<{ child: Child; family: any; representatives: any[] }> {
-        const { data } = await api.get<{ child: Child; family: any; representatives: any[] }>(`/api/children/${id}`);
+    async getById(id: number): Promise<{ child: Child; family: any; representatives: any[]; last_vulnerability?: any; last_socioeconomic?: any }> {
+        const { data } = await api.get(`/api/children/${id}`);
         return data;
+    },
+
+    /** Autocomplete: filtra por nombre/letras mientras se escribe. */
+    async search(q: string, limit = 10): Promise<Array<{ id: number; full_name: string; first_name: string; last_name: string; cedula: string | null; birth_date: string | null; age_display?: string; gender?: string; family_id?: number; representative?: { full_name: string; relationship: string; phone?: string } | null }>> {
+        const { data } = await api.get<{ results: Array<{ id: number; full_name: string; first_name: string; last_name: string; cedula: string | null; birth_date: string | null }> }>(`/api/children/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+        return data.results as Array<{ id: number; full_name: string; first_name: string; last_name: string; cedula: string | null; birth_date: string | null }>;
     },
 
     async create(childData: any): Promise<Child> {

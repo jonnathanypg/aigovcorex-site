@@ -57,6 +57,10 @@ api_bp.register_blueprint(ingestion_bp)
 from api.planning import planning_bp
 api_bp.register_blueprint(planning_bp)
 
+# CMCI F4 — informes mensuales multi-rol + 5 exports + intake + wizard + cron
+from api.cmci_reports import cmci_reports_bp
+api_bp.register_blueprint(cmci_reports_bp)
+
 # Social Programs OS
 from api.social_programs import social_programs_bp
 api_bp.register_blueprint(social_programs_bp)
@@ -68,6 +72,14 @@ api_bp.register_blueprint(geo_intelligence_bp)
 # Channels OS (Multi-Tenant & Inheritable Channels)
 from api.channels_os import channels_os_bp
 api_bp.register_blueprint(channels_os_bp)
+
+# Channels OS Templates
+from api.channels_os_templates import channels_os_templates_bp
+api_bp.register_blueprint(channels_os_templates_bp)
+
+# CMCI F1: fichas vulnerabilidad + socioeconómica (una sola vez; /cmci -> /api/cmci/*)
+from api.cmci import cmci_bp
+api_bp.register_blueprint(cmci_bp)
 
 __all__ = ['api_bp']
 

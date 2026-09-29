@@ -22,7 +22,7 @@ export default function EquiposSocialesPage() {
       <div className="space-y-3">
         {[
           { name: 'Dr. Alejandro Multilateral', email: 'demo.multilateral@govcorex.org', role: 'Director de Cooperación', prog: 'Programa Nutrición Costa', org: 'BID' },
-          { name: 'Lcda. Patricia Gobierno', email: 'demo.gobierno@govcorex.org', role: 'Supervisora Nacional', prog: 'Atención Primera Infancia CDI', org: 'MIES' },
+          { name: 'Lcda. Patricia Gobierno', email: 'demo.gobierno@govcorex.org', role: 'Supervisora Nacional', prog: 'Atención Primera Infancia', org: 'MIES' },
           { name: 'Ing. Roberto Municipal', email: 'demo.gad@govcorex.org', role: 'Coordinador Cantonal', prog: 'Programa Nutrición Costa', org: 'GAD Guayaquil' },
           { name: 'Dra. María Elena Ramos', email: 'demo.medico@govcorex.org', role: 'Médico Evaluador', prog: 'Programa Nutrición Costa', org: 'Fundación Vida' },
         ].map((u, i) => (

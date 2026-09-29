@@ -34,6 +34,11 @@ const routeLabels: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/registro': 'Registro de Niños',
   '/admision': 'Proceso de Admisión',
+  '/admision/ficha-vulnerabilidad/nueva': 'Ficha de Vulnerabilidad',
+  '/admision/ficha-socioeconomica/nueva': 'Ficha Socioeconómica',
+  '/admision/priorizacion': 'Priorización',
+  '/admision/dashboard-cmci': 'Dashboard del centro',
+  '/biblioteca': 'Biblioteca documental',
   '/asistencia': 'Control de Asistencia',
   '/seguimiento-idii': 'Seguimiento IDII',
   '/salud-nutricion': 'Salud & Nutrición',
@@ -65,9 +70,7 @@ const routeLabels: Record<string, string> = {
   '/geo/trazabilidad': 'Trazabilidad de Red',
   '/geo/equipos-campo': 'Equipos en Campo',
   '/canales/dashboard': 'Canales de Comunicación',
-  '/canales/whatsapp': 'WhatsApp',
-  '/canales/telegram': 'Telegram',
-  '/canales/conversaciones': 'Conversaciones',
+  '/canales/bandeja': 'Bandeja Unificada',
   '/canales/conexiones': 'Conexiones de Canal',
   '/canales/herencias': 'Herencias de Canal',
   '/canales/plantillas': 'Plantillas de Mensajes',
@@ -120,7 +123,7 @@ export function AppHeader() {
   return (
     <>
       <header
-        className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur-xl lg:h-[58px] lg:px-5 transition-all duration-300 relative bg-background/80 border-border/70"
+        className="app-header print:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur-xl lg:h-[58px] lg:px-5 transition-all duration-300 relative bg-background/80 border-border/70"
       >
         {/* Module accent left border */}
         {currentMod && (

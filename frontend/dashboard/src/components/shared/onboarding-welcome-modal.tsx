@@ -91,7 +91,7 @@ export function OnboardingWelcomeModal() {
                         </div>
                         <div className="min-w-0 flex-1">
                             <span className="text-xs font-semibold uppercase tracking-wider text-amber-100">
-                                KindiCore AI — Sistema CDI
+                                KindiCore AI — Gestión de centros
                             </span>
                             <h2 className="text-2xl font-extrabold leading-tight text-white mt-0.5 break-words">
                                 {userName ? `¡Bienvenido/a, ${userName}! 🎉` : '¡Bienvenido a KindiCore AI! 🎉'}
@@ -104,7 +104,7 @@ export function OnboardingWelcomeModal() {
                 <div className="p-6 space-y-5">
                     <div className="space-y-1.5">
                         <h3 className="text-lg font-bold text-foreground">
-                            Tu sistema operativo para CDIs está listo
+                            Tu sistema operativo para centros está listo
                         </h3>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                             Hemos preparado un tour rápido para que conozcas las principales herramientas.

@@ -176,3 +176,9 @@ Inventario 16 proyectos (sensible máx: menores/salud/legal/chats; reutilizable:
 **Archivos:** `backend/common/core_engine/__init__|identity|pseudonym|mask|events|audit|keys|contracts.py`, `backend/common/core_api|core_server|core_client.py`, `README_MOTOR.md`, `backend/common/tests/test_core_engine.py`, `app.py` (+12L).
 **Tests:** `pytest backend/common/tests/test_core_engine.py` → **11 passed** (identidad estable/normalizada, pepper cambia key, uid opaco, alias, policy recorta, masks, envelope ok/ko, audit verifica+tamper, forget agregados, e2e Flask, ODCS). `py_compile` OK. Standalone WSGI smoke OK (health/keys/resolve/forget).
 **Decisión:** sin tocar streaming real/frontend/modelos; sin instalar nada.
+
+## 2026-09-29 — LABCORE STANDALONE [DONE]
+**Hito:** proyecto `/Users/jonnathan/AI_LAB-WLT/labcore/` fuera del repo (sin git/push): copia `core_engine/` + server stdlib `:5060` (core v1 + ledger + `/health` + `/v1/metrics`).
+**Archivos labcore:** `src/{server,auth,ledger,client}.py`, `src/core_engine/*` (7, imports locales), `tests/test_labcore.py`, `Dockerfile` (3.12-slim, sin pip), `ecosystem.labcore.config.js`, `nginx-labcore-snippet.conf`, `.env.example`, `requirements.txt` (vacío), `README.md` (consumo remoto curl/python, tabla endpoints, roadmap F4). Ledger: cuentas ISO4217, débito=crédito, balance a cero, Idempotency-Key (replay/409), hash-chain + reuse `audit.py`. Auth: Bearer sha256+salt, roles admin|service|readonly (401/403), rate-limit memoria (429). aigovcorex intacto salvo esta entrada.
+**Tests:** `pytest` → **8 passed** (cuadre, desbalance, idempotencia, audit chain+tamper, roles, rate-limit, e2e HTTP 401/403/balance/verify, e2e 429); `py_compile` OK; smoke `:5060` OK (health 200, metrics 401 sin key, asiento 500 cuadra); `grep langchain|langgraph|openai|pinecone` limpio.
+**Próximo:** F4 bancario (persistencia SQLite/WAL, multi-moneda, maker-checker).

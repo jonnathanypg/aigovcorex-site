@@ -49,6 +49,18 @@ def create_app(config_name=None):
     from api.chat_upload import chat_upload_bp
     # Canonical Social AI module at backend/modules/social
     from social.api.social_programs import social_programs_bp
+
+    # CORE-MOTOR: blueprint unico del motor de datos lab-wide (backend/common).
+    # No duplicar este registro; otros proyectos consumen via HTTP (core_server :5050).
+    try:
+        import sys as _sys, os as _os
+        _COMMON = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..', 'common'))
+        if _COMMON not in _sys.path:
+            _sys.path.insert(0, _COMMON)
+        from core_api import core_bp as _core_bp
+        app.register_blueprint(_core_bp)
+    except Exception:
+        pass
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)

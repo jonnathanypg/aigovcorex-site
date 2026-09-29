@@ -170,3 +170,9 @@ Diagrama 146 nodos extraído (Lambda+Medallón+Mesh+Privacy+PII Vault+WORM). Pla
 
 ## 2026-09-29 — CORE DATOS LAB [ANÁLISIS+DONE]
 Inventario 16 proyectos (sensible máx: menores/salud/legal/chats; reutilizable: WA canónico, voz MediaSuite, RAG, AES LeFriApp, billing Aikrofy). Diseño `_core/` lab-wide con uid_enc único + ODCS + dominios + F0-F4. Doc `docs/cmci/ARQUITECTURA_CORE_DATOS_LAB.md`.
+
+## 2026-09-29 — MOTOR CORE DATOS [DONE]
+**Hito:** motor stdlib cero-deps `backend/common/core_engine/` (identity HMAC-SHA256+uid `cet_<32hex>`+vault memo/SQLite+merge_alias+sin-PII-logs, pseudonym PolicyFilter, mask ***4567/edad/***123, events envelope v1+memoria/JSONL/stub-NATS, audit hash-chain+verify, keys pepper versionado fail-closed+re-HMAC, contracts ODCS mínimo; upgrade AES-GCM documentado por función con `CORE_CRYPTO=std|aesgcm`) + `core_api.py` blueprint `/core/v1` (9 rutas incl. forget-tombstone) montado UNA vez en `early-childhood/app.py` (comentario CORE-MOTOR, verificado 9 rutas en url_map) + `core_server.py` wsgiref `:5050` + `core_client.py` urllib + `README_MOTOR.md` 5-min.
+**Archivos:** `backend/common/core_engine/__init__|identity|pseudonym|mask|events|audit|keys|contracts.py`, `backend/common/core_api|core_server|core_client.py`, `README_MOTOR.md`, `backend/common/tests/test_core_engine.py`, `app.py` (+12L).
+**Tests:** `pytest backend/common/tests/test_core_engine.py` → **11 passed** (identidad estable/normalizada, pepper cambia key, uid opaco, alias, policy recorta, masks, envelope ok/ko, audit verifica+tamper, forget agregados, e2e Flask, ODCS). `py_compile` OK. Standalone WSGI smoke OK (health/keys/resolve/forget).
+**Decisión:** sin tocar streaming real/frontend/modelos; sin instalar nada.

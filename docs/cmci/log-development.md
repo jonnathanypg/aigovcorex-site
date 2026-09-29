@@ -164,3 +164,6 @@ Carpeta `IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/` + `c
 
 ## 2026-09-27 — SEED XLSX + LIMPIEZA REMOTA [DONE]
 `backend/.gitignore *.xlsx` bloqueaba seed socio → `add -f`, push `95b49d4`. `IMPLEMETACION-Y-MEJORAS/` eliminada del remoto (0 rastros, verificado `ls-tree`); docs en `docs/cmci/`. Push `f2869dd`.
+
+## 2026-09-29 — ARQ BANCO DIGITAL [ANÁLISIS+DONE]
+Diagrama 146 nodos extraído (Lambda+Medallón+Mesh+Privacy+PII Vault+WORM). Plan maestro 9 secciones verificado en repo (C1-C9, puertos 0.0.0.0, to_dict PII, sin WEBHOOK_SECRET, DDL en arranque, sin subjects). Inventario: 0 Vault/KMS/streaming/TTS-local en código; `cryptography` declarado sin uso; edge-tts cloud. Plan `docs/cmci/PLAN_INTEGRACION_BANCO_DIGITAL.md`: NATS (no Kafka), DuckDB→MinIO/Spark, Piper/Kokoro, hash-chain ya/red después, F0-F4 con criterios.

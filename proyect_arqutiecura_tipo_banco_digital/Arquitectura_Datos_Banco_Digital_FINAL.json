@@ -1,0 +1,1182 @@
+{
+  "version": "31.6.0",
+  "pages": [
+    {
+      "id": "p1",
+      "name": "1 · Arquitectura",
+      "cells": [
+        {
+          "id": "1",
+          "type": "layer"
+        },
+        {
+          "id": "n3",
+          "type": "node",
+          "parent": "1",
+          "label": "Plataforma de Datos · Banco Digital S.A.",
+          "html": "<b>Plataforma de Datos · Banco Digital S.A.</b>"
+        },
+        {
+          "id": "n4",
+          "type": "node",
+          "parent": "1",
+          "label": "Arquitectura objetivo · Ingesta → Procesamiento → Almacenamiento → Serving/Consumo · Gobernanza transversal · Cloud-agnostic (open source sobre Kubernetes, alternativa cloud por componente) · Privacidad por diseño (LOPDP, Ecuador) · Cifras = supuestos a validar · Hoja explicativa en la página 2"
+        },
+        {
+          "id": "n5",
+          "type": "node",
+          "parent": "1",
+          "label": "Lambda",
+          "html": "<b>Lambda</b>"
+        },
+        {
+          "id": "n6",
+          "type": "node",
+          "parent": "1",
+          "label": "Medallón",
+          "html": "<b>Medallón</b>"
+        },
+        {
+          "id": "n7",
+          "type": "node",
+          "parent": "1",
+          "label": "Orquestación (Airflow)",
+          "html": "<b>Orquestación (Airflow)</b>"
+        },
+        {
+          "id": "n8",
+          "type": "node",
+          "parent": "1",
+          "label": "Data Mesh",
+          "html": "<b>Data Mesh</b>"
+        },
+        {
+          "id": "n9",
+          "type": "node",
+          "parent": "1",
+          "label": "Observabilidad y calidad",
+          "html": "<b>Observabilidad y calidad</b>"
+        },
+        {
+          "id": "n10",
+          "type": "node",
+          "parent": "1",
+          "label": "Catálogo / metadatos",
+          "html": "<b>Catálogo / metadatos</b>"
+        },
+        {
+          "id": "n11",
+          "type": "node",
+          "parent": "1",
+          "label": "CQRS",
+          "html": "<b>CQRS</b>"
+        },
+        {
+          "id": "n12",
+          "type": "node",
+          "parent": "1",
+          "label": "Data Fabric",
+          "html": "<b>Data Fabric</b>"
+        },
+        {
+          "id": "n13",
+          "type": "node",
+          "parent": "1",
+          "label": "1 · FUENTES",
+          "html": "<b>1 · FUENTES</b>"
+        },
+        {
+          "id": "n14",
+          "type": "node",
+          "parent": "1",
+          "label": "2 · INGESTA · privacidad en la frontera",
+          "html": "<b>2 · INGESTA · privacidad en la frontera</b>"
+        },
+        {
+          "id": "n15",
+          "type": "node",
+          "parent": "1",
+          "label": "3 · PROCESAMIENTO · Lambda",
+          "html": "<b>3 · PROCESAMIENTO · Lambda</b>"
+        },
+        {
+          "id": "n16",
+          "type": "node",
+          "parent": "1",
+          "label": "4 · ALMACENAMIENTO · Medallón",
+          "html": "<b>4 · ALMACENAMIENTO · Medallón</b>"
+        },
+        {
+          "id": "n17",
+          "type": "node",
+          "parent": "1",
+          "label": "5 · SERVING · CQRS + Fabric + ML",
+          "html": "<b>5 · SERVING · CQRS + Fabric + ML</b>"
+        },
+        {
+          "id": "n18",
+          "type": "node",
+          "parent": "1",
+          "label": "6 · CONSUMO · dominios vía data products",
+          "html": "<b>6 · CONSUMO · dominios vía data products</b>"
+        },
+        {
+          "id": "pas",
+          "type": "node",
+          "parent": "1",
+          "label": "Pasarelas de pago (externas)\nAdquirentes · webhooks / API\nPAN nunca entra (PCI DSS): solo token de red\n+ BIN + últimos 4",
+          "html": "<b style=\"font-size:11px\">Pasarelas de pago (externas)</b><br>Adquirentes · webhooks / API<br>PAN nunca entra (PCI DSS): solo token de red<br>+ BIN + últimos 4"
+        },
+        {
+          "id": "can",
+          "type": "node",
+          "parent": "1",
+          "label": "Canales digitales (internas)\nApp móvil · Web · Banca en línea\nEventos y telemetría (SDK)\nLecturas operacionales ← CQRS (Q)",
+          "html": "<b style=\"font-size:11px\">Canales digitales (internas)</b><br>App móvil · Web · Banca en línea<br>Eventos y telemetría (SDK)<br>Lecturas operacionales ← CQRS (Q)"
+        },
+        {
+          "id": "cmd",
+          "type": "node",
+          "parent": "1",
+          "label": "Command API · CQRS escritura\nValida comando · idempotency-key\nDevuelve token de versión (aggregate_id, N)\nRecibe scores y alertas (F)",
+          "html": "<b style=\"font-size:11px\">Command API · CQRS escritura</b><br>Valida comando · idempotency-key<br>Devuelve token de versión (aggregate_id, N)<br>Recibe scores y alertas (F)"
+        },
+        {
+          "id": "core",
+          "type": "node",
+          "parent": "1",
+          "label": "Core bancario · write model · SoR\nOLTP Oracle / DB2 / PostgreSQL · mainframe MQ\nÚnico que confirma escrituras\nOutbox en la misma transacción",
+          "html": "<b style=\"font-size:11px\">Core bancario · write model · SoR</b><br>OLTP Oracle / DB2 / PostgreSQL · mainframe MQ<br>Único que confirma escrituras<br>Outbox en la misma transacción"
+        },
+        {
+          "id": "bur",
+          "type": "node",
+          "parent": "1",
+          "label": "Burós y organismos (externas)\nBuró · SB · SRI · UAFE\nArchivos SFTP / API en lote\nHeader/trailer con totales de control",
+          "html": "<b style=\"font-size:11px\">Burós y organismos (externas)</b><br>Buró · SB · SRI · UAFE<br>Archivos SFTP / API en lote<br>Header/trailer con totales de control"
+        },
+        {
+          "id": "cc",
+          "type": "node",
+          "parent": "1",
+          "label": "Contact center (internas)\nCRM · tickets · voz / chat\nExportes batch / API",
+          "html": "<b style=\"font-size:11px\">Contact center (internas)</b><br>CRM · tickets · voz / chat<br>Exportes batch / API"
+        },
+        {
+          "id": "ref",
+          "type": "node",
+          "parent": "1",
+          "label": "Referencia y no estructurados\nISO 4217/3166 · MCC · catálogo de productos\nAudio de llamadas · documentos",
+          "html": "<b style=\"font-size:11px\">Referencia y no estructurados</b><br>ISO 4217/3166 · MCC · catálogo de productos<br>Audio de llamadas · documentos"
+        },
+        {
+          "id": "ctr",
+          "type": "node",
+          "parent": "1",
+          "label": "Contrato de fuente (data product)\nCada fuente interna se publica con dueño,\ncontrato ODCS y SLA; sin lecturas ad hoc\nsobre el OLTP ni tablas ajenas",
+          "html": "<b style=\"font-size:11px\">Contrato de fuente (data product)</b><br>Cada fuente interna se publica con dueño,<br>contrato ODCS y SLA; sin lecturas ad hoc<br>sobre el OLTP ni tablas ajenas"
+        },
+        {
+          "id": "gw",
+          "type": "node",
+          "parent": "1",
+          "label": "API Gateway + SDK\nKong · OAuth2 / mTLS · WAF\nValida OpenAPI · rate limit · envelope\nRechazo → 4xx / DLQ",
+          "html": "<b style=\"font-size:11px\">API Gateway + SDK</b><br>Kong · OAuth2 / mTLS · WAF<br>Valida OpenAPI · rate limit · envelope<br>Rechazo → 4xx / DLQ"
+        },
+        {
+          "id": "pgw",
+          "type": "node",
+          "parent": "1",
+          "label": "Privacy Gateway (streaming)\nClasifica → tokeniza (HMAC) → cifra campo (DEK)\nDEK en caché local efímera\nKafka recibe solo tokens + PII cifrada",
+          "html": "<b style=\"font-size:11px\">Privacy Gateway (streaming)</b><br>Clasifica → tokeniza (HMAC) → cifra campo (DEK)<br>DEK en caché local efímera<br>Kafka recibe solo tokens + PII cifrada"
+        },
+        {
+          "id": "kfk",
+          "type": "node",
+          "parent": "1",
+          "label": "Kafka · backbone de eventos\nSchema Registry · contratos · DLQ\nEnvelope: event_id · aggregate_version · accounting_date\nRetención 7 d (supuesto) + tiered · ACL por dominio",
+          "html": "<b style=\"font-size:11px\">Kafka · backbone de eventos</b><br>Schema Registry · contratos · DLQ<br>Envelope: event_id · aggregate_version · accounting_date<br>Retención 7 d (supuesto) + tiered · ACL por dominio"
+        },
+        {
+          "id": "cdc",
+          "type": "node",
+          "parent": "1",
+          "label": "CDC + Outbox\nDebezium Server + SMT de privacidad embebido\nOrden por aggregate_id · alerta de lag del WAL\nCifra en memoria: sin PII en claro",
+          "html": "<b style=\"font-size:11px\">CDC + Outbox</b><br>Debezium Server + SMT de privacidad embebido<br>Orden por aggregate_id · alerta de lag del WAL<br>Cifra en memoria: sin PII en claro"
+        },
+        {
+          "id": "nifi",
+          "type": "node",
+          "parent": "1",
+          "label": "NiFi · archivos y JDBC\nSFTP · JDBC batch · checksum · antivirus\nSecuencia y totales de control · falla → cuarentena\nCarga masiva NO pasa por Kafka",
+          "html": "<b style=\"font-size:11px\">NiFi · archivos y JDBC</b><br>SFTP · JDBC batch · checksum · antivirus<br>Secuencia y totales de control · falla → cuarentena<br>Carga masiva NO pasa por Kafka"
+        },
+        {
+          "id": "land",
+          "type": "node",
+          "parent": "1",
+          "label": "Secure Landing + Batch Privacy\nZona efímera cifrada (TTL ≤ 24 h), aislada\nSpark: misma librería y políticas que el gateway\nValida totales → Bronze + borrado seguro",
+          "html": "<b style=\"font-size:11px\">Secure Landing + Batch Privacy</b><br>Zona efímera cifrada (TTL ≤ 24 h), aislada<br>Spark: misma librería y políticas que el gateway<br>Valida totales → Bronze + borrado seguro"
+        },
+        {
+          "id": "vault",
+          "type": "node",
+          "parent": "1",
+          "label": "PII Vault · Key Service\nVault + HSM/KMS · KEK → DEK por titular+propósito\nToken HMAC-SHA-256 sobre party_id estable\nFail-closed: sin Vault, nunca PII en claro",
+          "html": "<b style=\"font-size:11px\">PII Vault · Key Service</b><br>Vault + HSM/KMS · KEK → DEK por titular+propósito<br>Token HMAC-SHA-256 sobre party_id estable<br>Fail-closed: sin Vault, nunca PII en claro"
+        },
+        {
+          "id": "era",
+          "type": "node",
+          "parent": "1",
+          "label": "Erasure Registry + Lawful Basis\nPostgreSQL HA · sin PII directa (token = dato personal)\nSe re-aplica tras restore / replay\nBases de licitud y consentimiento → OPA",
+          "html": "<b style=\"font-size:11px\">Erasure Registry + Lawful Basis</b><br>PostgreSQL HA · sin PII directa (token = dato personal)<br>Se re-aplica tras restore / replay<br>Bases de licitud y consentimiento → OPA"
+        },
+        {
+          "id": "kc",
+          "type": "node",
+          "parent": "1",
+          "label": "Kafka Connect → Bronze\nSink Iceberg append-only · sin lógica\nCommit cada 5 min o ≥128 MB (evita small files)\nYa tokenizado",
+          "html": "<b style=\"font-size:11px\">Kafka Connect → Bronze</b><br>Sink Iceberg append-only · sin lógica<br>Commit cada 5 min o ≥128 MB (evita small files)<br>Ya tokenizado"
+        },
+        {
+          "id": "spd",
+          "type": "node",
+          "parent": "1",
+          "label": "Speed Layer · tiempo real\nFlink SQL · event-time · watermarks\nExactly-once con sinks idempotentes\nSalida: vista caliente (H) + proyecciones (P)",
+          "html": "<b style=\"font-size:11px\">Speed Layer · tiempo real</b><br>Flink SQL · event-time · watermarks<br>Exactly-once con sinks idempotentes<br>Salida: vista caliente (H) + proyecciones (P)"
+        },
+        {
+          "id": "bat",
+          "type": "node",
+          "parent": "1",
+          "label": "Batch Layer · histórico\nSpark + dbt Core · orquestado por Airflow\nCierres por accounting_date · recálculo · backfill\nDisparo por evento archivo_procesado",
+          "html": "<b style=\"font-size:11px\">Batch Layer · histórico</b><br>Spark + dbt Core · orquestado por Airflow<br>Cierres por accounting_date · recálculo · backfill<br>Disparo por evento archivo_procesado"
+        },
+        {
+          "id": "lg",
+          "type": "node",
+          "parent": "1",
+          "label": "Lógica única Speed / Batch\nTransformaciones compartidas (Flink SQL / dbt)\nPruebas de equivalencia\nClave Kafka = aggregate_id · Iceberg: bucket(party_id)",
+          "html": "<b style=\"font-size:11px\">Lógica única Speed / Batch</b><br>Transformaciones compartidas (Flink SQL / dbt)<br>Pruebas de equivalencia<br>Clave Kafka = aggregate_id · Iceberg: bucket(party_id)"
+        },
+        {
+          "id": "qg",
+          "type": "node",
+          "parent": "1",
+          "label": "Quality Gate (Bronze → Silver)\nGreat Expectations / Soda\nCompletitud · validez · unicidad · reglas de negocio\nPASS → Silver · FAIL → cuarentena",
+          "html": "<b style=\"font-size:11px\">Quality Gate (Bronze → Silver)</b><br>Great Expectations / Soda<br>Completitud · validez · unicidad · reglas de negocio<br>PASS → Silver · FAIL → cuarentena"
+        },
+        {
+          "id": "qua",
+          "type": "node",
+          "parent": "1",
+          "label": "Cuarentena + DLQ\nRechazados con motivo\nAlerta al Data Owner + ticket ITSM\nAnálisis de impacto por linaje",
+          "html": "<b style=\"font-size:11px\">Cuarentena + DLQ</b><br>Rechazados con motivo<br>Alerta al Data Owner + ticket ITSM<br>Análisis de impacto por linaje"
+        },
+        {
+          "id": "rep",
+          "type": "node",
+          "parent": "1",
+          "label": "Replay · Backfill\nReproceso idempotente desde Bronze / Kafka\nAplica Erasure Registry antes de reabrir\nRegenera Gold, features y proyecciones",
+          "html": "<b style=\"font-size:11px\">Replay · Backfill</b><br>Reproceso idempotente desde Bronze / Kafka<br>Aplica Erasure Registry antes de reabrir<br>Regenera Gold, features y proyecciones"
+        },
+        {
+          "id": "rec",
+          "type": "node",
+          "parent": "1",
+          "label": "Reconciliación\nOrigen → Bronze (conteos, hash) · Speed ↔ Batch\nGold ↔ Core por accounting_date\nCuadre antes de certificar",
+          "html": "<b style=\"font-size:11px\">Reconciliación</b><br>Origen → Bronze (conteos, hash) · Speed ↔ Batch<br>Gold ↔ Core por accounting_date<br>Cuadre antes de certificar"
+        },
+        {
+          "id": "bro",
+          "type": "node",
+          "parent": "1",
+          "label": "BRONZE · dato original protegido\nIceberg (Delta alt.) sobre S3 / MinIO / ADLS / GCS\nAppend-only · sin lógica de negocio · PII tokenizada\nObjetos (voz, docs) con PII redactada",
+          "html": "<b style=\"font-size:11px\">BRONZE · dato original protegido</b><br>Iceberg (Delta alt.) sobre S3 / MinIO / ADLS / GCS<br>Append-only · sin lógica de negocio · PII tokenizada<br>Objetos (voz, docs) con PII redactada"
+        },
+        {
+          "id": "sil",
+          "type": "node",
+          "parent": "1",
+          "label": "SILVER · curado\nDedup por event_id · SCD2 · modelo canónico\nSolo tokens · SoR analítico\nSe concilia contra el Core",
+          "html": "<b style=\"font-size:11px\">SILVER · curado</b><br>Dedup por event_id · SCD2 · modelo canónico<br>Solo tokens · SoR analítico<br>Se concilia contra el Core"
+        },
+        {
+          "id": "gol",
+          "type": "node",
+          "parent": "1",
+          "label": "GOLD · data products\nKPIs · agregados · mínimo necesario\nVersionados v1 / v2 · SLA / SLO\nIncluye regulatorios certificados (derivados)",
+          "html": "<b style=\"font-size:11px\">GOLD · data products</b><br>KPIs · agregados · mínimo necesario<br>Versionados v1 / v2 · SLA / SLO<br>Incluye regulatorios certificados (derivados)"
+        },
+        {
+          "id": "mdm",
+          "type": "node",
+          "parent": "1",
+          "label": "MDM / RDM\nParty golden record · identity resolution\nReferencias ISO · MCC · SB con vigencia (SCD2)\nparty_id maestro alimenta tokens",
+          "html": "<b style=\"font-size:11px\">MDM / RDM</b><br>Party golden record · identity resolution<br>Referencias ISO · MCC · SB con vigencia (SCD2)<br>party_id maestro alimenta tokens"
+        },
+        {
+          "id": "cat",
+          "type": "node",
+          "parent": "1",
+          "label": "Catálogo Iceberg + mantenimiento\nREST / Nessie · time travel · branching\nCompactación · expire snapshots (Airflow)\nTime travel sobre datos suprimidos falla por diseño",
+          "html": "<b style=\"font-size:11px\">Catálogo Iceberg + mantenimiento</b><br>REST / Nessie · time travel · branching<br>Compactación · expire snapshots (Airflow)<br>Time travel sobre datos suprimidos falla por diseño"
+        },
+        {
+          "id": "worm",
+          "type": "node",
+          "parent": "1",
+          "label": "Zona de evidencia WORM\nObject Lock (compliance) · Audit Trail\nEvidencia de DSAR, supresión, claves, break-glass\nEscritura solo por servicio",
+          "html": "<b style=\"font-size:11px\">Zona de evidencia WORM</b><br>Object Lock (compliance) · Audit Trail<br>Evidencia de DSAR, supresión, claves, break-glass<br>Escritura solo por servicio"
+        },
+        {
+          "id": "ilm",
+          "type": "node",
+          "parent": "1",
+          "label": "Retención y ciclo de vida (ILM)\nCaliente → tibio → frío · legal hold\nRetención por finalidad\nSupresión por crypto-shredding + propagación",
+          "html": "<b style=\"font-size:11px\">Retención y ciclo de vida (ILM)</b><br>Caliente → tibio → frío · legal hold<br>Retención por finalidad<br>Supresión por crypto-shredding + propagación"
+        },
+        {
+          "id": "sot",
+          "type": "node",
+          "parent": "1",
+          "label": "Fuentes de verdad\nTransacción = Core · Analítica = Lakehouse\nRegulatorio = data products certificados derivados\nConflicto: Core > Lakehouse > proyección",
+          "html": "<b style=\"font-size:11px\">Fuentes de verdad</b><br>Transacción = Core · Analítica = Lakehouse<br>Regulatorio = data products certificados derivados<br>Conflicto: Core > Lakehouse > proyección"
+        },
+        {
+          "id": "sl",
+          "type": "node",
+          "parent": "1",
+          "label": "Serving Layer Lambda\nFusiona vista batch + speed (clave + versión)\nBatch prevalece en ventanas cerradas (≤ T-1)\nUpsert condicional idempotente",
+          "html": "<b style=\"font-size:11px\">Serving Layer Lambda</b><br>Fusiona vista batch + speed (clave + versión)<br>Batch prevalece en ventanas cerradas (≤ T-1)<br>Upsert condicional idempotente"
+        },
+        {
+          "id": "cq",
+          "type": "node",
+          "parent": "1",
+          "label": "CQRS · query side\nClickHouse · Redis · OpenSearch · PostgreSQL\nProyecciones reconstruibles · last_applied_version\nLag con SLO",
+          "html": "<b style=\"font-size:11px\">CQRS · query side</b><br>ClickHouse · Redis · OpenSearch · PostgreSQL<br>Proyecciones reconstruibles · last_applied_version<br>Lag con SLO"
+        },
+        {
+          "id": "fab",
+          "type": "node",
+          "parent": "1",
+          "label": "Data Fabric · acceso lógico\nTrino (Denodo alt.) · capa semántica Cube / dbt\nFederación selectiva: solo réplicas con contrato\nABAC · pushdown · caché",
+          "html": "<b style=\"font-size:11px\">Data Fabric · acceso lógico</b><br>Trino (Denodo alt.) · capa semántica Cube / dbt<br>Federación selectiva: solo réplicas con contrato<br>ABAC · pushdown · caché"
+        },
+        {
+          "id": "fs",
+          "type": "node",
+          "parent": "1",
+          "label": "Feature Store + MLOps\nFeast: offline Iceberg / online Redis + test equiv.\nMLflow: staging → shadow → canary → champion\nDrift · sesgo · explicabilidad",
+          "html": "<b style=\"font-size:11px\">Feature Store + MLOps</b><br>Feast: offline Iceberg / online Redis + test equiv.<br>MLflow: staging → shadow → canary → champion<br>Drift · sesgo · explicabilidad"
+        },
+        {
+          "id": "api",
+          "type": "node",
+          "parent": "1",
+          "label": "Data Product APIs / BI\nREST · GraphQL · Superset / Power BI\nABAC + consentimiento por finalidad\nSLA / SLO por producto",
+          "html": "<b style=\"font-size:11px\">Data Product APIs / BI</b><br>REST · GraphQL · Superset / Power BI<br>ABAC + consentimiento por finalidad<br>SLA / SLO por producto"
+        },
+        {
+          "id": "ryw",
+          "type": "node",
+          "parent": "1",
+          "label": "CQRS · read-your-writes\nProyección responde si versión ≥ N\nSi no llega en X ms → fallback a API del Core\nSaldo crítico: siempre API del Core",
+          "html": "<b style=\"font-size:11px\">CQRS · read-your-writes</b><br>Proyección responde si versión ≥ N<br>Si no llega en X ms → fallback a API del Core<br>Saldo crítico: siempre API del Core"
+        },
+        {
+          "id": "ttl",
+          "type": "node",
+          "parent": "1",
+          "label": "Token Translation Service\nJoin entre dominios sin identificador común\nOPA autoriza el par · pseudónimo de sesión no persistido\nTodo auditado",
+          "html": "<b style=\"font-size:11px\">Token Translation Service</b><br>Join entre dominios sin identificador común<br>OPA autoriza el par · pseudónimo de sesión no persistido<br>Todo auditado"
+        },
+        {
+          "id": "uso",
+          "type": "node",
+          "parent": "1",
+          "label": "Regla de uso\nLakehouse = analítica · CQRS = operacional\nFabric = acceso lógico a data products\nNo es atajo: nunca sobre el OLTP primario",
+          "html": "<b style=\"font-size:11px\">Regla de uso</b><br>Lakehouse = analítica · CQRS = operacional<br>Fabric = acceso lógico a data products<br>No es atajo: nunca sobre el OLTP primario"
+        },
+        {
+          "id": "rie",
+          "type": "node",
+          "parent": "1",
+          "label": "Riesgo · productor y consumidor\nProduce: score, PD/LGD, fraude\nConsume: transacciones, buró, features\nOwner · Steward · SLA · contrato",
+          "html": "<b style=\"font-size:11px\">Riesgo · productor y consumidor</b><br>Produce: score, PD/LGD, fraude<br>Consume: transacciones, buró, features<br>Owner · Steward · SLA · contrato"
+        },
+        {
+          "id": "mkt",
+          "type": "node",
+          "parent": "1",
+          "label": "Marketing · productor y consumidor\nProduce: segmentos, propensión, CLV\nSin PII directa · finalidad y consentimiento verificados",
+          "html": "<b style=\"font-size:11px\">Marketing · productor y consumidor</b><br>Produce: segmentos, propensión, CLV<br>Sin PII directa · finalidad y consentimiento verificados"
+        },
+        {
+          "id": "prd",
+          "type": "node",
+          "parent": "1",
+          "label": "Producto · productor y consumidor\nProduce: uso, embudos, NPS\nConsume: eventos de canales, contact center",
+          "html": "<b style=\"font-size:11px\">Producto · productor y consumidor</b><br>Produce: uso, embudos, NPS<br>Consume: eventos de canales, contact center"
+        },
+        {
+          "id": "cum",
+          "type": "node",
+          "parent": "1",
+          "label": "Cumplimiento y reporting\nReportes UAFE / SB / SRI / BCE · AML\nLinaje de columna · detokenización controlada\nBreak-glass con doble aprobación",
+          "html": "<b style=\"font-size:11px\">Cumplimiento y reporting</b><br>Reportes UAFE / SB / SRI / BCE · AML<br>Linaje de columna · detokenización controlada<br>Break-glass con doble aprobación"
+        },
+        {
+          "id": "cli",
+          "type": "node",
+          "parent": "1",
+          "label": "Clientes · Party / MDM\nProduce: perfil maestro (golden record)\nConsume: Core, canales, contact center, burós",
+          "html": "<b style=\"font-size:11px\">Clientes · Party / MDM</b><br>Produce: perfil maestro (golden record)<br>Consume: Core, canales, contact center, burós"
+        },
+        {
+          "id": "reg",
+          "type": "node",
+          "parent": "1",
+          "label": "Reguladores y terceros\nSB · SRI · UAFE · BCE\nEntrega SFTP / API con evidencias",
+          "html": "<b style=\"font-size:11px\">Reguladores y terceros</b><br>SB · SRI · UAFE · BCE<br>Entrega SFTP / API con evidencias"
+        },
+        {
+          "id": "ana",
+          "type": "node",
+          "parent": "1",
+          "label": "Analistas · BI · Data Science\nSuperset / Power BI · notebooks\nAutoservicio vía Fabric con ABAC",
+          "html": "<b style=\"font-size:11px\">Analistas · BI · Data Science</b><br>Superset / Power BI · notebooks<br>Autoservicio vía Fabric con ABAC"
+        },
+        {
+          "id": "fb",
+          "type": "node",
+          "parent": "1",
+          "label": "Retroalimentación a operaciones\nScores y alertas vuelven al Core / canales\nvía Command API y eventos (bucle cerrado)",
+          "html": "<b style=\"font-size:11px\">Retroalimentación a operaciones</b><br>Scores y alertas vuelven al Core / canales<br>vía Command API y eventos (bucle cerrado)"
+        },
+        {
+          "id": "n19",
+          "type": "edge",
+          "parent": "1",
+          "source": "pas",
+          "target": "gw",
+          "label": "webhook / API"
+        },
+        {
+          "id": "n20",
+          "type": "edge",
+          "parent": "1",
+          "source": "can",
+          "target": "gw",
+          "label": "eventos"
+        },
+        {
+          "id": "n21",
+          "type": "edge",
+          "parent": "1",
+          "source": "can",
+          "target": "cmd",
+          "label": "comando"
+        },
+        {
+          "id": "n22",
+          "type": "edge",
+          "parent": "1",
+          "source": "cmd",
+          "target": "core",
+          "label": "ejecuta"
+        },
+        {
+          "id": "n23",
+          "type": "edge",
+          "parent": "1",
+          "source": "core",
+          "target": "cdc",
+          "label": "outbox"
+        },
+        {
+          "id": "n24",
+          "type": "edge",
+          "parent": "1",
+          "source": "bur",
+          "target": "nifi",
+          "label": "SFTP"
+        },
+        {
+          "id": "n25",
+          "type": "edge",
+          "parent": "1",
+          "source": "cc",
+          "target": "nifi",
+          "label": "export"
+        },
+        {
+          "id": "n26",
+          "type": "edge",
+          "parent": "1",
+          "source": "ref",
+          "target": "land",
+          "label": "archivos"
+        },
+        {
+          "id": "n27",
+          "type": "edge",
+          "parent": "1",
+          "source": "gw",
+          "target": "pgw"
+        },
+        {
+          "id": "n28",
+          "type": "edge",
+          "parent": "1",
+          "source": "pgw",
+          "target": "kfk",
+          "label": "tokens"
+        },
+        {
+          "id": "n29",
+          "type": "edge",
+          "parent": "1",
+          "source": "cdc",
+          "target": "kfk"
+        },
+        {
+          "id": "n30",
+          "type": "edge",
+          "parent": "1",
+          "source": "nifi",
+          "target": "land"
+        },
+        {
+          "id": "n31",
+          "type": "edge",
+          "parent": "1",
+          "source": "vault",
+          "target": "land",
+          "label": "claves"
+        },
+        {
+          "id": "n32",
+          "type": "edge",
+          "parent": "1",
+          "source": "vault",
+          "target": "pgw",
+          "label": "claves"
+        },
+        {
+          "id": "n33",
+          "type": "edge",
+          "parent": "1",
+          "source": "kfk",
+          "target": "spd"
+        },
+        {
+          "id": "n34",
+          "type": "edge",
+          "parent": "1",
+          "source": "kfk",
+          "target": "kc"
+        },
+        {
+          "id": "n35",
+          "type": "edge",
+          "parent": "1",
+          "source": "land",
+          "target": "bro",
+          "label": "B"
+        },
+        {
+          "id": "n36",
+          "type": "edge",
+          "parent": "1",
+          "source": "kc",
+          "target": "bro",
+          "label": "commit 5 min"
+        },
+        {
+          "id": "n37",
+          "type": "edge",
+          "parent": "1",
+          "source": "bat",
+          "target": "sil",
+          "label": "Spark + dbt"
+        },
+        {
+          "id": "n38",
+          "type": "edge",
+          "parent": "1",
+          "source": "qg",
+          "target": "sil",
+          "label": "PASS"
+        },
+        {
+          "id": "n39",
+          "type": "edge",
+          "parent": "1",
+          "source": "qg",
+          "target": "qua",
+          "label": "FAIL"
+        },
+        {
+          "id": "n40",
+          "type": "edge",
+          "parent": "1",
+          "source": "bro",
+          "target": "sil",
+          "label": "Quality Gate"
+        },
+        {
+          "id": "n41",
+          "type": "edge",
+          "parent": "1",
+          "source": "sil",
+          "target": "gol"
+        },
+        {
+          "id": "n42",
+          "type": "edge",
+          "parent": "1",
+          "source": "spd",
+          "target": "sl",
+          "label": "H"
+        },
+        {
+          "id": "n43",
+          "type": "edge",
+          "parent": "1",
+          "source": "spd",
+          "target": "cq",
+          "label": "P"
+        },
+        {
+          "id": "n44",
+          "type": "edge",
+          "parent": "1",
+          "source": "gol",
+          "target": "sl",
+          "label": "vista batch"
+        },
+        {
+          "id": "n45",
+          "type": "edge",
+          "parent": "1",
+          "source": "gol",
+          "target": "fab"
+        },
+        {
+          "id": "n46",
+          "type": "edge",
+          "parent": "1",
+          "source": "gol",
+          "target": "fs",
+          "label": "features"
+        },
+        {
+          "id": "n47",
+          "type": "edge",
+          "parent": "1",
+          "source": "gol",
+          "target": "api"
+        },
+        {
+          "id": "n48",
+          "type": "edge",
+          "parent": "1",
+          "source": "cq",
+          "target": "fab"
+        },
+        {
+          "id": "n49",
+          "type": "edge",
+          "parent": "1",
+          "source": "sl",
+          "target": "rie"
+        },
+        {
+          "id": "n50",
+          "type": "edge",
+          "parent": "1",
+          "source": "fs",
+          "target": "rie",
+          "label": "features"
+        },
+        {
+          "id": "n51",
+          "type": "edge",
+          "parent": "1",
+          "source": "fab",
+          "target": "prd"
+        },
+        {
+          "id": "n52",
+          "type": "edge",
+          "parent": "1",
+          "source": "fab",
+          "target": "mkt"
+        },
+        {
+          "id": "n53",
+          "type": "edge",
+          "parent": "1",
+          "source": "fab",
+          "target": "ana"
+        },
+        {
+          "id": "n54",
+          "type": "edge",
+          "parent": "1",
+          "source": "api",
+          "target": "cum"
+        },
+        {
+          "id": "n55",
+          "type": "edge",
+          "parent": "1",
+          "source": "api",
+          "target": "reg"
+        },
+        {
+          "id": "n56",
+          "type": "edge",
+          "parent": "1",
+          "source": "cq",
+          "target": "can",
+          "label": "Q · lectura CQRS"
+        },
+        {
+          "id": "n57",
+          "type": "edge",
+          "parent": "1",
+          "source": "rie",
+          "target": "fb",
+          "label": "scores"
+        },
+        {
+          "id": "n58",
+          "type": "edge",
+          "parent": "1",
+          "source": "fb",
+          "target": "cmd",
+          "label": "F · retroalimentación"
+        },
+        {
+          "id": "n59",
+          "type": "node",
+          "parent": "1",
+          "label": "DATA MESH · propiedad descentralizada, datos como producto, autoservicio y gobernanza federada",
+          "html": "<b>DATA MESH · propiedad descentralizada, datos como producto, autoservicio y gobernanza federada</b>"
+        },
+        {
+          "id": "n60",
+          "type": "node",
+          "parent": "1",
+          "label": "Dominios y ownership\nSource: Core · Clientes · Pagos · Canales · CC\nConsumer: Riesgo · Marketing · Cumpl. · Producto\nOwner + Steward por dominio",
+          "html": "<b style=\"font-size:11px\">Dominios y ownership</b><br>Source: Core · Clientes · Pagos · Canales · CC<br>Consumer: Riesgo · Marketing · Cumpl. · Producto<br>Owner + Steward por dominio"
+        },
+        {
+          "id": "n61",
+          "type": "node",
+          "parent": "1",
+          "label": "Data product (contrato ODCS)\nEsquema · SLO · clasificación PII · finalidad\nPuertos: Iceberg · OpenAPI · AsyncAPI\nGobierno antes de publicar (I6)",
+          "html": "<b style=\"font-size:11px\">Data product (contrato ODCS)</b><br>Esquema · SLO · clasificación PII · finalidad<br>Puertos: Iceberg · OpenAPI · AsyncAPI<br>Gobierno antes de publicar (I6)"
+        },
+        {
+          "id": "n62",
+          "type": "node",
+          "parent": "1",
+          "label": "Catálogo / descubrimiento\nDataHub · marketplace de data products\nGlosario · metadatos compartidos · linaje\nEtiquetas PII con revisión Steward / DPO",
+          "html": "<b style=\"font-size:11px\">Catálogo / descubrimiento</b><br>DataHub · marketplace de data products<br>Glosario · metadatos compartidos · linaje<br>Etiquetas PII con revisión Steward / DPO"
+        },
+        {
+          "id": "n63",
+          "type": "node",
+          "parent": "1",
+          "label": "Plataforma self-service\nTerraform / Helm · CI/CD · plantillas DAG y dbt\nNamespaces y cuotas por dominio\nFinOps: showback → chargeback (OpenCost)",
+          "html": "<b style=\"font-size:11px\">Plataforma self-service</b><br>Terraform / Helm · CI/CD · plantillas DAG y dbt<br>Namespaces y cuotas por dominio<br>FinOps: showback → chargeback (OpenCost)"
+        },
+        {
+          "id": "n64",
+          "type": "node",
+          "parent": "1",
+          "label": "Acceso entre dominios\nSolo por puertos publicados, con contrato\nJoins vía Token Translation Service (OPA)\nFederar un OLTP exige contrato + Steward",
+          "html": "<b style=\"font-size:11px\">Acceso entre dominios</b><br>Solo por puertos publicados, con contrato<br>Joins vía Token Translation Service (OPA)<br>Federar un OLTP exige contrato + Steward"
+        },
+        {
+          "id": "n65",
+          "type": "node",
+          "parent": "1",
+          "label": "Ciclo de vida del data product\nVersionado v1/v2 · deprecación ≥ 90 d (supuesto)\nContract tests consumer-driven (Pact) en CI\nexpand → migrate → contract",
+          "html": "<b style=\"font-size:11px\">Ciclo de vida del data product</b><br>Versionado v1/v2 · deprecación ≥ 90 d (supuesto)<br>Contract tests consumer-driven (Pact) en CI<br>expand → migrate → contract"
+        },
+        {
+          "id": "n66",
+          "type": "node",
+          "parent": "1",
+          "label": "Gobierno federado y estándares\nConsejo: CISO · DPO · owners · RACI\nModelo canónico Party · Cuenta · Transacción\nISO 20022 solo pagos y reportes que lo exijan",
+          "html": "<b style=\"font-size:11px\">Gobierno federado y estándares</b><br>Consejo: CISO · DPO · owners · RACI<br>Modelo canónico Party · Cuenta · Transacción<br>ISO 20022 solo pagos y reportes que lo exijan"
+        },
+        {
+          "id": "n67",
+          "type": "node",
+          "parent": "1",
+          "label": "GOBERNANZA, SEGURIDAD Y PRIVACIDAD · transversal a todas las capas (LOPDP)",
+          "html": "<b>GOBERNANZA, SEGURIDAD Y PRIVACIDAD · transversal a todas las capas (LOPDP)</b>"
+        },
+        {
+          "id": "n68",
+          "type": "node",
+          "parent": "1",
+          "label": "Catálogo y metadatos\nDataHub · glosario · etiquetas PII\nFinalidad y base de licitud por producto\nDetección automática + revisión Steward",
+          "html": "<b style=\"font-size:11px\">Catálogo y metadatos</b><br>DataHub · glosario · etiquetas PII<br>Finalidad y base de licitud por producto<br>Detección automática + revisión Steward"
+        },
+        {
+          "id": "n69",
+          "type": "node",
+          "parent": "1",
+          "label": "Linaje de columna\nOpenLineage + Marquez\nOrigen → pipeline → producto → modelo\nAnálisis de impacto (calidad, brechas)",
+          "html": "<b style=\"font-size:11px\">Linaje de columna</b><br>OpenLineage + Marquez<br>Origen → pipeline → producto → modelo<br>Análisis de impacto (calidad, brechas)"
+        },
+        {
+          "id": "n70",
+          "type": "node",
+          "parent": "1",
+          "label": "Audit Trail\nWORM + índice OpenSearch\nQuién accedió, a qué y con qué finalidad\nEscritura solo por servicio · revisión indep.",
+          "html": "<b style=\"font-size:11px\">Audit Trail</b><br>WORM + índice OpenSearch<br>Quién accedió, a qué y con qué finalidad<br>Escritura solo por servicio · revisión indep."
+        },
+        {
+          "id": "n71",
+          "type": "node",
+          "parent": "1",
+          "label": "Zero Trust y accesos\nKeycloak · OPA / Ranger (ABAC) · mTLS\nRLS / CLS · masking dinámico\nPolíticas como código (GitOps)",
+          "html": "<b style=\"font-size:11px\">Zero Trust y accesos</b><br>Keycloak · OPA / Ranger (ABAC) · mTLS<br>RLS / CLS · masking dinámico<br>Políticas como código (GitOps)"
+        },
+        {
+          "id": "n72",
+          "type": "node",
+          "parent": "1",
+          "label": "Privacidad LOPDP\nDPO · EIPD · registro de tratamientos\nMinimización · finalidad · DSAR por derecho\nResidencia y transferencias: validar con DPO",
+          "html": "<b style=\"font-size:11px\">Privacidad LOPDP</b><br>DPO · EIPD · registro de tratamientos<br>Minimización · finalidad · DSAR por derecho<br>Residencia y transferencias: validar con DPO"
+        },
+        {
+          "id": "n73",
+          "type": "node",
+          "parent": "1",
+          "label": "Supresión y claves\nErasure Registry → privacy.erasure → derivados\nCrypto-shredding + verificación + evidencia WORM\nKEK (HSM) → DEK · break-glass 4-eyes",
+          "html": "<b style=\"font-size:11px\">Supresión y claves</b><br>Erasure Registry → privacy.erasure → derivados<br>Crypto-shredding + verificación + evidencia WORM<br>KEK (HSM) → DEK · break-glass 4-eyes"
+        },
+        {
+          "id": "n74",
+          "type": "node",
+          "parent": "1",
+          "label": "Seguridad y cumplimiento\nWAF · SIEM (Wazuh / Elastic) · PCI DSS\nISO 27001 · NIST CSF 2.0 · ISO 27701\nPlaybook de brechas (art. 43): validar con DPO",
+          "html": "<b style=\"font-size:11px\">Seguridad y cumplimiento</b><br>WAF · SIEM (Wazuh / Elastic) · PCI DSS<br>ISO 27001 · NIST CSF 2.0 · ISO 27701<br>Playbook de brechas (art. 43): validar con DPO"
+        },
+        {
+          "id": "n75",
+          "type": "node",
+          "parent": "1",
+          "label": "ORQUESTACIÓN · OBSERVABILIDAD · RESILIENCIA · ESCALABILIDAD · DEVSECOPS",
+          "html": "<b>ORQUESTACIÓN · OBSERVABILIDAD · RESILIENCIA · ESCALABILIDAD · DEVSECOPS</b>"
+        },
+        {
+          "id": "n76",
+          "type": "node",
+          "parent": "1",
+          "label": "Orquestación\nAirflow · dbt · Argo (jobs K8s / ML)\nProgramado + event-driven\nPlantillas DAG por dominio",
+          "html": "<b style=\"font-size:11px\">Orquestación</b><br>Airflow · dbt · Argo (jobs K8s / ML)<br>Programado + event-driven<br>Plantillas DAG por dominio"
+        },
+        {
+          "id": "n77",
+          "type": "node",
+          "parent": "1",
+          "label": "Observabilidad de datos\nPrometheus · Grafana · OpenTelemetry\nElementary · SLO por data product\nFrescura · volumen · drift · calidad",
+          "html": "<b style=\"font-size:11px\">Observabilidad de datos</b><br>Prometheus · Grafana · OpenTelemetry<br>Elementary · SLO por data product<br>Frescura · volumen · drift · calidad"
+        },
+        {
+          "id": "n78",
+          "type": "node",
+          "parent": "1",
+          "label": "Calidad y contratos\nGreat Expectations / Soda en pipeline\nPact y contract tests en CI/CD\nQuality Gate + hot-path DQ en streaming",
+          "html": "<b style=\"font-size:11px\">Calidad y contratos</b><br>Great Expectations / Soda en pipeline<br>Pact y contract tests en CI/CD<br>Quality Gate + hot-path DQ en streaming"
+        },
+        {
+          "id": "n79",
+          "type": "node",
+          "parent": "1",
+          "label": "Resiliencia y DR\nK8s multi-AZ · DR activo-pasivo por componente\nRPO ≤ 5 min · RTO ≤ 1 h (supuesto)\nCore desacoplado: el outbox retiene eventos",
+          "html": "<b style=\"font-size:11px\">Resiliencia y DR</b><br>K8s multi-AZ · DR activo-pasivo por componente<br>RPO ≤ 5 min · RTO ≤ 1 h (supuesto)<br>Core desacoplado: el outbox retiene eventos"
+        },
+        {
+          "id": "n80",
+          "type": "node",
+          "parent": "1",
+          "label": "Escalabilidad\nParticionado Kafka / Iceberg · KEDA · tiered\n10k ev/s sostenidos · 50k pico (supuesto)\nPruebas de carga k6 / Locust",
+          "html": "<b style=\"font-size:11px\">Escalabilidad</b><br>Particionado Kafka / Iceberg · KEDA · tiered<br>10k ev/s sostenidos · 50k pico (supuesto)<br>Pruebas de carga k6 / Locust"
+        },
+        {
+          "id": "n81",
+          "type": "node",
+          "parent": "1",
+          "label": "DevSecOps y FinOps\nGitLab/GitHub · Terraform · ArgoCD · Trivy\nSecret scanning · pentest periódico\nOpenCost por dominio",
+          "html": "<b style=\"font-size:11px\">DevSecOps y FinOps</b><br>GitLab/GitHub · Terraform · ArgoCD · Trivy<br>Secret scanning · pentest periódico<br>OpenCost por dominio"
+        },
+        {
+          "id": "n82",
+          "type": "node",
+          "parent": "1",
+          "label": "Alternativas cloud\nKafka → Kinesis / Event Hubs · S3 → ADLS / GCS\nTrino → Denodo · Vault → KMS / Key Vault\nIceberg → Delta · Airflow → MWAA / Composer",
+          "html": "<b style=\"font-size:11px\">Alternativas cloud</b><br>Kafka → Kinesis / Event Hubs · S3 → ADLS / GCS<br>Trino → Denodo · Vault → KMS / Key Vault<br>Iceberg → Delta · Airflow → MWAA / Composer"
+        },
+        {
+          "id": "n83",
+          "type": "node",
+          "parent": "1",
+          "label": "INVARIANTES DE DISEÑO · reglas que la arquitectura garantiza",
+          "html": "<b>INVARIANTES DE DISEÑO · reglas que la arquitectura garantiza</b>"
+        },
+        {
+          "id": "n84",
+          "type": "node",
+          "parent": "1",
+          "label": "I1 · Privacidad en la frontera\nPII en claro solo en origen y Secure Landing",
+          "html": "<b style=\"font-size:11px\">I1 · Privacidad en la frontera</b><br>PII en claro solo en origen y Secure Landing"
+        },
+        {
+          "id": "n85",
+          "type": "node",
+          "parent": "1",
+          "label": "I2 · Bronze sin lógica\nOriginal protegido; solo se tokeniza",
+          "html": "<b style=\"font-size:11px\">I2 · Bronze sin lógica</b><br>Original protegido; solo se tokeniza"
+        },
+        {
+          "id": "n86",
+          "type": "node",
+          "parent": "1",
+          "label": "I3 · Fuentes de verdad\nCore > Lakehouse > proyección",
+          "html": "<b style=\"font-size:11px\">I3 · Fuentes de verdad</b><br>Core > Lakehouse > proyección"
+        },
+        {
+          "id": "n87",
+          "type": "node",
+          "parent": "1",
+          "label": "I4 · Acceso vía data products\nSin lecturas ad hoc sobre OLTP ni Bronze/Silver ajenos",
+          "html": "<b style=\"font-size:11px\">I4 · Acceso vía data products</b><br>Sin lecturas ad hoc sobre OLTP ni Bronze/Silver ajenos"
+        },
+        {
+          "id": "n88",
+          "type": "node",
+          "parent": "1",
+          "label": "I5 · Envelope versionado\nevent_id + versión por stream + accounting_date",
+          "html": "<b style=\"font-size:11px\">I5 · Envelope versionado</b><br>event_id + versión por stream + accounting_date"
+        },
+        {
+          "id": "n89",
+          "type": "node",
+          "parent": "1",
+          "label": "I6 · Gobierno antes de publicar\nContrato, clasificación y finalidad en catálogo",
+          "html": "<b style=\"font-size:11px\">I6 · Gobierno antes de publicar</b><br>Contrato, clasificación y finalidad en catálogo"
+        },
+        {
+          "id": "n90",
+          "type": "node",
+          "parent": "1",
+          "label": "I7 · Evidencia y supresión durables\nWORM + Erasure Registry re-aplicado",
+          "html": "<b style=\"font-size:11px\">I7 · Evidencia y supresión durables</b><br>WORM + Erasure Registry re-aplicado"
+        },
+        {
+          "id": "n91",
+          "type": "node",
+          "parent": "1",
+          "label": "I8 · Fail-closed\nSin Vault/HSM: nunca PII en claro",
+          "html": "<b style=\"font-size:11px\">I8 · Fail-closed</b><br>Sin Vault/HSM: nunca PII en claro"
+        },
+        {
+          "id": "n92",
+          "type": "node",
+          "parent": "1",
+          "label": "I9 · Cifras declaradas\nSLO, RPO/RTO y volúmenes = supuestos a validar",
+          "html": "<b style=\"font-size:11px\">I9 · Cifras declaradas</b><br>SLO, RPO/RTO y volúmenes = supuestos a validar"
+        },
+        {
+          "id": "n93",
+          "type": "node",
+          "parent": "1",
+          "label": "HOJA DE RUTA · la arquitectura es el estado objetivo (24-36 meses): se implanta por fases y se migra por coexistencia",
+          "html": "<b>HOJA DE RUTA · la arquitectura es el estado objetivo (24-36 meses): se implanta por fases y se migra por coexistencia</b>"
+        },
+        {
+          "id": "n94",
+          "type": "node",
+          "parent": "1",
+          "label": "FASE 1 · Fundacional (0-6 m)\nFuentes prioritarias · Privacy Gateway + Batch Privacy + Vault/HSM · Kafka\nBronze/Silver/Gold · Airflow + dbt · Quality Gate · DataHub · WORM · 2-3 dominios piloto",
+          "html": "<b style=\"font-size:11px\">FASE 1 · Fundacional (0-6 m)</b><br>Fuentes prioritarias · Privacy Gateway + Batch Privacy + Vault/HSM · Kafka<br>Bronze/Silver/Gold · Airflow + dbt · Quality Gate · DataHub · WORM · 2-3 dominios piloto"
+        },
+        {
+          "id": "n95",
+          "type": "node",
+          "parent": "1",
+          "label": "FASE 2 · Tiempo real y serving (6-12 m)\nDebezium (CDC + SMT) · Flink Speed + Serving Lambda · CQRS · Fabric (Trino)\nDSAR y bases de licitud · data products regulatorios · DR Tier-1",
+          "html": "<b style=\"font-size:11px\">FASE 2 · Tiempo real y serving (6-12 m)</b><br>Debezium (CDC + SMT) · Flink Speed + Serving Lambda · CQRS · Fabric (Trino)<br>DSAR y bases de licitud · data products regulatorios · DR Tier-1"
+        },
+        {
+          "id": "n96",
+          "type": "node",
+          "parent": "1",
+          "label": "FASE 3 · Madurez y mesh (12-24 m)\nDominios autónomos · Pact · Feast/MLOps · gobierno federado con OPA\nFinOps chargeback · Token Translation Service",
+          "html": "<b style=\"font-size:11px\">FASE 3 · Madurez y mesh (12-24 m)</b><br>Dominios autónomos · Pact · Feast/MLOps · gobierno federado con OPA<br>FinOps chargeback · Token Translation Service"
+        },
+        {
+          "id": "n97",
+          "type": "node",
+          "parent": "1",
+          "label": "MIGRACIÓN DESDE EL ESTADO ACTUAL\nCoexistencia con el DWH legado: migración por dominio, dual-run\ncon conciliación Gold ↔ legado, criterios de cutover y rollback, retiro",
+          "html": "<b style=\"font-size:11px\">MIGRACIÓN DESDE EL ESTADO ACTUAL</b><br>Coexistencia con el DWH legado: migración por dominio, dual-run<br>con conciliación Gold ↔ legado, criterios de cutover y rollback, retiro"
+        },
+        {
+          "id": "n98",
+          "type": "node",
+          "parent": "1",
+          "label": "Leyenda · ━▶ flujo de datos · ━▶ data products (Gold) / serving · ━▶ B = batch protegido → Bronze · ┅▶ claves de cifrado · FAIL = cuarentena · ┅▶ control / retroalimentación (F) · H = hot path → Serving · P = proyecciones → CQRS · Q = lectura CQRS → canales · SoR = sistema de registro · ABAC = acceso por atributos · DEK/KEK = clave de dato / maestra · Comandos: Canales → Command API → Core → Outbox/CDC → Kafka → proyecciones · Cargas masivas: SFTP/JDBC → Secure Landing → Spark → Bronze (Kafka no participa)",
+          "html": "<b>Leyenda</b> · <font color=\"#37474f\">━▶ flujo de datos</font> · <font color=\"#2e7d32\">━▶ data products (Gold) / serving</font> · <font color=\"#c62828\">━▶ B = batch protegido → Bronze · ┅▶ claves de cifrado · FAIL = cuarentena</font> · ┅▶ control / retroalimentación (F) · H = hot path → Serving · P = proyecciones → CQRS · Q = lectura CQRS → canales · SoR = sistema de registro · ABAC = acceso por atributos · DEK/KEK = clave de dato / maestra · Comandos: Canales → Command API → Core → Outbox/CDC → Kafka → proyecciones · Cargas masivas: SFTP/JDBC → Secure Landing → Spark → Bronze (Kafka no participa)"
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "name": "2 · Hoja explicativa",
+      "cells": [
+        {
+          "id": "1",
+          "type": "layer"
+        },
+        {
+          "id": "n3",
+          "type": "node",
+          "parent": "1",
+          "label": "Hoja explicativa · Plataforma de Datos para un Banco Digital",
+          "html": "<b>Hoja explicativa · Plataforma de Datos para un Banco Digital</b>"
+        },
+        {
+          "id": "n4",
+          "type": "node",
+          "parent": "1",
+          "label": "Lectura recomendada: 1 Enfoque → 2 Conceptos del reto → 4 Decisiones y trade-offs → 6 Objeciones previstas. Cifras = supuestos a validar; plazos legales los confirma DPO / Legal."
+        },
+        {
+          "id": "n5",
+          "type": "node",
+          "parent": "1",
+          "label": "1 · Enfoque",
+          "html": "<b>1 · Enfoque</b>"
+        },
+        {
+          "id": "n6",
+          "type": "node",
+          "parent": "1",
+          "label": "Diseño cloud-agnostic: open source sobre Kubernetes, con una alternativa cloud por componente. Los datos entran por API, CDC y archivos; la PII se protege en la frontera (tokenización + cifrado por titular, LOPDP) antes de Kafka y Bronze. Fluyen por Lambda (Speed + Batch) hacia un lakehouse Medallón (Iceberg); la Serving Layer fusiona ambos caminos y CQRS sirve lecturas operacionales de baja latencia. Los dominios publican y consumen data products con dueño, contrato y SLO (Data Mesh + Fabric); gobierno, calidad, observabilidad y seguridad son transversales. El Core no depende de la plataforma: el outbox retiene los eventos si esta cae.",
+          "html": "<b>Diseño cloud-agnostic</b>: open source sobre Kubernetes, con una alternativa cloud por componente. Los datos entran por API, CDC y archivos; la <b>PII se protege en la frontera</b> (tokenización + cifrado por titular, LOPDP) antes de Kafka y Bronze. Fluyen por <b>Lambda</b> (Speed + Batch) hacia un lakehouse <b>Medallón</b> (Iceberg); la Serving Layer fusiona ambos caminos y <b>CQRS</b> sirve lecturas operacionales de baja latencia. Los dominios publican y consumen <b>data products</b> con dueño, contrato y SLO (<b>Data Mesh</b> + <b>Fabric</b>); gobierno, calidad, observabilidad y seguridad son transversales. El Core no depende de la plataforma: el outbox retiene los eventos si esta cae."
+        },
+        {
+          "id": "n7",
+          "type": "node",
+          "parent": "1",
+          "label": "2 · Conceptos exigidos → dónde se materializan",
+          "html": "<b>2 · Conceptos exigidos → dónde se materializan</b>"
+        },
+        {
+          "id": "n8",
+          "type": "node",
+          "parent": "1",
+          "label": "Concepto del retoDónde está en el diagramaLambdaCapa 3: Speed (Flink) + Batch (Spark / dbt); se fusionan en la Serving Layer (capa 5) con lógica compartidaMedallónCapa 4: Bronze → Silver → Gold con Quality Gate entre Bronze y SilverOrquestaciónAirflow + dbt (Argo solo K8s / ML); programado y por evento (archivo_procesado)Data MeshBanda rosa + capa 6: dominios source / consumer, Owner + Steward, data products ODCS, self-service, gobierno federadoObservabilidad y calidadQuality Gate, cuarentena y reconciliación; Prometheus, Grafana, OTel, Elementary; SLO por data productCatálogo / metadatosDataHub: glosario, etiquetas PII, marketplace; linaje de columna con OpenLineage + MarquezCQRSCommand API → Core → outbox / CDC → Kafka → proyecciones; read-your-writes con versión NData FabricTrino + capa semántica sobre Gold, read models y réplicas con contrato; ABAC; no es atajo",
+          "html": "<table style=\"border-collapse:collapse;width:100%;font-size:11px\" cellpadding=\"3\"><tr><td style=\"width:150px;background:#455a64;color:#fff;border:1px solid #455a64\"><b>Concepto del reto</b></td><td style=\"width:454px;background:#455a64;color:#fff;border:1px solid #455a64\"><b>Dónde está en el diagrama</b></td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>Lambda</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Capa 3: Speed (Flink) + Batch (Spark / dbt); se fusionan en la Serving Layer (capa 5) con lógica compartida</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Medallón</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Capa 4: Bronze → Silver → Gold con Quality Gate entre Bronze y Silver</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>Orquestación</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Airflow + dbt (Argo solo K8s / ML); programado y por evento (archivo_procesado)</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Data Mesh</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Banda rosa + capa 6: dominios source / consumer, Owner + Steward, data products ODCS, self-service, gobierno federado</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>Observabilidad y calidad</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Quality Gate, cuarentena y reconciliación; Prometheus, Grafana, OTel, Elementary; SLO por data product</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Catálogo / metadatos</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">DataHub: glosario, etiquetas PII, marketplace; linaje de columna con OpenLineage + Marquez</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>CQRS</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Command API → Core → outbox / CDC → Kafka → proyecciones; read-your-writes con versión N</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Data Fabric</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Trino + capa semántica sobre Gold, read models y réplicas con contrato; ABAC; no es atajo</td></tr></table>"
+        },
+        {
+          "id": "n9",
+          "type": "node",
+          "parent": "1",
+          "label": "3 · Requisitos del reto → cobertura",
+          "html": "<b>3 · Requisitos del reto → cobertura</b>"
+        },
+        {
+          "id": "n10",
+          "type": "node",
+          "parent": "1",
+          "label": "Requisito del retoCoberturaFuentes heterogéneasCapas 1-2: API Gateway, SDK, Debezium / outbox, NiFi (SFTP, JDBC)Tiempo real + históricoCapa 3: Speed, Batch, Replay / Backfill; cargas masivas por Secure LandingAutonomía de áreasRiesgo, Marketing, Cumplimiento y Producto consumen data products; plataforma self-serviceDatos personales (LOPDP)Privacidad en la frontera, Vault / HSM, Lawful Basis, DSAR, Erasure Registry + crypto-shreddingTrazabilidad y calidadLinaje de columna, Audit Trail WORM, Quality Gate, reconciliación en 3 puntosResiliente, modular, escalableK8s multi-AZ, DR activo-pasivo, KEDA, particionado, Core desacopladoLectura / escritura desacopladasCQRS: Command API (escritura) y read models (lectura), con versión y fallbackCrudo / procesado / consumoBronze / Silver / Gold + zona de evidencia WORMInteroperabilidad entre dominiosMesh + catálogo + modelo canónico / MDM + Fabric + Token Translation Service",
+          "html": "<table style=\"border-collapse:collapse;width:100%;font-size:11px\" cellpadding=\"3\"><tr><td style=\"width:170px;background:#00838f;color:#fff;border:1px solid #00838f\"><b>Requisito del reto</b></td><td style=\"width:434px;background:#00838f;color:#fff;border:1px solid #00838f\"><b>Cobertura</b></td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\"><b>Fuentes heterogéneas</b></td><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\">Capas 1-2: API Gateway, SDK, Debezium / outbox, NiFi (SFTP, JDBC)</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Tiempo real + histórico</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Capa 3: Speed, Batch, Replay / Backfill; cargas masivas por Secure Landing</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\"><b>Autonomía de áreas</b></td><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\">Riesgo, Marketing, Cumplimiento y Producto consumen data products; plataforma self-service</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Datos personales (LOPDP)</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Privacidad en la frontera, Vault / HSM, Lawful Basis, DSAR, Erasure Registry + crypto-shredding</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\"><b>Trazabilidad y calidad</b></td><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\">Linaje de columna, Audit Trail WORM, Quality Gate, reconciliación en 3 puntos</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Resiliente, modular, escalable</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">K8s multi-AZ, DR activo-pasivo, KEDA, particionado, Core desacoplado</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\"><b>Lectura / escritura desacopladas</b></td><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\">CQRS: Command API (escritura) y read models (lectura), con versión y fallback</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Crudo / procesado / consumo</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Bronze / Silver / Gold + zona de evidencia WORM</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\"><b>Interoperabilidad entre dominios</b></td><td style=\"border:1px solid #cfd8dc;background:#e0f7fa;vertical-align:top\">Mesh + catálogo + modelo canónico / MDM + Fabric + Token Translation Service</td></tr></table>"
+        },
+        {
+          "id": "n11",
+          "type": "node",
+          "parent": "1",
+          "label": "4 · Decisiones clave y trade-offs",
+          "html": "<b>4 · Decisiones clave y trade-offs</b>"
+        },
+        {
+          "id": "n12",
+          "type": "node",
+          "parent": "1",
+          "label": "DecisiónPor qué y qué cuesta → mitigaciónLambda con lógica únicaCubre cierres e históricos y eventos en tiempo real. Costo: dos caminos → transformaciones compartidas, pruebas de equivalencia y reconciliación; Kappa como evolución.Privacidad en la fronteraTokeniza y cifra antes de Kafka y Bronze; supresión por crypto-shredding. Costo: latencia y dependencia de Vault / HSM → caché local de DEK y fail-closed.Cargas masivas fuera de KafkaArchivo → Secure Landing efímero → Spark protege → Bronze. Costo: ventana ≤ 24 h con PII en claro → aislada, cifrada y auditada.Debezium con SMT embebidoEvita que un gateway remoto genere backpressure sobre el WAL del Core. Costo: acopla versión de librería → misma librería versionada.Bronze = original protegidoReprocesable por replay; el negocio vive en Silver / Gold. Costo: almacenamiento; commit de 5 min o 128 MB evita small files.CQRS solo donde aportaLecturas operacionales de baja latencia; el saldo crítico va siempre por la API del Core. Costo: consistencia eventual → versión mínima + fallback.Fuentes de verdad explícitasCore = transacción · Lakehouse = analítica · proyección = derivada. Conflicto: Core > Lakehouse > proyección, con reconciliación diaria.Data Mesh por fasesAcceso entre dominios solo vía data products con contrato. Costo: gobierno federado y adopción → 3 fases y 2-3 dominios piloto.Fabric como capa lógicaAbstrae orígenes sin eludir contratos; federa solo réplicas publicadas, nunca el OLTP primario.Un estándar por funciónOpen source sobre K8s y alternativa cloud documentada. Costo: operar más piezas → un estándar por función, GitOps e IaC.",
+          "html": "<table style=\"border-collapse:collapse;width:100%;font-size:11px\" cellpadding=\"3\"><tr><td style=\"width:170px;background:#455a64;color:#fff;border:1px solid #455a64\"><b>Decisión</b></td><td style=\"width:444px;background:#455a64;color:#fff;border:1px solid #455a64\"><b>Por qué y qué cuesta → mitigación</b></td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>Lambda con lógica única</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Cubre cierres e históricos y eventos en tiempo real. <i>Costo:</i> dos caminos → transformaciones compartidas, pruebas de equivalencia y reconciliación; Kappa como evolución.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Privacidad en la frontera</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Tokeniza y cifra antes de Kafka y Bronze; supresión por crypto-shredding. <i>Costo:</i> latencia y dependencia de Vault / HSM → caché local de DEK y fail-closed.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>Cargas masivas fuera de Kafka</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Archivo → Secure Landing efímero → Spark protege → Bronze. <i>Costo:</i> ventana ≤ 24 h con PII en claro → aislada, cifrada y auditada.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Debezium con SMT embebido</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Evita que un gateway remoto genere backpressure sobre el WAL del Core. <i>Costo:</i> acopla versión de librería → misma librería versionada.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>Bronze = original protegido</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Reprocesable por replay; el negocio vive en Silver / Gold. <i>Costo:</i> almacenamiento; commit de 5 min o 128 MB evita small files.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>CQRS solo donde aporta</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Lecturas operacionales de baja latencia; el saldo crítico va siempre por la API del Core. <i>Costo:</i> consistencia eventual → versión mínima + fallback.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>Fuentes de verdad explícitas</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Core = transacción · Lakehouse = analítica · proyección = derivada. Conflicto: Core > Lakehouse > proyección, con reconciliación diaria.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Data Mesh por fases</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Acceso entre dominios solo vía data products con contrato. <i>Costo:</i> gobierno federado y adopción → 3 fases y 2-3 dominios piloto.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\"><b>Fabric como capa lógica</b></td><td style=\"border:1px solid #cfd8dc;background:#eceff1;vertical-align:top\">Abstrae orígenes sin eludir contratos; federa solo réplicas publicadas, nunca el OLTP primario.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Un estándar por función</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Open source sobre K8s y alternativa cloud documentada. <i>Costo:</i> operar más piezas → un estándar por función, GitOps e IaC.</td></tr></table>"
+        },
+        {
+          "id": "n13",
+          "type": "node",
+          "parent": "1",
+          "label": "5 · Flujos de punta a punta",
+          "html": "<b>5 · Flujos de punta a punta</b>"
+        },
+        {
+          "id": "n14",
+          "type": "node",
+          "parent": "1",
+          "label": "FlujoRecorridoComando (CQRS)Canal → Command API → Core → outbox (misma transacción) → Debezium + SMT → Kafka → proyector → lectura con versión ≥ N (o fallback al Core)Archivo de buróSFTP → NiFi (checksum, antivirus) → Secure Landing → Spark tokeniza → Bronze → Quality Gate → Silver → GoldSupresión (DSAR)Solicitud → identidad → retención legal (DPO) → Erasure Registry → privacy.erasure → Vault destruye DEK → derivados → evidencia WORMIncidente de calidadFAIL → cuarentena → alerta al Owner → impacto por linaje → replay idempotente → reconciliación",
+          "html": "<table style=\"border-collapse:collapse;width:100%;font-size:11px\" cellpadding=\"3\"><tr><td style=\"width:130px;background:#2e7d32;color:#fff;border:1px solid #2e7d32\"><b>Flujo</b></td><td style=\"width:484px;background:#2e7d32;color:#fff;border:1px solid #2e7d32\"><b>Recorrido</b></td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#e8f5e9;vertical-align:top\"><b>Comando (CQRS)</b></td><td style=\"border:1px solid #cfd8dc;background:#e8f5e9;vertical-align:top\">Canal → Command API → Core → outbox (misma transacción) → Debezium + SMT → Kafka → proyector → lectura con versión ≥ N (o fallback al Core)</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Archivo de buró</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">SFTP → NiFi (checksum, antivirus) → Secure Landing → Spark tokeniza → Bronze → Quality Gate → Silver → Gold</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#e8f5e9;vertical-align:top\"><b>Supresión (DSAR)</b></td><td style=\"border:1px solid #cfd8dc;background:#e8f5e9;vertical-align:top\">Solicitud → identidad → retención legal (DPO) → Erasure Registry → privacy.erasure → Vault destruye DEK → derivados → evidencia WORM</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Incidente de calidad</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">FAIL → cuarentena → alerta al Owner → impacto por linaje → replay idempotente → reconciliación</td></tr></table>"
+        },
+        {
+          "id": "n15",
+          "type": "node",
+          "parent": "1",
+          "label": "6 · Objeciones previstas y respuesta",
+          "html": "<b>6 · Objeciones previstas y respuesta</b>"
+        },
+        {
+          "id": "n16",
+          "type": "node",
+          "parent": "1",
+          "label": "ObjeciónRespuestaSobreingenieríaEs el estado objetivo (24-36 m): se implanta por fases y se migra por coexistencia desde el DWH legado (dual-run, cutover, rollback).Lambda duplica lógicaLógica compartida, pruebas de equivalencia y reconciliación Speed ↔ Batch; Kappa si simplifica.¿PII en claro en algún punto?Solo en origen y en el Secure Landing (≤ 24 h). Kafka, Bronze, Silver, Gold y proyecciones: tokens o cifrado por titular. Sin Vault / HSM: fail-closed.¿Cómo se suprime en un lake inmutable?Crypto-shredding: se destruye la DEK del titular; el time travel falla por diseño y el Erasure Registry se re-aplica tras restore o replay.¿Y si cae la plataforma?El Core no depende de ella; reporting regulatorio manual desde réplica; DR activo-pasivo (RPO ≤ 5 min, RTO ≤ 1 h, supuestos).¿Mesh, Fabric, Lakehouse y CQRS se pisan?No: Mesh = organización y contrato; Lakehouse = analítica; Fabric = acceso lógico; CQRS = lectura operacional (regla de uso en capa 5).Tokens por dominio impiden joinsSolo vía Token Translation Service autorizado por OPA; el cruce es temporal, no se persiste y queda auditado.Dos ejes de tiempoevent_time para streaming; accounting_date para contabilidad, cierres y cuadre Gold ↔ Core.",
+          "html": "<table style=\"border-collapse:collapse;width:100%;font-size:11px\" cellpadding=\"3\"><tr><td style=\"width:180px;background:#c62828;color:#fff;border:1px solid #c62828\"><b>Objeción</b></td><td style=\"width:434px;background:#c62828;color:#fff;border:1px solid #c62828\"><b>Respuesta</b></td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffebee;vertical-align:top\"><b>Sobreingeniería</b></td><td style=\"border:1px solid #cfd8dc;background:#ffebee;vertical-align:top\">Es el estado objetivo (24-36 m): se implanta por fases y se migra por coexistencia desde el DWH legado (dual-run, cutover, rollback).</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Lambda duplica lógica</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Lógica compartida, pruebas de equivalencia y reconciliación Speed ↔ Batch; Kappa si simplifica.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffebee;vertical-align:top\"><b>¿PII en claro en algún punto?</b></td><td style=\"border:1px solid #cfd8dc;background:#ffebee;vertical-align:top\">Solo en origen y en el Secure Landing (≤ 24 h). Kafka, Bronze, Silver, Gold y proyecciones: tokens o cifrado por titular. Sin Vault / HSM: fail-closed.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>¿Cómo se suprime en un lake inmutable?</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">Crypto-shredding: se destruye la DEK del titular; el time travel falla por diseño y el Erasure Registry se re-aplica tras restore o replay.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffebee;vertical-align:top\"><b>¿Y si cae la plataforma?</b></td><td style=\"border:1px solid #cfd8dc;background:#ffebee;vertical-align:top\">El Core no depende de ella; reporting regulatorio manual desde réplica; DR activo-pasivo (RPO ≤ 5 min, RTO ≤ 1 h, supuestos).</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>¿Mesh, Fabric, Lakehouse y CQRS se pisan?</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">No: Mesh = organización y contrato; Lakehouse = analítica; Fabric = acceso lógico; CQRS = lectura operacional (regla de uso en capa 5).</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffebee;vertical-align:top\"><b>Tokens por dominio impiden joins</b></td><td style=\"border:1px solid #cfd8dc;background:#ffebee;vertical-align:top\">Solo vía Token Translation Service autorizado por OPA; el cruce es temporal, no se persiste y queda auditado.</td></tr><tr><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\"><b>Dos ejes de tiempo</b></td><td style=\"border:1px solid #cfd8dc;background:#ffffff;vertical-align:top\">event_time para streaming; accounting_date para contabilidad, cierres y cuadre Gold ↔ Core.</td></tr></table>"
+        },
+        {
+          "id": "n17",
+          "type": "node",
+          "parent": "1",
+          "label": "7 · Supuestos, alcance y riesgos residuales",
+          "html": "<b>7 · Supuestos, alcance y riesgos residuales</b>"
+        },
+        {
+          "id": "n18",
+          "type": "node",
+          "parent": "1",
+          "label": "Cifras: 10k ev/s, latencias, RPO / RTO, TTL y retenciones son supuestos a validar con pruebas de carga y simulacros de DR.\nLegal: plazos y bases (derechos del titular, notificación de brechas, art. 43 LOPDP) los confirma el DPO / Legal; prevalece el texto vigente.\nRoles: Owner y Steward son propuestos; nombres y RACI los define el banco.\nGarantías: exactly-once dentro de Flink + Kafka; de extremo a extremo con idempotencia (event_id) y upsert condicional por versión.\nFuera de alcance: CIAM de clientes, CDE / PCI del adquirente, DR del Core, dimensionamiento de costos.\nRiesgos residuales: complejidad operativa (un estándar por función, GitOps), dependencia de Vault / HSM (caché, fail-closed, HSM secundario) y adopción del mesh (fases, comunidad de práctica).",
+          "html": "<b>Cifras:</b> 10k ev/s, latencias, RPO / RTO, TTL y retenciones son <b>supuestos</b> a validar con pruebas de carga y simulacros de DR.<br><b>Legal:</b> plazos y bases (derechos del titular, notificación de brechas, art. 43 LOPDP) los confirma el DPO / Legal; prevalece el texto vigente.<br><b>Roles:</b> Owner y Steward son propuestos; nombres y RACI los define el banco.<br><b>Garantías:</b> exactly-once dentro de Flink + Kafka; de extremo a extremo con idempotencia (event_id) y upsert condicional por versión.<br><b>Fuera de alcance:</b> CIAM de clientes, CDE / PCI del adquirente, DR del Core, dimensionamiento de costos.<br><b>Riesgos residuales:</b> complejidad operativa (un estándar por función, GitOps), dependencia de Vault / HSM (caché, fail-closed, HSM secundario) y adopción del mesh (fases, comunidad de práctica)."
+        },
+        {
+          "id": "n19",
+          "type": "node",
+          "parent": "1",
+          "label": "8 · Hoja de ruta y migración",
+          "html": "<b>8 · Hoja de ruta y migración</b>"
+        },
+        {
+          "id": "n20",
+          "type": "node",
+          "parent": "1",
+          "label": "Fase 1 · Fundacional (0-6 m): fuentes prioritarias, protección de PII, Kafka, Bronze / Silver / Gold, Airflow + dbt, calidad, catálogo, 2-3 dominios piloto.\nFase 2 · Tiempo real y serving (6-12 m): CDC, Flink, Serving Lambda, CQRS, Fabric, DSAR, data products regulatorios, DR.\nFase 3 · Madurez y mesh (12-24 m): dominios autónomos, Pact, MLOps, gobierno federado, FinOps.\nMigración: coexistencia con el DWH legado, por dominio, con dual-run y criterios de salida.",
+          "html": "<b>Fase 1 · Fundacional (0-6 m):</b> fuentes prioritarias, protección de PII, Kafka, Bronze / Silver / Gold, Airflow + dbt, calidad, catálogo, 2-3 dominios piloto.<br><b>Fase 2 · Tiempo real y serving (6-12 m):</b> CDC, Flink, Serving Lambda, CQRS, Fabric, DSAR, data products regulatorios, DR.<br><b>Fase 3 · Madurez y mesh (12-24 m):</b> dominios autónomos, Pact, MLOps, gobierno federado, FinOps.<br><b>Migración:</b> coexistencia con el DWH legado, por dominio, con dual-run y criterios de salida."
+        }
+      ]
+    }
+  ]
+}

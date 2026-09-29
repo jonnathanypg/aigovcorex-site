@@ -167,3 +167,6 @@ Carpeta `IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/` + `c
 
 ## 2026-09-29 — ARQ BANCO DIGITAL [ANÁLISIS+DONE]
 Diagrama 146 nodos extraído (Lambda+Medallón+Mesh+Privacy+PII Vault+WORM). Plan maestro 9 secciones verificado en repo (C1-C9, puertos 0.0.0.0, to_dict PII, sin WEBHOOK_SECRET, DDL en arranque, sin subjects). Inventario: 0 Vault/KMS/streaming/TTS-local en código; `cryptography` declarado sin uso; edge-tts cloud. Plan `docs/cmci/PLAN_INTEGRACION_BANCO_DIGITAL.md`: NATS (no Kafka), DuckDB→MinIO/Spark, Piper/Kokoro, hash-chain ya/red después, F0-F4 con criterios.
+
+## 2026-09-29 — CORE DATOS LAB [ANÁLISIS+DONE]
+Inventario 16 proyectos (sensible máx: menores/salud/legal/chats; reutilizable: WA canónico, voz MediaSuite, RAG, AES LeFriApp, billing Aikrofy). Diseño `_core/` lab-wide con uid_enc único + ODCS + dominios + F0-F4. Doc `docs/cmci/ARQUITECTURA_CORE_DATOS_LAB.md`.

@@ -28,11 +28,13 @@ def resolve_report_tenant_ids(tenant_id, user_id, center_name: str = None):
     from models.tenant import Tenant
 
     if center_name:
-        # Search for tenant by name (case-insensitive partial match)
+        # Search for tenant by name DENTRO del alcance del usuario (anti-IDOR)
+        allowed = set(resolve_tenant_ids(None, user_id))
         matches = Tenant.query.filter(
             Tenant.name.ilike(f'%{center_name}%'),
             Tenant.is_active == True
         ).all()
+        matches = [t for t in matches if not allowed or t.id in allowed]
 
         if not matches:
             return [], f'No se encontró ningún centro con el nombre "{center_name}"'

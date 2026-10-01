@@ -565,13 +565,32 @@ Input: {'child_name': 'Juan Pérez', 'message': 'Texto del mensaje', 'user_id': 
 def get_all_tools():
     """Get all available tools for the agent"""
     from agents.tools.report_tools import GenerateReportTool
+    from agents.tools.identity_tools import GetCurrentUserProfileTool, GetAssistantCapabilitiesTool
+    from agents.tools.attendance_tools import GetAbsentChildrenTool, GetAttendanceTodayTool
     from agents.tools.management_tools import (
         ManagePlanningTool, ManageWeeklyMenuTool,
         ManageMaintenanceTaskTool, ManageInterventionTool,
         ManageAdmissionTool, ManageChildTool, ManageIngestionTool,
         SendEmailTool, ManageSocialProgramsTool, ManageChannelsTool,
     )
+    from agents.tools.org_admin_tools import (
+        ManageUsersTool, ManageCentersTool, ManageFamilyTool, ManageApplicationsTool,
+    )
+    from agents.tools.care_ops_tools import (
+        ManageMilestonesTool, ManageHealthVaccinesTool, ManageRationsTool,
+        ManageCMCITool, ManageMonitoringStaffTool, ManageNotificationsTool,
+        ManageDocumentsKnowledgeTool, ManageGeoChannelsTool,
+    )
+    from agents.subagents import (
+        DelegateChildProfile, DelegateHealthNutrition, DelegateDevelopment,
+        DelegateCMCIAdmission, DelegateOperationsGeo, DelegateSocial,
+        DelegatePeopleOrg, DelegateKnowledgeReports,
+    )
     return [
+        GetCurrentUserProfileTool(),
+        GetAssistantCapabilitiesTool(),
+        GetAbsentChildrenTool(),
+        GetAttendanceTodayTool(),
         SearchChildTool(),
         RecordAttendanceTool(),
         LogNutritionTool(),
@@ -601,5 +620,28 @@ def get_all_tools():
         ManageSocialProgramsTool(),
         # Multichannel Infrastructure & Inheritance (Phase 10)
         ManageChannelsTool(),
+        # Org Admin (cobertura 100%: usuarios/centros/familia/solicitudes)
+        ManageUsersTool(),
+        ManageCentersTool(),
+        ManageFamilyTool(),
+        ManageApplicationsTool(),
+        # Care & Ops (IDII/salud/raciones/CMCI/monitoreo/notifs/docs/geo)
+        ManageMilestonesTool(),
+        ManageHealthVaccinesTool(),
+        ManageRationsTool(),
+        ManageCMCITool(),
+        ManageMonitoringStaffTool(),
+        ManageNotificationsTool(),
+        ManageDocumentsKnowledgeTool(),
+        ManageGeoChannelsTool(),
+        # Subagentes supervisores (delegación en 1 llamada)
+        DelegateChildProfile(),
+        DelegateHealthNutrition(),
+        DelegateDevelopment(),
+        DelegateCMCIAdmission(),
+        DelegateOperationsGeo(),
+        DelegateSocial(),
+        DelegatePeopleOrg(),
+        DelegateKnowledgeReports(),
     ]
 

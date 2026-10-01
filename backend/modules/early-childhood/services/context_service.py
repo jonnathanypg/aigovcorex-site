@@ -63,6 +63,16 @@ class ContextService:
             scope['allowed_actions'] = ['select', 'insert', 'update']
             scope['tenant_id'] = user.tenant_id
 
+        elif role_name in ('supervisor', 'doctor', 'nutritionist', 'psychologist',
+                           'social_worker', 'administrative', 'admin', 'coordinadora_centro',
+                           'coordinador_general', 'central', 'central_dase', 'central_mdh'):
+            # Staff clínico/soporte y supervisión: alcance total del centro (lectura+escritura
+            # operativa, sin borrado). Antes caían en Default Deny 1=0 y el SQL no devolvía nada.
+            scope['filter_sql'] = f"tenant_id = {user.tenant_id}"
+            scope['access_level'] = 'tenant_full'
+            scope['allowed_actions'] = ['select', 'insert', 'update']
+            scope['tenant_id'] = user.tenant_id
+
         elif role_name in [ContextService.ROLE_EDUCATOR, 'educadora']:
             # Educator: ONLY assigned children (child_ids from assigned_educator_id)
             child_ids = [c.id for c in Child.query.filter_by(

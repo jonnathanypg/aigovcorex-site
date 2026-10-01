@@ -113,6 +113,8 @@ def send_message():
             legal_name=lic_ctx['legal_name'],
             ruc=lic_ctx['ruc'],
             centers_list=lic_ctx['centers_list'],
+            user_full_name=getattr(user, 'full_name', None) or f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip() or None,
+            user_email=getattr(user, 'email', None),
         )
         
         # Process message through the orchestrator
@@ -210,6 +212,8 @@ def stream_message():
             legal_name=lic_ctx['legal_name'],
             ruc=lic_ctx['ruc'],
             centers_list=lic_ctx['centers_list'],
+            user_full_name=getattr(user, 'full_name', None) or f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip() or None,
+            user_email=getattr(user, 'email', None),
         )
         
         # Wrap with streaming - pass Flask app for context in background thread

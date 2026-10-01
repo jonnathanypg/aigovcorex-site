@@ -166,7 +166,29 @@ def receive_whatsapp_message():
 
         # TODO: Process through AI orchestrator for OS channels
         # For now, just acknowledge receipt
-        return jsonify({'status': 'handled_os_channel', 'conversation_id': conv_id, 'success': True}), 200
+        try:
+            from api.channels_os_webhook import (
+                _process_with_ai_orchestrator as _os_process,
+                _send_whatsapp_response as _os_send,
+            )
+            from models.channel_config import ChannelConversation
+            _conv = ChannelConversation.query.get(conv_id)
+            _ai_text = _os_process(
+                channel=os_channel, conversation=_conv,
+                user_message=message, contact_phone=clean_phone)
+            _sent = _os_send(os_channel, phone, _ai_text)
+            if _sent:
+                _persist_incoming_message_os(
+                    channel=os_channel, external_id=phone,
+                    contact_name=None, contact_phone=clean_phone,
+                    role='assistant', content=_ai_text,
+                    channel_type='whatsapp')
+            return jsonify({'status': 'handled_os_channel', 'conversation_id': conv_id,
+                            'success': True, 'ai_response_sent': bool(_sent)}), 200
+        except Exception as _e:
+            print(f"[WhatsApp Webhook] OS AI error: {_e}")
+            return jsonify({'status': 'handled_os_channel', 'conversation_id': conv_id,
+                            'success': True, 'ai_fallback': True}), 200
 
     # Legacy License-based flow
     license_obj = License.query.get(company_id)
@@ -185,9 +207,9 @@ def receive_whatsapp_message():
             phone=phone,
             attachment=attachment
         )
-        _send_whatsapp_response(company_id, phone, response_text)
+        _send_whatsapp_response(license_id, phone, response_text)
         return jsonify({'status': 'handled_public_citizen', 'user_found': False, 'success': True}), 200
-
+    
     # Process message through the AI orchestrator
     try:
         # Notify user we are thinking
@@ -307,7 +329,12 @@ def _process_ai_message(message: str, identity: dict, license_obj: License, phon
             if file_name.lower().endswith('.csv'):
                 context_prefix += "\nEste es un archivo CSV. Puedes procesarlo usando la herramienta 'manage_ingestion' con action='process_csv'."
     
-    # Use LangGraph orchestrator
+    # Use LangGraph orchestrator (multi-módulo: kindicore + social)
+    try:
+        from api.chat import _build_license_context as _lic_ctx
+        _ctx = _lic_ctx(license_obj.id) if license_obj and getattr(license_obj, 'id', None) else {}
+    except Exception:
+        _ctx = {}
     orchestrator = LangGraphOrchestrator(
         tenant_id=tenant_id or 1,
         user_id=user_id,
@@ -316,7 +343,10 @@ def _process_ai_message(message: str, identity: dict, license_obj: License, phon
         license_name=license_obj.name,
         legal_name=license_obj.legal_name,
         ruc=license_obj.ruc,
-        centers_list=identity.get('centers_list', [])
+        centers_list=identity.get('centers_list', []) or _ctx.get('centers_list', []),
+        user_full_name=identity.get('user_name'),
+        enabled_modules=_ctx.get('enabled_modules') or [],
+        programs_list=_ctx.get('active_programs') or [],
     )
     
     # Process with role context

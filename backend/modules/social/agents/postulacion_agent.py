@@ -10,8 +10,13 @@ from typing import Dict, List, Optional, Tuple
 try:
     # Runtime principal: backend/modules/early-childhood en sys.path
     from agents.llm_interface import get_llm
-except ImportError:  # servicio social standalone
-    from backend.modules.early_childhood.agents.llm_interface import get_llm  # type: ignore
+except ImportError:  # servicio social standalone: agregar early-childhood al path
+    import os as _os
+    import sys as _sys
+    _EC = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..', 'early-childhood'))
+    if _EC not in _sys.path:
+        _sys.path.insert(0, _EC)
+    from agents.llm_interface import get_llm
 from models import db
 
 logger = logging.getLogger(__name__)
@@ -53,7 +58,7 @@ class PostulacionAgent:
         try:
             from api.social_programs import _validate_field_value
         except ImportError:  # servicio social standalone
-            from backend.modules.social.api.social_programs import _validate_field_value  # type: ignore
+            from social.api.social_programs import _validate_field_value
 
         history = history or []
         label = current_field.get('label') or current_field.get('id')
@@ -106,7 +111,7 @@ class PostulacionAgent:
         try:
             from api.social_programs import _validate_field_value
         except ImportError:  # servicio social standalone
-            from backend.modules.social.api.social_programs import _validate_field_value  # type: ignore
+            from social.api.social_programs import _validate_field_value
 
         label = field.get('label') or field.get('id')
         ftype = (field.get('type') or 'text').lower()

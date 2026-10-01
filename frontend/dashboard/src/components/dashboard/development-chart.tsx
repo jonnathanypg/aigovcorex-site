@@ -36,7 +36,7 @@ const VIBRANT_COLORS = [
   "#a3e635", // lime
 ];
 
-export function DevelopmentChart({ className, tenantId }: { className?: string; tenantId?: number }) {
+export function DevelopmentChart({ className, tenantId, from, to }: { className?: string; tenantId?: number; from?: string; to?: string }) {
   const { role, center } = useRole();
   const [data, setData] = useState<ChartDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +45,7 @@ export function DevelopmentChart({ className, tenantId }: { className?: string; 
 
   const fetchData = useCallback(async () => {
     try {
-      const chartData = await monitoringService.getDevelopmentChart(tenantId);
+      const chartData = await monitoringService.getDevelopmentChart(tenantId, { from, to });
       setData(chartData);
 
       if (chartData.length > 0) {
@@ -67,7 +67,7 @@ export function DevelopmentChart({ className, tenantId }: { className?: string; 
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, from, to]);
 
   useEffect(() => {
     fetchData();

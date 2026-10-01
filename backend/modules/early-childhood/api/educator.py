@@ -86,7 +86,7 @@ def get_my_children(user):
             tenant_id=user.tenant_id,
             assigned_educator_id=user.id,
             status='activo'
-        ).all()
+        ).order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         
         children_list = []
         for child in children:
@@ -121,7 +121,7 @@ def get_attendance(user):
             tenant_id=user.tenant_id,
             assigned_educator_id=user.id,
             status='activo'
-        ).all()
+        ).order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         child_ids = [c.id for c in children]
         
         attendance_records = Attendance.query.filter(
@@ -387,7 +387,7 @@ def get_attendance_alerts(user):
         children = Child.query.filter_by(
             tenant_id=user.tenant_id,
             status='activo'
-        ).all()
+        ).order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         
         alerts = []
         

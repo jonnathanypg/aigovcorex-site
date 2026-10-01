@@ -32,46 +32,33 @@ def require_authenticated(f):
 @monitoring_bp.route('/kpis', methods=['GET'])
 @require_authenticated
 def get_kpis(user):
-    """Obtener KPIs de monitoreo"""
+    """Obtener KPIs de monitoreo (soporta ?from=YYYY-MM-DD&to=YYYY-MM-DD para periodo personalizado)"""
     try:
         today = date.today()
         first_of_month = today.replace(day=1)
+        f_from, f_to = _parse_date_range()
+        period_start = f_from or first_of_month
+        period_end = f_to or today
         
-        target_tenant_ids = []
         requested_tenant_id = request.args.get('tenant_id', type=int)
-        
-        # Determinar scope de tenants
-        if is_multi_center_role(user):
-            from models.license import LicenseAdmin
-            lic_admin = LicenseAdmin.query.filter_by(user_id=user.id).first()
-            if lic_admin:
-                all_tenants = Tenant.query.filter_by(license_id=lic_admin.license_id, is_active=True).all()
-                allowed_ids = [t.id for t in all_tenants]
-                
-                if requested_tenant_id:
-                    if requested_tenant_id in allowed_ids:
-                        target_tenant_ids = [requested_tenant_id]
-                    else:
-                        return jsonify({'error': 'Acceso denegado al centro solicitado'}), 403
-                else:
-                    target_tenant_ids = allowed_ids
-        elif user.tenant_id:
-            target_tenant_ids = [user.tenant_id]
+        target_tenant_ids = _resolve_tenant_scope(user, requested_tenant_id)
             
         if not target_tenant_ids:
             return jsonify({'kpis': [], 'message': 'No hay centros asignados'}), 200
 
         # Calcular métricas agregadas
         
-        # 1. Indicador de Asistencia (Mes actual)
+        # 1. Indicador de Asistencia (Mes actual o periodo ?from/?to)
         total_attendance = Attendance.query.filter(
             Attendance.tenant_id.in_(target_tenant_ids),
-            Attendance.date >= first_of_month
+            Attendance.date >= period_start,
+            Attendance.date <= period_end
         ).count()
         
         present_attendance = Attendance.query.filter(
             Attendance.tenant_id.in_(target_tenant_ids),
-            Attendance.date >= first_of_month,
+            Attendance.date >= period_start,
+            Attendance.date <= period_end,
             Attendance.status == 'presente'
         ).count()
         
@@ -141,11 +128,12 @@ def get_kpis(user):
         else:
             development_rate = 0
 
-        # 4. Indicador de Nutrición (Controles crecimiento mes actual)
+        # 4. Indicador de Nutrición (Controles crecimiento en periodo)
         kids_with_growth = db.session.query(HealthRecord.child_id).filter(
             HealthRecord.tenant_id.in_(target_tenant_ids),
             HealthRecord.record_type == 'crecimiento',
-            HealthRecord.record_date >= first_of_month
+            HealthRecord.record_date >= period_start,
+            HealthRecord.record_date <= period_end
         ).distinct().count()
         
         nutrition_rate = (kids_with_growth / total_kids * 100) if total_kids > 0 else 0
@@ -328,10 +316,31 @@ def _resolve_tenant_scope(user, requested_tenant_id=None):
     return target
 
 
+def _parse_date_range(default_days=30):
+    """Helper: parse ?from=YYYY-MM-DD & ?to=YYYY-MM-DD. Returns (start, end) or (None, None)."""
+    from datetime import datetime as _dt
+    s_raw = request.args.get('from') or request.args.get('start') or request.args.get('start_date')
+    e_raw = request.args.get('to') or request.args.get('end') or request.args.get('end_date')
+    start = end = None
+    try:
+        if s_raw:
+            start = _dt.strptime(s_raw[:10], '%Y-%m-%d').date()
+        if e_raw:
+            end = _dt.strptime(e_raw[:10], '%Y-%m-%d').date()
+    except Exception:
+        return None, None
+    if start and end and end < start:
+        start, end = end, start
+    # Limit range to 366 days to avoid overload
+    if start and end and (end - start).days > 366:
+        start = end - timedelta(days=366)
+    return start, end
+
+
 @monitoring_bp.route('/attendance-trend', methods=['GET'])
 @require_authenticated
 def get_attendance_trend(user):
-    """Tendencia de asistencia diaria — últimos 30 días (Line Chart)"""
+    """Tendencia de asistencia diaria — últimos 30 días por defecto, o periodo ?from/?to (Line Chart)"""
     try:
         requested_tid = request.args.get('tenant_id', type=int)
         target_ids = _resolve_tenant_scope(user, requested_tid)
@@ -339,7 +348,9 @@ def get_attendance_trend(user):
             return jsonify({'chart_data': []}), 200
 
         today = date.today()
-        start = today - timedelta(days=29)
+        f_from, f_to = _parse_date_range()
+        start = f_from or (today - timedelta(days=29))
+        end = f_to or today
 
         # Get daily attendance counts grouped by date and status
         rows = db.session.query(
@@ -349,13 +360,13 @@ def get_attendance_trend(user):
         ).filter(
             Attendance.tenant_id.in_(target_ids),
             Attendance.date >= start,
-            Attendance.date <= today
+            Attendance.date <= end
         ).group_by(Attendance.date, Attendance.status).all()
 
         # Build data by day
         day_map = {}
         d = start
-        while d <= today:
+        while d <= end:
             day_map[d] = {'fecha': d.strftime('%d/%m'), 'presentes': 0, 'ausentes': 0, 'justificados': 0, 'tardanzas': 0}
             d += timedelta(days=1)
 
@@ -573,6 +584,9 @@ def get_centers_comparison(user):
 
         today = date.today()
         first_of_month = today.replace(day=1)
+        f_from, f_to = _parse_date_range()
+        period_start = f_from or first_of_month
+        period_end = f_to or today
         chart_data = []
 
         for tid in target_ids:
@@ -583,11 +597,13 @@ def get_centers_comparison(user):
             # Attendance rate
             total_att = Attendance.query.filter(
                 Attendance.tenant_id == tid,
-                Attendance.date >= first_of_month
+                Attendance.date >= period_start,
+                Attendance.date <= period_end
             ).count()
             present_att = Attendance.query.filter(
                 Attendance.tenant_id == tid,
-                Attendance.date >= first_of_month,
+                Attendance.date >= period_start,
+                Attendance.date <= period_end,
                 Attendance.status == 'presente'
             ).count()
             att_rate = round((present_att / total_att * 100)) if total_att > 0 else 0
@@ -611,11 +627,12 @@ def get_centers_comparison(user):
             else:
                 dev_rate = 0
 
-            # Nutrition rate (kids with growth record this month)
+            # Nutrition rate (kids with growth record in period)
             kids_growth = db.session.query(HealthRecord.child_id).filter(
                 HealthRecord.tenant_id == tid,
                 HealthRecord.record_type == 'crecimiento',
-                HealthRecord.record_date >= first_of_month
+                HealthRecord.record_date >= period_start,
+                HealthRecord.record_date <= period_end
             ).distinct().count()
             nut_rate = round((kids_growth / total_kids * 100)) if total_kids > 0 else 0
 

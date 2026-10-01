@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2, Bot, Upload, Globe } from 'lucide-react';
 import { licenseAdminService, type SponsorLogo } from '@/services/license-admin.service';
-import { useAgentRefresh } from '@/hooks/use-agent-refresh';
+import { useAgentRefresh, dispatchAgentConfigChanged } from '@/hooks/use-agent-refresh';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AgentConfigModalProps {
@@ -49,7 +49,7 @@ export function AgentConfigModal({ isOpen, onClose }: AgentConfigModalProps) {
     const [logos, setLogos] = useState<SponsorLogo[]>([]);
 
     // API URL Base for image display (assuming backend serves static files)
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5010';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const getImageUrl = (path: string | null) => {
         if (!path) return null;
@@ -105,6 +105,10 @@ export function AgentConfigModal({ isOpen, onClose }: AgentConfigModalProps) {
                 timezone: timezone
             });
             toast.success('Configuración actualizada');
+            // Avisar al ChatWidget (botón flotante + sidebar) para que
+            // recargue nombre/icono al instante, sin recargar la página
+            dispatchAgentConfigChanged();
+            queryClient.invalidateQueries({ queryKey: ['sponsorLogos'] });
             onClose();
         } catch (error) {
             console.error('Error saving config:', error);

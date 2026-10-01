@@ -32,7 +32,7 @@ interface PublicChatWidgetProps {
 
 export function PublicChatWidget({
     orgSlug,
-    apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5010',
+    apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000',
     position = 'bottom-right',
     primaryColor = '#f97316',
     className,
@@ -48,6 +48,13 @@ export function PublicChatWidget({
     const [userPhone, setUserPhone] = useState('');
     const [step, setStep] = useState<'intro' | 'chat'>('intro');
     const [fetchError, setFetchError] = useState(false);
+
+    // Construye la URL del icono del agente (respeta http absoluto o relativo a apiBase)
+    const getAgentIconUrl = (path?: string | null) => {
+        if (!path) return null;
+        if (path.startsWith('http')) return path;
+        return `${apiBase}${path}`;
+    };
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -176,8 +183,13 @@ export function PublicChatWidget({
                         }}
                     >
                         <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-sm">
-                                <Bot className="w-6 h-6 text-white" />
+                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-sm overflow-hidden">
+                                {(() => {
+                                    const iconUrl = getAgentIconUrl(orgConfig?.agent_icon);
+                                    return iconUrl
+                                        ? <img src={iconUrl} alt="Agent" className="w-full h-full object-cover" />
+                                        : <Bot className="w-6 h-6 text-white" />;
+                                })()}
                             </div>
                             <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">

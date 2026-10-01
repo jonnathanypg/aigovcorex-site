@@ -214,8 +214,8 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
         }
     };
 
-    const filteredRecords = records.filter(
-        (record) => {
+    const filteredRecords = records
+        .filter((record) => {
             const searchLower = filter.toLowerCase();
             const matchesSearch = (
                 record.full_name.toLowerCase().includes(searchLower) ||
@@ -224,8 +224,12 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
             if (!matchesSearch) return false;
             if (onlyIncomplete) return !getCompleteness(record).complete;
             return true;
-        }
-    );
+        })
+        .sort((a, b) => {
+            const nameA = `${a.last_name || ''} ${a.first_name || ''}`.trim().toLowerCase();
+            const nameB = `${b.last_name || ''} ${b.first_name || ''}`.trim().toLowerCase();
+            return nameA.localeCompare(nameB, 'es', { sensitivity: 'base' });
+        });
 
     if (isLoading) {
         return (

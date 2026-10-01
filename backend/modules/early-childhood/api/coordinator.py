@@ -138,7 +138,7 @@ def get_children(user):
                 )
             )
         
-        children = query.all()
+        children = query.order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         
         children_list = []
         for child in children:

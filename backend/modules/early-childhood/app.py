@@ -43,6 +43,7 @@ def create_app(config_name=None):
     from api.telegram_webhook import telegram_webhook_bp
     from api.channels_os_webhook import channels_os_webhook_bp
     from api.knowledge import knowledge_bp
+    from api.document_templates import document_templates_bp
     from api.reports import reports_bp
     from api.voice import voice_bp
     from api.public_chat import public_chat_bp
@@ -72,6 +73,7 @@ def create_app(config_name=None):
     app.register_blueprint(telegram_webhook_bp)
     app.register_blueprint(channels_os_webhook_bp)
     app.register_blueprint(knowledge_bp)
+    app.register_blueprint(document_templates_bp)
     app.register_blueprint(voice_bp, url_prefix='/api/voice')
     app.register_blueprint(public_chat_bp)
     app.register_blueprint(chat_upload_bp)

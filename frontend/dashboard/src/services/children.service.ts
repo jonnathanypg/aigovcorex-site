@@ -54,10 +54,12 @@ export const childrenService = {
         return data;
     },
 
-    /** Autocomplete: filtra por nombre/letras mientras se escribe. */
-    async search(q: string, limit = 10): Promise<Array<{ id: number; full_name: string; first_name: string; last_name: string; cedula: string | null; birth_date: string | null; age_display?: string; gender?: string; family_id?: number; representative?: { full_name: string; relationship: string; phone?: string } | null }>> {
-        const { data } = await api.get<{ results: Array<{ id: number; full_name: string; first_name: string; last_name: string; cedula: string | null; birth_date: string | null }> }>(`/api/children/search?q=${encodeURIComponent(q)}&limit=${limit}`);
-        return data.results as Array<{ id: number; full_name: string; first_name: string; last_name: string; cedula: string | null; birth_date: string | null }>;
+    /** Autocomplete: filtra por nombre/letras mientras se escribe. Requiere >=1 letra. */
+    async search(q: string, limit = 10, tenantId?: number): Promise<Array<{ id: number; full_name: string; first_name: string; last_name: string; cedula: string | null; birth_date: string | null; age_display?: string; gender?: string; center_name?: string; tenant_id?: number; family_id?: number; representative?: { full_name: string; relationship: string; phone?: string } | null }>> {
+        const params = new URLSearchParams({ q, limit: String(limit) });
+        if (tenantId) params.append('tenant_id', String(tenantId));
+        const { data } = await api.get<{ results: Array<{ id: number; full_name: string; first_name: string; last_name: string; cedula: string | null; birth_date: string | null; age_display?: string; gender?: string; center_name?: string; tenant_id?: number; family_id?: number; representative?: { full_name: string; relationship: string; phone?: string } | null }> }>(`/api/children/search?${params.toString()}`);
+        return data.results;
     },
 
     async create(childData: any): Promise<Child> {

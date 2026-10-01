@@ -232,7 +232,7 @@ def get_pending_vaccines():
         children = Child.query.filter(
             Child.tenant_id.in_(target_tenant_ids), 
             Child.status == 'activo'
-        ).all()
+        ).order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         if user.role.name in ['educadora', 'educator']:
             children = [c for c in children if c.assigned_educator_id == user.id]
         

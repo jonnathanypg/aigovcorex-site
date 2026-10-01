@@ -43,7 +43,11 @@ const statusLabelMap: { [key: string]: string } = {
     rejected: "Rechazado"
 };
 
-export function AdmissionClient() {
+interface AdmissionClientProps {
+    tenantId?: number;
+}
+
+export function AdmissionClient({ tenantId }: AdmissionClientProps = {}) {
     const { role, center } = useRole();
     const [admissions, setAdmissions] = useState<Application[]>([]);
     const [filter, setFilter] = useState("");
@@ -59,14 +63,14 @@ export function AdmissionClient() {
     const fetchData = useCallback(async () => {
         try {
             setIsLoading(true);
-            const data = await applicationsService.getAll();
+            const data = await applicationsService.getAll(undefined, tenantId);
             setAdmissions(data);
         } catch (error) {
             console.error("Error loading admissions:", error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [tenantId]);
 
     useEffect(() => {
         fetchData();
@@ -120,9 +124,9 @@ export function AdmissionClient() {
         }
     };
 
-    // Filter by tab + search
-    const filteredAdmissions = admissions.filter(
-        (admission) => {
+    // Filter by tab + search and order alphabetically by child_name (Apellidos y Nombres)
+    const filteredAdmissions = admissions
+        .filter((admission) => {
             const q = filter.toLowerCase();
             const statusLabel = statusLabelMap[admission.status] || admission.status;
             const matchesSearch = admission.child_name.toLowerCase().includes(q) ||
@@ -137,8 +141,8 @@ export function AdmissionClient() {
                 // Rechazados tab
                 return matchesSearch && admission.status === "rejected";
             }
-        }
-    );
+        })
+        .sort((a, b) => (a.child_name || '').localeCompare(b.child_name || '', 'es', { sensitivity: 'base' }));
 
     const renderActionsMenu = (admission: Application) => {
         return (

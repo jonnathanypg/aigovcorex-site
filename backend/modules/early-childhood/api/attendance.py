@@ -15,11 +15,12 @@ def _educator_child_ids(user):
     """Ids de niños asignados a la educadora (solo si rol educadora/educator)."""
     if user.role.name not in ['educadora', 'educator']:
         return None
-    return [c.id for c in Child.query.filter_by(
+    assigned = [c.id for c in Child.query.filter_by(
         tenant_id=user.tenant_id,
         assigned_educator_id=user.id,
         status='activo'
     ).all()]
+    return assigned
 
 @attendance_bp.route('', methods=['GET'])
 @tenant_required
@@ -53,7 +54,7 @@ def get_attendance():
             if child_ids:
                 query = query.filter(Attendance.child_id.in_(child_ids))
             else:
-                query = query.filter(Attendance.child_id == -1)  # no assigned children
+                query = query.filter(db.false())
         else:
             tenant_id = TenantContext.get_current_tenant_id()
             query = query.filter_by(tenant_id=tenant_id)
@@ -72,7 +73,6 @@ def mark_attendance():
     user = TenantContext.get_current_user()
     
     if is_multi_center_role(user):
-        from models.child import Child
         from models.tenant import Tenant
         from models.license import LicenseAdmin
         
@@ -92,10 +92,15 @@ def mark_attendance():
         tenant_id = child.tenant_id
     else:
         tenant_id = TenantContext.get_current_tenant_id()
+        child = Child.query.get(child_id)
+        if not child:
+            return jsonify({'error': 'Niño no encontrado'}), 404
         if user.role.name in ['educadora', 'educator']:
-            child = Child.query.get(child_id)
-            if not child or child.assigned_educator_id != user.id:
+            if child.assigned_educator_id != user.id:
                 return jsonify({'error': 'Solo puede registrar asistencia de sus niños asignados'}), 403
+        # Ensure tenant_id always matches child's center
+        if child.tenant_id:
+            tenant_id = child.tenant_id
 
     target_date = datetime.strptime(data.get('date', get_today_date(user).isoformat()), '%Y-%m-%d').date()
     status = data['status']
@@ -109,6 +114,7 @@ def mark_attendance():
     if attendance:
         attendance.status = status
         attendance.registered_by_id = user.id
+        attendance.tenant_id = tenant_id
     else:
         attendance = Attendance(
             tenant_id=tenant_id,
@@ -178,8 +184,6 @@ def get_attendance_range():
             child_ids = _educator_child_ids(current_user)
             if child_ids:
                 query = query.filter(Attendance.child_id.in_(child_ids))
-            else:
-                query = query.filter(Attendance.child_id == -1)
         else:
             tenant_id = TenantContext.get_current_tenant_id()
             query = query.filter_by(tenant_id=tenant_id)

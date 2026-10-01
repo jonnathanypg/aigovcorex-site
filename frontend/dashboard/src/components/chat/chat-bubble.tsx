@@ -15,7 +15,7 @@ interface ChatBubbleProps {
 const getImageUrl = (path: string | null) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5010';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     return `${API_URL}${path}`;
 };
 

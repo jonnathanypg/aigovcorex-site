@@ -9,6 +9,7 @@ from models.child import Child, Family, Representative
 from models.user import User
 from models.tenant import Tenant
 from datetime import datetime
+from sqlalchemy.orm import joinedload
 
 children_bp = Blueprint('children', __name__, url_prefix='/children')
 
@@ -78,7 +79,7 @@ def get_children():
                 )
             )
         
-        children = query.all()
+        children = query.order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         
         return jsonify({
             'children': [child.to_dict() for child in children],
@@ -179,28 +180,65 @@ def search_children():
             license_id = get_license_id_for_user(current_user)
             if not license_id:
                 return jsonify({'error': 'No license assigned'}), 403
-            query = Child.query.join(Tenant).filter(Tenant.license_id == license_id)
+            # Obtener tenant_ids de la licencia y filtrar con IN + joinedload (evita conflictos join+joinedload)
+            tenant_ids = [t.id for t in Tenant.query.filter_by(license_id=license_id, is_active=True).all()]
+            query = Child.query.options(joinedload(Child.tenant)).filter(Child.tenant_id.in_(tenant_ids))
             requested_tenant = request.args.get('tenant_id')
             if requested_tenant and requested_tenant != 'all':
-                query = query.filter(Child.tenant_id == requested_tenant)
+                if int(requested_tenant) in tenant_ids:
+                    query = query.filter(Child.tenant_id == requested_tenant)
         elif current_user.role.name in ['educadora', 'educator']:
             tenant_id = TenantContext.get_current_tenant_id()
-            query = Child.query.filter_by(tenant_id=tenant_id,
-                                          assigned_educator_id=current_user.id)
+            query = Child.query.options(joinedload(Child.tenant)).filter_by(tenant_id=tenant_id, assigned_educator_id=current_user.id)
         else:
             tenant_id = TenantContext.get_current_tenant_id()
-            query = Child.query.filter_by(tenant_id=tenant_id)
+            query = Child.query.options(joinedload(Child.tenant)).filter_by(tenant_id=tenant_id)
 
-        like = f'%{q}%'
-        query = query.filter(
-            db.or_(
-                Child.first_name.ilike(like),
-                Child.last_name.ilike(like),
-                Child.cedula.ilike(like),
-                db.func.concat(Child.first_name, ' ', Child.last_name).ilike(like),
-                db.func.concat(Child.last_name, ' ', Child.first_name).ilike(like),
-            )
-        ).order_by(Child.last_name.asc(), Child.first_name.asc()).limit(limit)
+        # Multi-token flexible search: splits words, strips commas.
+        # Con 1 sola letra se busca por PREFIJO de apellido/nombre (empiezan por esa letra),
+        # no por contiene: así "a" lista Apellidos A..., "b" los B..., etc.
+        tokens = [t.strip() for t in q.replace(',', ' ').split() if t.strip()]
+        if tokens:
+            token_filters = []
+            for token in tokens:
+                if len(token) == 1:
+                    like_pre = f'{token}%'
+                    token_filters.append(db.or_(
+                        Child.first_name.ilike(like_pre),
+                        Child.last_name.ilike(like_pre),
+                        Child.cedula.ilike(like_pre),
+                        db.func.concat(Child.first_name, ' ', Child.last_name).ilike(like_pre),
+                        db.func.concat(Child.last_name, ' ', Child.first_name).ilike(like_pre),
+                        db.func.concat(Child.last_name, ', ', Child.first_name).ilike(like_pre),
+                    ))
+                else:
+                    like = f'%{token}%'
+                    token_filters.append(db.or_(
+                        Child.first_name.ilike(like),
+                        Child.last_name.ilike(like),
+                        Child.cedula.ilike(like),
+                        db.func.concat(Child.first_name, ' ', Child.last_name).ilike(like),
+                        db.func.concat(Child.last_name, ' ', Child.first_name).ilike(like),
+                        db.func.concat(Child.last_name, ', ', Child.first_name).ilike(like),
+                    ))
+            query = query.filter(db.and_(*token_filters))
+
+        # Orden por relevancia: prefijo primero (empieza con el texto), luego contiene.
+        # Sin esto, buscar "a" devuelve siempre los mismos apellidos (orden alfabético).
+        try:
+            _t0 = tokens[0] if tokens else q
+            _prefix = f'{_t0}%'
+            query = query.order_by(
+                db.case(
+                    (db.func.concat(Child.first_name, ' ', Child.last_name).ilike(_prefix), 0),
+                    (Child.first_name.ilike(_prefix), 1),
+                    (Child.last_name.ilike(_prefix), 2),
+                    else_=3,
+                ),
+                Child.last_name.asc(), Child.first_name.asc(),
+            ).limit(limit)
+        except Exception:
+            query = query.order_by(Child.last_name.asc(), Child.first_name.asc()).limit(limit)
         rows = query.all()
         results = []
         for child in rows:
@@ -218,13 +256,14 @@ def search_children():
             results.append({
                 'id': child.id,
                 'full_name': d.get('full_name'),
-                'first_name': child.first_name,
-                'last_name': child.last_name,
+                'first_name': child.first_name.strip() if child.first_name else '',
+                'last_name': child.last_name.strip() if child.last_name else '',
                 'cedula': child.cedula,
                 'birth_date': d.get('birth_date'),
                 'age_display': d.get('age_display'),
                 'gender': child.gender,
                 'tenant_id': child.tenant_id,
+                'center_name': child.tenant.name if child.tenant else None,
                 'family_id': child.family_id,
                 'representative': rep,
             })
@@ -241,25 +280,20 @@ def get_child(child_id):
         current_user = TenantContext.get_current_user()
         
         from utils.role_helpers import is_multi_center_role
+        from sqlalchemy.orm import joinedload
         if is_multi_center_role(current_user):
-            # License admin scope check (simplified)
-            child = Child.query.get(child_id)
+            # License admin scope check - eager load tenant
+            child = Child.query.options(joinedload(Child.tenant)).get(child_id)
         elif current_user.role.name in ['educadora', 'educator']:
-            # Educator: only if child is assigned to them
             tenant_id = TenantContext.get_current_tenant_id()
-            child = Child.query.filter_by(
+            child = Child.query.options(joinedload(Child.tenant)).filter_by(
                 id=child_id,
                 tenant_id=tenant_id,
                 assigned_educator_id=current_user.id
             ).first()
-        elif current_user.role.name in ['educadora', 'educator']:
-            tenant_id = TenantContext.get_current_tenant_id()
-            child = Child.query.filter_by(
-                id=child_id, tenant_id=tenant_id, assigned_educator_id=current_user.id
-            ).first()
         else:
             tenant_id = TenantContext.get_current_tenant_id()
-            child = Child.query.filter_by(id=child_id, tenant_id=tenant_id).first()
+            child = Child.query.options(joinedload(Child.tenant)).filter_by(id=child_id, tenant_id=tenant_id).first()
         
         if not child:
             return jsonify({'error': 'Niño no encontrado'}), 404

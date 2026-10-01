@@ -67,7 +67,7 @@ export function ChatWidget() {
     // Agent config
     const { selectedCenterId } = useLicense();
     const currentTenantId = selectedCenterId === 'all' ? undefined : Number(selectedCenterId);
-    const [agentName, setAgentName] = useState('GovCoreX Copilot');
+    const [agentName, setAgentName] = useState('KindiCore AI');
     const [agentIcon, setAgentIcon] = useState<string | null>(null);
 
     // Sync module-level flag for OnboardingChecklistWidget to read
@@ -78,27 +78,36 @@ export function ChatWidget() {
         window.dispatchEvent(new CustomEvent('kindicore-chat-sidebar-toggle', { detail: { isOpen: val } }));
     };
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5010';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
     const getImageUrl = (path: string | null) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
         return `${API_URL}${path}`;
     };
 
+    // Carga la identidad del agente (nombre + icono) desde public-config.
+    // Se reutiliza al montar y cada vez que el AgentConfigModal guarda cambios.
+    const loadAgentConfig = useCallback(async () => {
+        const user = authService.getStoredUser();
+        setIsAuthenticated(!!user);
+        if (user && typeof window !== 'undefined') {
+            try {
+                const { licenseAdminService } = await import('@/services/license-admin.service');
+                const config = await licenseAdminService.getPublicConfig();
+                setAgentName(config.agent_name || 'KindiCore AI');
+                setAgentIcon(config.agent_icon || null);
+            } catch {
+                // silent
+            }
+        }
+    }, []);
+
     // Auth + history + agent config load
     useEffect(() => {
         const checkAuthAndLoad = async () => {
+            await loadAgentConfig();
             const user = authService.getStoredUser();
-            setIsAuthenticated(!!user);
             if (user && typeof window !== 'undefined') {
-                try {
-                    const { licenseAdminService } = await import('@/services/license-admin.service');
-                    const config = await licenseAdminService.getPublicConfig();
-                    setAgentName(config.agent_name || 'KindiCore AI');
-                    setAgentIcon(config.agent_icon || null);
-                } catch (e) {
-                    // silent
-                }
                 const userKey = `${CHAT_HISTORY_KEY}_${user.id}`;
                 const saved = localStorage.getItem(userKey);
                 if (saved) {
@@ -111,8 +120,17 @@ export function ChatWidget() {
         };
         checkAuthAndLoad();
         window.addEventListener('storage', checkAuthAndLoad);
-        return () => window.removeEventListener('storage', checkAuthAndLoad);
-    }, []);
+        // Refrescar identidad al guardar en Personalizar agente (sin recargar página)
+        import('@/hooks/use-agent-refresh').then(({ AGENT_CONFIG_CHANGED_EVENT }) => {
+            window.addEventListener(AGENT_CONFIG_CHANGED_EVENT, loadAgentConfig);
+        });
+        return () => {
+            window.removeEventListener('storage', checkAuthAndLoad);
+            import('@/hooks/use-agent-refresh').then(({ AGENT_CONFIG_CHANGED_EVENT }) => {
+                window.removeEventListener(AGENT_CONFIG_CHANGED_EVENT, loadAgentConfig);
+            });
+        };
+    }, [loadAgentConfig]);
 
     // Save history
     useEffect(() => {
@@ -584,8 +602,12 @@ export function ChatWidget() {
                     <div ref={scrollRef} className="space-y-4 pr-1">
                         {messages.length === 0 && (
                             <div className="text-center py-12 px-6">
-                                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 flex items-center justify-center border border-amber-500/10">
-                                    <Bot className="w-8 h-8 text-amber-500 animate-float" />
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 flex items-center justify-center border border-amber-500/10 overflow-hidden">
+                                    {agentIcon ? (
+                                        <img src={getImageUrl(agentIcon) || ''} alt="Agent" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Bot className="w-8 h-8 text-amber-500 animate-float" />
+                                    )}
                                 </div>
                                 <h3 className="font-extrabold text-lg text-foreground tracking-tight">¡Consola Multi-Agente Activa!</h3>
                                 <p className="text-xs text-muted-foreground leading-relaxed max-w-[280px] mx-auto mt-2">

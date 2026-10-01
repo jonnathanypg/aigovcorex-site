@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { OS_MODULES, type ModuleId } from '@/lib/os-modules';
+import { authService } from '@/services/auth.service';
 import { X } from 'lucide-react';
 
 interface OSSubNavPanelProps {
@@ -16,9 +17,28 @@ interface OSSubNavPanelProps {
 
 export function OSSubNavPanel({ activeModule, isOpen, onClose, onNavigate }: OSSubNavPanelProps) {
   const pathname = usePathname();
+  const [userRole, setUserRole] = useState<string>('');
+
+  useEffect(() => {
+    const user = authService.getStoredUser();
+    if (user) {
+      const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+      setUserRole(roleName || '');
+    }
+  }, []);
+
   const mod = OS_MODULES.find(m => m.id === activeModule);
 
   if (!mod) return null;
+
+  // Filter sections and items by user role
+  const visibleSections = mod.sections
+    .filter(section => !section.roles || !userRole || section.roles.includes(userRole))
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => !item.roles || !userRole || item.roles.includes(userRole)),
+    }))
+    .filter(section => section.items.length > 0);
 
   return (
     <>
@@ -72,7 +92,7 @@ export function OSSubNavPanel({ activeModule, isOpen, onClose, onNavigate }: OSS
 
         {/* Nav Sections */}
         <div className="flex-1 overflow-y-auto py-2 scrollbar-none">
-          {mod.sections.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.title} className="mb-2">
               <p className="px-4 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                 {section.title}
@@ -173,7 +193,7 @@ export function OSSubNavPanel({ activeModule, isOpen, onClose, onNavigate }: OSS
 
         {/* Mobile Nav Items */}
         <div className="flex-1 overflow-y-auto py-2 px-1 max-h-[55vh] pb-4">
-          {mod.sections.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.title} className="mb-3">
               <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                 {section.title}

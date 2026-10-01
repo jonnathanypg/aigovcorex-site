@@ -9,11 +9,27 @@ import { useEffect } from "react";
 export const AGENT_DATA_CHANGED_EVENT = "kindicore-agent-data-changed";
 
 /**
+ * Evento disparado cuando se guarda la personalización del agente
+ * (nombre, icono, personalidad, zona horaria, sponsors) desde el
+ * AgentConfigModal. El ChatWidget lo escucha para recargar la
+ * identidad sin necesidad de recargar la página.
+ */
+export const AGENT_CONFIG_CHANGED_EVENT = "kindicore-agent-config-changed";
+
+/**
  * Dispatch the global refresh event. Called from the chat widget
  * after receiving a successful agent response.
  */
 export function dispatchAgentDataChanged() {
     window.dispatchEvent(new CustomEvent(AGENT_DATA_CHANGED_EVENT));
+}
+
+/**
+ * Dispatch the agent-config refresh event. Called from AgentConfigModal
+ * after saving customization so ChatWidget reloads name/icon instantly.
+ */
+export function dispatchAgentConfigChanged() {
+    window.dispatchEvent(new CustomEvent(AGENT_CONFIG_CHANGED_EVENT));
 }
 
 /**

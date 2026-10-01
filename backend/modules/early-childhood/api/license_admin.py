@@ -32,14 +32,21 @@ license_admin_bp = Blueprint('license_admin', __name__, url_prefix='/api/license
 
 @license_admin_bp.route('/public-config', methods=['GET'])
 def get_public_config():
-    """Endpoint público para obtener configuración básica de la marca/licencia"""
+    """Endpoint público para obtener configuración básica de la marca/licencia.
+
+    Fuente única de identidad del agente (nombre + icono) para el ChatWidget
+    del dashboard y el display de sponsors. Se mantiene público (sin JWT)
+    porque también lo consume el widget embebible.
+    """
     try:
         from models.license import License, SponsorLogo
         license_obj = License.query.filter_by(status='active').first()
-        logos = SponsorLogo.query.all()
+        logos = SponsorLogo.query.filter_by(license_id=license_obj.id).all() if license_obj else []
         return jsonify({
             'license_name': license_obj.name if license_obj else 'AI GovCoreX OS',
             'legal_name': license_obj.legal_name if license_obj else 'AI GovCoreX OS Platform',
+            'agent_name': (license_obj.agent_name if license_obj and license_obj.agent_name else 'KindiCore AI'),
+            'agent_icon': license_obj.agent_icon_path if license_obj else None,
             'sponsor_logos': [l.to_dict() for l in logos] if logos else []
         }), 200
     except Exception as e:
@@ -550,7 +557,7 @@ def get_territorial_control(license_admin):
         return jsonify({
             'macro_summary': {
                 'license_name': license.name,
-                'sponsor_name': license.sponsor_name or 'DASE / Municipio de Guayaquil',
+                'sponsor_name': getattr(license, 'sponsor_name', None) or 'DASE / Municipio de Guayaquil',
                 'total_centers': len(centers),
                 'total_capacity': total_authorized_capacity,
                 'total_enrolled': total_enrolled,
@@ -1017,51 +1024,6 @@ def update_license_customization(license_admin):
         return jsonify({'error': str(e)}), 500
 
 
-@license_admin_bp.route('/public-config', methods=['GET'])
-@jwt_required()
-def get_public_license_config():
-    """
-    Obtener configuración pública de la licencia (Logos, Agente)
-    Accesible para CUALQUIER usuario autenticado que pertenezca a un centro de la licencia.
-    """
-    try:
-        user_id = int(get_jwt_identity())
-        user = User.query.get(user_id)
-        
-        if not user:
-            return jsonify({'error': 'Usuario no encontrado'}), 404
-            
-        target_license_id = None
-        
-        # 1. Caso License Admin o Roles Universales
-        if user.role.name in ['license_admin', 'supervisor', 'doctor']:
-            lic_admin = LicenseAdmin.query.filter_by(user_id=user.id, is_active=True).first()
-            if lic_admin:
-                target_license_id = lic_admin.license_id
-                
-        # 2. Caso Usuario de Centro (Coordinador, Educadora, etc.)
-        elif user.tenant_id:
-            tenant = Tenant.query.get(user.tenant_id)
-            if tenant:
-                target_license_id = tenant.license_id
-                
-        if not target_license_id:
-            return jsonify({'error': 'No se encontró una licencia asociada a su usuario'}), 404
-            
-        # Obtener datos
-        license_obj = License.query.get(target_license_id)
-        logos = SponsorLogo.query.filter_by(license_id=target_license_id).all()
-        
-        return jsonify({
-            'agent_name': license_obj.agent_name or 'KindiCore AI',
-            'agent_icon': license_obj.agent_icon_path,
-            'sponsor_logos': [logo.to_dict() for logo in logos]
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
 # --- Endpoints para Logos de Patrocinadores ---
 
 @license_admin_bp.route('/logos', methods=['GET'])
@@ -1133,11 +1095,9 @@ def delete_sponsor_logo(license_admin, logo_id):
 
         if not logo_to_delete:
             return jsonify({'error': 'Logo no encontrado o no pertenece a esta licencia'}), 404
-        
-        # Opcional: Eliminar el archivo físico del sistema de archivos aquí
-        # import os
-        # if os.path.exists(logo_to_delete.logo_path):
-        #     os.remove(logo_to_delete.logo_path)
+
+        # Eliminar el archivo físico del sistema de archivos
+        FileService.delete_file(logo_to_delete.logo_path)
 
         db.session.delete(logo_to_delete)
         db.session.commit()

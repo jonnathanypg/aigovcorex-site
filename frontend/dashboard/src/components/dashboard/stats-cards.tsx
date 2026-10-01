@@ -13,14 +13,14 @@ import type { DashboardStats } from "@/types";
 import { Users, CalendarCheck, AlertTriangle, ClipboardList, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function StatsCards({ tenantId }: { tenantId?: number }) {
+export function StatsCards({ tenantId, from, to }: { tenantId?: number; from?: string; to?: string }) {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const fetchStats = useCallback(async () => {
         try {
-            const data = await dashboardService.getStats(tenantId);
+            const data = await dashboardService.getStats(tenantId, { from, to });
             setStats(data);
         } catch (err) {
             console.error("Error fetching dashboard stats:", err);
@@ -28,7 +28,7 @@ export function StatsCards({ tenantId }: { tenantId?: number }) {
         } finally {
             setIsLoading(false);
         }
-    }, [tenantId]);
+    }, [tenantId, from, to]);
 
     useEffect(() => {
         fetchStats();

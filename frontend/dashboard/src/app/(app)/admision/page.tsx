@@ -1,7 +1,13 @@
+"use client";
+
 import { AdmissionClient } from "@/components/admision/admission-client";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLicense } from "@/contexts/license-context";
 
 export default function AdmisionPage() {
+    const { isLicenseAdmin, selectedCenterId } = useLicense();
+    const tenantId = (isLicenseAdmin && selectedCenterId !== 'all') ? Number(selectedCenterId) : undefined;
+
     return (
         <div className="space-y-6">
             <Card className="bg-card/10 backdrop-blur-lg border-border/20">
@@ -12,7 +18,7 @@ export default function AdmisionPage() {
                     </CardDescription>
                 </CardHeader>
             </Card>
-            <AdmissionClient />
+            <AdmissionClient key={tenantId || 'all'} tenantId={tenantId} />
         </div>
     );
 }

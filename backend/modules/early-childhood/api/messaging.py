@@ -246,7 +246,7 @@ def send_broadcast():
     if group:
         query = query.filter(Child.assigned_group.ilike(f'%{group}%'))
     
-    children = query.all()
+    children = query.order_by(Child.last_name.asc(), Child.first_name.asc()).all()
     
     if not children:
         return jsonify({'error': 'No se encontraron niños con los filtros especificados'}), 404

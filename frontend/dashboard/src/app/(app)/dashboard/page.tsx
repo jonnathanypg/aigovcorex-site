@@ -1,10 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecentAdmissions } from "@/components/dashboard/recent-admissions";
 import { DevelopmentChart } from "@/components/dashboard/development-chart";
 import { CentersSummary } from "@/components/dashboard/centers-summary";
+import { DateRangeFilter, type DateRange } from "@/components/dashboard/date-range-filter";
 import { useRole } from "@/hooks/use-role";
 import { useLicense } from "@/contexts/license-context";
 import { SponsorLogoDisplay } from "@/components/license-admin/SponsorLogoDisplay";
@@ -12,6 +13,7 @@ import { SponsorLogoDisplay } from "@/components/license-admin/SponsorLogoDispla
 export default function DashboardPage() {
     const { role, center } = useRole();
     const { isLicenseAdmin, selectedCenterId } = useLicense();
+    const [range, setRange] = useState<DateRange>({ preset: "month" });
 
     // Determine filter
     const tenantId = (isLicenseAdmin && selectedCenterId !== 'all') ? Number(selectedCenterId) : undefined;
@@ -29,12 +31,12 @@ export default function DashboardPage() {
 
     const getDescription = () => {
         if (role === 'admin' || showGlobalSummary) {
-            return "Vista general consolidada del estado de todos los centros.";
+            return "Vista general consolidada del estado de todos los centros. Filtre por fechas específicas o periodos personalizados.";
         }
         if (isLicenseAdmin && tenantId) {
-            return "Vista detallada de los indicadores del centro seleccionado.";
+            return "Vista detallada de los indicadores del centro seleccionado. Filtre por fechas específicas o periodos personalizados.";
         }
-        return `Vista general del estado del ${center || 'centro'} en tiempo real.`;
+        return `Vista general del estado del ${center || 'centro'} en tiempo real. Filtre por fechas específicas o periodos personalizados.`;
     }
 
     return (
@@ -53,13 +55,15 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            <StatsCards tenantId={tenantId} />
+            <DateRangeFilter value={range} onChange={setRange} />
+
+            <StatsCards tenantId={tenantId} from={range.from} to={range.to} />
 
             {showGlobalSummary && <CentersSummary />}
 
             <div className="grid gap-8 grid-cols-1 lg:grid-cols-7">
-                <RecentAdmissions tenantId={tenantId} />
-                <DevelopmentChart tenantId={tenantId} />
+                <RecentAdmissions tenantId={tenantId} from={range.from} to={range.to} />
+                <DevelopmentChart tenantId={tenantId} from={range.from} to={range.to} />
             </div>
         </div>
     );

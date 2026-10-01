@@ -33,6 +33,21 @@ def get_stats():
     # Use Dynamic Timezone
     today = get_today_date(user)
     requested_tenant_id = request.args.get('tenant_id', type=int)
+    # Filtro periodo personalizado ?from=YYYY-MM-DD&to=YYYY-MM-DD (opcional)
+    from datetime import datetime as _dt
+    f_from = f_to = None
+    try:
+        _fr = request.args.get('from') or request.args.get('start')
+        _to = request.args.get('to') or request.args.get('end')
+        if _fr:
+            f_from = _dt.strptime(_fr[:10], '%Y-%m-%d').date()
+        if _to:
+            f_to = _dt.strptime(_to[:10], '%Y-%m-%d').date()
+    except Exception:
+        f_from = f_to = None
+    period_start = f_from or today
+    period_end = f_to or today
+    has_custom_range = bool(f_from or f_to)
     
     is_super_admin = user.role.name == 'super_admin'
     is_license_admin = is_multi_center_role(user)
@@ -97,27 +112,39 @@ def get_stats():
     
     present_today = Attendance.query.filter(
         Attendance.tenant_id.in_(target_tenant_ids),
-        Attendance.date == today,
+        Attendance.date >= period_start,
+        Attendance.date <= period_end,
         Attendance.status == 'presente'
     ).count()
+    total_in_period = Attendance.query.filter(
+        Attendance.tenant_id.in_(target_tenant_ids),
+        Attendance.date >= period_start,
+        Attendance.date <= period_end
+    ).count() if has_custom_range else 0
     
     pending_apps = Application.query.filter(
         Application.center_id.in_(target_tenant_ids),
         Application.status.in_(['pending', 'waitlist'])
     ).count()
     
-    # Calculate attendance rate
-    attendance_rate = (present_today / total_expected * 100) if total_expected > 0 else 0
+    # Calculate attendance rate (rango personalizado: presentes/registros del periodo; por defecto: presentes hoy / total niños)
+    if has_custom_range and total_in_period > 0:
+        attendance_rate = (present_today / total_in_period * 100)
+    else:
+        attendance_rate = (present_today / total_expected * 100) if total_expected > 0 else 0
     
     # Health Alerts
     from models.health import HealthRecord
     from datetime import timedelta
     week_ago = today - timedelta(days=7)
+    alert_start = f_from or week_ago
+    alert_end = f_to or today
     
     critical_alerts = HealthRecord.query.filter(
         HealthRecord.tenant_id.in_(target_tenant_ids),
         HealthRecord.record_type.in_(['incidente', 'enfermedad']),
-        HealthRecord.record_date >= week_ago
+        HealthRecord.record_date >= alert_start,
+        HealthRecord.record_date <= alert_end
     ).count()
     
     # Also count unread alert-type notifications
@@ -212,12 +239,26 @@ def get_recent_applications():
             
     if not target_tenant_ids:
         return jsonify({'applications': []}), 200
-        
-    # Execute Query
-    applications = Application.query.filter(
+
+    # Filtro periodo opcional ?from/?to sobre application_date
+    from datetime import datetime as _dt2
+    q = Application.query.filter(
         Application.center_id.in_(target_tenant_ids),
         Application.status.in_(['pending', 'waitlist'])
-    ).order_by(Application.application_date.desc()).limit(limit).all()
+    )
+    try:
+        _fr = request.args.get('from') or request.args.get('start')
+        _to = request.args.get('to') or request.args.get('end')
+        if _fr:
+            _fd = _dt2.strptime(_fr[:10], '%Y-%m-%d').date()
+            q = q.filter(Application.application_date >= _fd)
+        if _to:
+            _td = _dt2.strptime(_to[:10], '%Y-%m-%d').date()
+            q = q.filter(Application.application_date <= _td)
+    except Exception:
+        pass
+    # Execute Query
+    applications = q.order_by(Application.application_date.desc()).limit(limit).all()
     
     return jsonify({
         'applications': [

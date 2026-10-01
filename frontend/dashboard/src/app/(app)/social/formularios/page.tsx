@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { socialService, type SocialProgram, type ProgramFormDefinition, type FormField } from '@/services/social.service';
 import { chatService } from '@/services/chat.service';
 import { DynamicFormRenderer } from '@/components/social/dynamic-form-renderer';
+import { SocialKnowledgeManager } from '@/components/social/knowledge-manager';
 
 const FIELD_TYPES: Array<FormField['type']> = ['text', 'number', 'currency', 'select', 'boolean', 'date', 'cedula', 'file'];
 
@@ -295,11 +296,11 @@ export default function FormulariosDinamicosPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                         <FileCode2 className="w-6 h-6 text-sky-400" />
                         Formularios Dinámicos & Intake Omnicanal
                     </h1>
-                    <p className="text-white/50 text-sm mt-1">
+                    <p className="text-muted-foreground text-sm mt-1">
                         Cada programa posee su propio esquema de datos personalizado, autogenerable por el Copiloto IA y operable en Web Wizard o Chat 24/7
                     </p>
                 </div>
@@ -309,7 +310,7 @@ export default function FormulariosDinamicosPage() {
                         variant="outline"
                         size="sm"
                         onClick={loadPrograms}
-                        className="border-white/10 text-white hover:bg-white/10 text-xs gap-1.5"
+                        className="border-border/20 text-foreground hover:bg-accent/10 text-xs gap-1.5"
                     >
                         <RefreshCw className="w-3.5 h-3.5" /> Actualizar
                     </Button>
@@ -324,15 +325,15 @@ export default function FormulariosDinamicosPage() {
 
             {/* List of Programs & Forms */}
             {isLoading ? (
-                <div className="flex items-center justify-center p-12 text-white/50 gap-2">
+                <div className="flex items-center justify-center p-12 text-muted-foreground gap-2">
                     <Loader2 className="w-5 h-5 animate-spin text-sky-400" />
                     <span>Cargando formularios dinámicos...</span>
                 </div>
             ) : programs.length === 0 ? (
-                <Card className="bg-zinc-900/40 border-white/10 p-12 text-center text-white space-y-3">
+                <Card className="bg-card/40 border-border/20 p-12 text-center text-foreground space-y-3">
                     <Layers className="w-10 h-10 text-sky-400 mx-auto opacity-60" />
                     <h3 className="font-bold text-base">No hay programas sociales registrados</h3>
-                    <p className="text-xs text-white/50 max-w-sm mx-auto">
+                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                         Usa el Copiloto IA para generar tu primer programa social y su estructura de formulario dinámico en segundos.
                     </p>
                     <Button
@@ -351,15 +352,15 @@ export default function FormulariosDinamicosPage() {
                         return (
                             <Card
                                 key={prog.id}
-                                className="bg-zinc-900/60 border-white/10 backdrop-blur-md text-white hover:border-sky-500/40 transition-all flex flex-col justify-between"
+                                className="bg-card/60 border-border/20 backdrop-blur-md text-foreground hover:border-sky-500/40 transition-all flex flex-col justify-between"
                             >
                                 <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <Badge variant="outline" className="text-[10px] font-mono border-white/15 text-white/70 mb-1.5">
+                                            <Badge variant="outline" className="text-[10px] font-mono border-border/20 text-muted-foreground mb-1.5">
                                                 {prog.short_code}
                                             </Badge>
-                                            <CardTitle className="text-base font-bold text-white line-clamp-1">
+                                            <CardTitle className="text-base font-bold text-foreground line-clamp-1">
                                                 {prog.name}
                                             </CardTitle>
                                         </div>
@@ -367,26 +368,26 @@ export default function FormulariosDinamicosPage() {
                                             className={
                                                 prog.status === 'active'
                                                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                                    : 'bg-zinc-800 text-zinc-400'
+                                                    : 'bg-muted text-muted-foreground'
                                             }
                                         >
                                             {prog.status === 'active' ? 'Activo' : prog.status}
                                         </Badge>
                                     </div>
-                                    <CardDescription className="text-xs text-white/50 line-clamp-2 mt-1">
+                                    <CardDescription className="text-xs text-muted-foreground line-clamp-2 mt-1">
                                         {prog.description || 'Sin descripción'}
                                     </CardDescription>
                                 </CardHeader>
 
                                 <CardContent className="space-y-4 pt-0">
-                                    <div className="grid grid-cols-2 gap-2 text-[11px] p-2.5 rounded-xl bg-zinc-950/40 border border-white/5 text-white/70">
+                                    <div className="grid grid-cols-2 gap-2 text-[11px] p-2.5 rounded-xl bg-card/40 border border-border/20 text-foreground/70">
                                         <div>
-                                            <span className="text-white/40 block text-[10px]">Campos Dinámicos:</span>
-                                            <span className="font-semibold text-white">{fieldsCount} campos</span>
+                                            <span className="text-muted-foreground block text-[10px]">Campos Dinámicos:</span>
+                                            <span className="font-semibold text-foreground">{fieldsCount} campos</span>
                                         </div>
                                         <div>
-                                            <span className="text-white/40 block text-[10px]">Versión Schema:</span>
-                                            <span className="font-semibold text-white">v{version}</span>
+                                            <span className="text-muted-foreground block text-[10px]">Versión Schema:</span>
+                                            <span className="font-semibold text-foreground">v{version}</span>
                                         </div>
                                     </div>
 
@@ -396,38 +397,38 @@ export default function FormulariosDinamicosPage() {
                                             type="button"
                                             onClick={() => openEditor(prog)}
                                             variant="outline"
-                                            className="w-full justify-between text-xs border-amber-500/30 text-white hover:bg-amber-500/10 hover:border-amber-500/50 h-9"
+                                            className="w-full justify-between text-xs border-amber-500/30 text-foreground hover:bg-amber-500/10 hover:border-amber-500/50 h-9"
                                         >
                                             <span className="flex items-center gap-1.5">
                                                 <Pencil className="w-3.5 h-3.5 text-amber-400" />
                                                 Editar campos (agregar / quitar / ajustar)
                                             </span>
-                                            <ArrowRight className="w-3 h-3 text-white/40" />
+                                            <ArrowRight className="w-3 h-3 text-muted-foreground" />
                                         </Button>
                                         <Button
                                             type="button"
                                             onClick={() => openPreview(prog, 'web_form')}
                                             variant="outline"
-                                            className="w-full justify-between text-xs border-white/10 text-white hover:bg-sky-500/10 hover:border-sky-500/30 h-9"
+                                            className="w-full justify-between text-xs border-border/20 text-foreground hover:bg-sky-500/10 hover:border-sky-500/30 h-9"
                                         >
                                             <span className="flex items-center gap-1.5">
                                                 <Eye className="w-3.5 h-3.5 text-sky-400" />
                                                 Método A: Formulario Web (Wizard)
                                             </span>
-                                            <ArrowRight className="w-3 h-3 text-white/40" />
+                                            <ArrowRight className="w-3 h-3 text-muted-foreground" />
                                         </Button>
 
                                         <Button
                                             type="button"
                                             onClick={() => openPreview(prog, 'conversational')}
                                             variant="outline"
-                                            className="w-full justify-between text-xs border-white/10 text-white hover:bg-emerald-500/10 hover:border-emerald-500/30 h-9"
+                                            className="w-full justify-between text-xs border-border/20 text-foreground hover:bg-emerald-500/10 hover:border-emerald-500/30 h-9"
                                         >
                                             <span className="flex items-center gap-1.5">
                                                 <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
                                                 Método B: Conversacional (Chatbot)
                                             </span>
-                                            <ArrowRight className="w-3 h-3 text-white/40" />
+                                            <ArrowRight className="w-3 h-3 text-muted-foreground" />
                                         </Button>
                                     </div>
                                 </CardContent>
@@ -437,17 +438,22 @@ export default function FormulariosDinamicosPage() {
                 </div>
             )}
 
+            {/* Knowledge Manager (RAG) */}
+            <SocialKnowledgeManager programId={selectedProgram?.id} />
+
+            {/* ────────────────────────────────────────────────────────────────────────── */}
+
             {/* ══════════════════════════════════════════════════════════════════════ */}
             {/* MODAL PREVIEW: DUAL METHOD FORM RENDERER */}
             {/* ══════════════════════════════════════════════════════════════════════ */}
             <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-4xl bg-zinc-950 border-white/15 text-white p-6 max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-4xl bg-card border-border/20 text-foreground p-6 max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+                        <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
                             <Layers className="w-5 h-5 text-sky-400" />
                             {selectedProgram?.name} — Ficha de Postulación Dinámica
                         </DialogTitle>
-                        <DialogDescription className="text-xs text-white/50">
+                        <DialogDescription className="text-xs text-muted-foreground">
                             Previsualiza y prueba cómo responderán los postulantes en la web o a través de WhatsApp/Telegram
                         </DialogDescription>
                     </DialogHeader>
@@ -465,6 +471,11 @@ export default function FormulariosDinamicosPage() {
                             />
                         </div>
                     )}
+
+            {/* Knowledge Manager (RAG) */}
+            <SocialKnowledgeManager programId={selectedProgram?.id} />
+
+            {/* ────────────────────────────────────────────────────────────────────────── */}
                 </DialogContent>
             </Dialog>
 
@@ -472,32 +483,32 @@ export default function FormulariosDinamicosPage() {
             {/* MODAL: COPILOTO IA — GENERADOR DE PROGRAMAS & FORMULARIOS */}
             {/* ══════════════════════════════════════════════════════════════════════ */}
             <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
-                <DialogContent className="max-w-xl bg-zinc-950 border-white/15 text-white p-6">
+                <DialogContent className="max-w-xl bg-card border-border/20 text-foreground p-6">
                     <DialogHeader>
                         <div className="w-10 h-10 rounded-2xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 mb-2">
                             <Sparkles className="w-5 h-5" />
                         </div>
-                        <DialogTitle className="text-base font-bold text-white">
+                        <DialogTitle className="text-base font-bold text-foreground">
                             Generar Programa & Formulario Dinámico con Copiloto IA
                         </DialogTitle>
-                        <DialogDescription className="text-xs text-white/50">
+                        <DialogDescription className="text-xs text-muted-foreground">
                             Describe en lenguaje natural el programa social, objetivos o pega el texto del TDR/convocatoria. El agente estructurará automáticamente los campos, preguntas conversacionales y reglas de elegibilidad.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 my-2">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-white/80">Nombre del Programa (Opcional)</label>
+                            <label className="text-xs font-semibold text-foreground/80">Nombre del Programa (Opcional)</label>
                             <Input
                                 placeholder="Ej: Bono Solidario para Familias con Adultos Mayores"
                                 value={aiProgramName}
                                 onChange={(e) => setAiProgramName(e.target.value)}
-                                className="bg-zinc-900 border-white/10 text-white text-xs h-10"
+                                className="bg-input border-border text-foreground text-xs h-10"
                             />
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-white/80 flex items-center justify-between">
+                            <label className="text-xs font-semibold text-foreground/80 flex items-center justify-between">
                                 <span>Instrucciones o Perfil del Programa para la IA *</span>
                                 <button
                                     type="button"
@@ -517,6 +528,11 @@ export default function FormulariosDinamicosPage() {
                                     ) : (
                                         <><Mic className="w-3 h-3" /> Dictar por voz</>
                                     )}
+
+            {/* Knowledge Manager (RAG) */}
+            <SocialKnowledgeManager programId={selectedProgram?.id} />
+
+            {/* ────────────────────────────────────────────────────────────────────────── */}
                                 </button>
                             </label>
                             <Textarea
@@ -524,20 +540,20 @@ export default function FormulariosDinamicosPage() {
                                 placeholder="Ejemplo: Necesito un programa de asistencia alimentaria para hogares vulnerables con niños menores de 5 años. Necesito preguntar cédula, número de hijos, ingreso mensual, tipo de vivienda, si tienen acceso a agua potable y si algún miembro tiene discapacidad. Las familias con ingreso menor a $200 y más de 2 niños deben tener máxima prioridad... (o dicta con el micrófono)"
                                 value={aiPrompt}
                                 onChange={(e) => setAiPrompt(e.target.value)}
-                                className="bg-zinc-900 border-white/10 text-white text-xs"
+                                className="bg-input border-border text-foreground text-xs"
                             />
-                            <p className="text-[10px] text-white/40">
+                            <p className="text-[10px] text-muted-foreground">
                                 Puedes escribirlo o dictarlo con el micrófono (se transcribe con el servicio de voz de la plataforma).
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/20">
                         <Button
                             variant="ghost"
                             onClick={() => setAiModalOpen(false)}
                             disabled={isGeneratingAI}
-                            className="text-white/60 hover:text-white text-xs"
+                            className="text-muted-foreground hover:text-foreground text-xs"
                         >
                             Cancelar
                         </Button>
@@ -555,6 +571,11 @@ export default function FormulariosDinamicosPage() {
                                     <Sparkles className="w-3.5 h-3.5" /> Generar y Activar
                                 </>
                             )}
+
+            {/* Knowledge Manager (RAG) */}
+            <SocialKnowledgeManager programId={selectedProgram?.id} />
+
+            {/* ────────────────────────────────────────────────────────────────────────── */}
                         </Button>
                     </div>
                 </DialogContent>
@@ -659,6 +680,11 @@ export default function FormulariosDinamicosPage() {
                         {editFields.length === 0 && (
                             <p className="text-xs text-white/40 text-center py-6">Sin campos. Agrega el primero con el botón superior.</p>
                         )}
+
+            {/* Knowledge Manager (RAG) */}
+            <SocialKnowledgeManager programId={selectedProgram?.id} />
+
+            {/* ────────────────────────────────────────────────────────────────────────── */}
                     </div>
 
                     <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10 mt-3">

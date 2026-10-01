@@ -210,14 +210,14 @@ export default function BeneficiariosSocialPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 bg-sky-500/10 border-sky-500/20">
-          <span className="text-xs text-sky-600 dark:text-sky-300 font-semibold">Beneficiarios Activos / Aprobados</span>
+        <Card className="p-4 bg-sky-500/10 border-sky-500/20 dark:bg-sky-500/10 dark:border-sky-500/20">
+          <span className="text-xs font-semibold text-sky-600 dark:text-sky-300">Beneficiarios Activos / Aprobados</span>
           <p className="text-2xl font-bold text-foreground mt-1">
             {beneficiaries.filter((b) => b.status === 'approved' || b.status === 'active').length}
           </p>
         </Card>
-        <Card className="p-4 bg-emerald-500/10 border-emerald-500/20">
-          <span className="text-xs text-emerald-600 dark:text-emerald-300 font-semibold">Ingesta Vía WhatsApp & Agente IA</span>
+        <Card className="p-4 bg-emerald-500/10 border-emerald-500/20 dark:bg-emerald-500/10 dark:border-emerald-500/20">
+          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">Ingesta Vía WhatsApp & Agente IA</span>
           <p className="text-2xl font-bold text-foreground mt-1">
             {beneficiaries.filter(
               (b) =>
@@ -227,8 +227,8 @@ export default function BeneficiariosSocialPage() {
             ).length}
           </p>
         </Card>
-        <Card className="p-4 bg-violet-500/10 border-violet-500/20">
-          <span className="text-xs text-violet-600 dark:text-violet-300 font-semibold">Postulantes en Calificación</span>
+        <Card className="p-4 bg-violet-500/10 border-violet-500/20 dark:bg-violet-500/10 dark:border-violet-500/20">
+          <span className="text-xs font-semibold text-violet-600 dark:text-violet-300">Postulantes en Calificación</span>
           <p className="text-2xl font-bold text-foreground mt-1">
             {beneficiaries.filter((b) => b.status === 'applicant').length}
           </p>

@@ -83,11 +83,11 @@ export default function SocialDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <ClipboardList className="w-6 h-6 text-sky-400" />
             Social AI
           </h1>
-          <p className="text-white/50 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Gestión integral de programas, formularios conversacionales y captación multicanal
           </p>
         </div>
@@ -106,15 +106,15 @@ export default function SocialDashboardPage() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl p-4 border transition-all duration-200 hover:scale-[1.01]"
+            className="rounded-xl p-4 border transition-all duration-200 hover:scale-[1.01] bg-card/50 backdrop-blur-lg border-border/20"
             style={{ background: `${stat.color}08`, border: `1px solid ${stat.color}25` }}
           >
             <div className="flex items-start justify-between mb-3">
               <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
-              <Activity className="w-4 h-4 text-white/20" />
+              <Activity className="w-4 h-4 text-muted-foreground/30" />
             </div>
-            <p className="text-2xl font-bold text-white">{stat.value}</p>
-            <p className="text-xs text-white/50 mt-0.5">{stat.label}</p>
+            <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
             <p className="text-xs mt-2 font-medium" style={{ color: stat.color }}>
               {stat.change}
             </p>
@@ -123,14 +123,14 @@ export default function SocialDashboardPage() {
       </div>
 
       {/* Programs List */}
-      <div className="rounded-xl border border-white/8 bg-white/3 p-6">
+      <div className="rounded-xl border border-border/20 bg-card/50 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-white font-semibold flex items-center gap-2 text-base">
+            <h2 className="text-foreground font-semibold flex items-center gap-2 text-base">
               <ClipboardList className="w-4 h-4 text-sky-400" />
               Programas Sociales Registrados
             </h2>
-            <p className="text-xs text-white/40 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Haz clic sobre cualquier programa para ver su ficha técnica, objetivos y configuración
             </p>
           </div>
@@ -138,7 +138,7 @@ export default function SocialDashboardPage() {
             variant="ghost"
             size="sm"
             onClick={loadPrograms}
-            className="text-xs text-white/50 hover:text-white"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Recargar
@@ -146,7 +146,7 @@ export default function SocialDashboardPage() {
         </div>
 
         {programs.length === 0 ? (
-          <div className="text-center py-8 text-xs text-white/40">
+          <div className="text-center py-8 text-xs text-muted-foreground">
             No se han creado programas sociales aún. Crea uno nuevo usando el botón superior.
           </div>
         ) : (
@@ -155,15 +155,15 @@ export default function SocialDashboardPage() {
               <div
                 key={prog.id}
                 onClick={() => handleOpenProgram(prog)}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-sky-500/5 hover:border-sky-500/30 cursor-pointer transition-all gap-3 group"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-accent/30 border border-border/20 hover:bg-sky-500/10 hover:border-sky-500/30 cursor-pointer transition-all gap-3 group"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-2.5 h-2.5 rounded-full bg-sky-400 group-hover:scale-125 transition-transform" />
                   <div>
-                    <p className="text-white text-sm font-semibold group-hover:text-sky-300 transition-colors">
+                    <p className="text-foreground text-sm font-semibold group-hover:text-sky-300 transition-colors">
                       {prog.name}
                     </p>
-                    <p className="text-xs text-white/40">
+                    <p className="text-xs text-muted-foreground">
                       Código: <span className="font-mono text-sky-300">{prog.short_code}</span> • Beneficiarios: {prog.beneficiaries_count || prog.current_beneficiaries || 0}
                     </p>
                   </div>
@@ -189,7 +189,7 @@ export default function SocialDashboardPage() {
                     href={`/social/postulaciones?program_id=${prog.id}`}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Button size="sm" variant="ghost" className="text-xs text-white/60 hover:text-white h-8">
+                    <Button size="sm" variant="ghost" className="text-xs text-muted-foreground hover:text-foreground h-8">
                       Postulantes →
                     </Button>
                   </Link>
@@ -210,13 +210,13 @@ export default function SocialDashboardPage() {
 
       {/* Modal Preview Formulario Dinámico */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl bg-zinc-950 border-white/15 text-white p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl bg-card border-border/20 text-foreground p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <FileCode2 className="w-5 h-5 text-sky-400" />
               {selectedProgram?.name} — Ficha de Captación
             </DialogTitle>
-            <DialogDescription className="text-xs text-white/50">
+            <DialogDescription className="text-xs text-muted-foreground">
               Visualización y prueba del esquema dinámico en tiempo real
             </DialogDescription>
           </DialogHeader>

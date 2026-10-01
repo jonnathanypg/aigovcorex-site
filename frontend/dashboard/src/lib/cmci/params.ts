@@ -185,6 +185,20 @@ export const VULN_THRESHOLDS = {
 
 export const CMCI_LIST = ["CMCI Guasmo", "CMCI Bahía", "CMCI Orquídeas", "Otro Centro"];
 export const CMCI_CODES: Record<string, string> = { "CMCI Guasmo": "GU", "CMCI Bahía": "BH", "CMCI Orquídeas": "OR", "Otro Centro": "XX" };
+
+/** Normaliza etiquetas de centro para que coincidan con los valores estándar de CMCI_LIST */
+export function normalizeCenterLabel(label: string | undefined | null): string | null {
+  if (!label) return null;
+  const match = CMCI_LIST.find(c => c.toLowerCase() === label.toLowerCase());
+  if (match) return match;
+  for (const c of CMCI_LIST) {
+    if (label.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(label.toLowerCase())) {
+      return c;
+    }
+  }
+  return null;
+}
+
 export const VULN_ESTADOS = ["En proceso", "Completa", "Pendiente de revisión", "Validada", "Admitida", "No admitida", "Lista de espera"];
 export const AGE_MIN = 12; export const AGE_MAX = 42;
 

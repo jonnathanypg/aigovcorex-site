@@ -101,32 +101,17 @@ export function ageInRange(months: number, countryIso = DEFAULT_COUNTRY): boolea
   return months >= c.age_min && months <= c.age_max;
 }
 
-/** Validación ID por country_config (EC default cédula módulo-10, sin hardcode en UI). */
-export function validateId(value: string, countryIso = DEFAULT_COUNTRY): { valid: boolean; message: string } {
+/** Validación ID: requiere exactamente 10 dígitos numéricos en Ecuador, sin rechazar dígitos por tercer dígito. */
+export function validateId(value: string, countryIso = DEFAULT_COUNTRY): { valid: boolean; message: string; warning?: boolean } {
   const c = COUNTRY_CONFIGS[countryIso] ?? COUNTRY_CONFIGS[DEFAULT_COUNTRY];
   const v = (value ?? "").trim();
   if (!v) return { valid: true, message: "" }; // opcional
-  if (c.id_validation === "modulo-10") {
-    // Cédula ecuatoriana: 10 dígitos, tercer dígito < 6 (persona natural),
-    // módulo-10 con coeficientes 2,1 alternados sobre los 9 primeros.
-    if (!/^\d{10}$/.test(v)) return { valid: false, message: `${c.id_type} debe tener 10 dígitos` };
-    const digits = v.split("").map(Number);
-    if (digits[2] >= 6) return { valid: false, message: `${c.id_type} inválida (tercer dígito debe ser < 6)` };
-    let sum = 0;
-    for (let i = 0; i < 9; i++) {
-      let d = digits[i] * (i % 2 === 0 ? 2 : 1);
-      if (d > 9) d -= 9;
-      sum += d;
+  if (c.country_iso === "EC" || c.id_type === "cedula") {
+    if (!/^\d{10}$/.test(v)) {
+      return { valid: false, message: "La cédula debe tener exactamente 10 dígitos numéricos" };
     }
-    const check = (10 - (sum % 10)) % 10;
-    return check === digits[9]
-      ? { valid: true, message: "" }
-      : { valid: false, message: `${c.id_type} inválida (módulo-10)` };
+    return { valid: true, message: "" };
   }
-  // Estrategia genérica por país: longitud mínima desde country_config.
-  // TODO(country): al agregar un país, definir id_min_length + id_validation
-  // en COUNTRY_CONFIGS (vía params con scope) y, si requiere checksum propio,
-  // añadir una rama aquí keyeada por c.id_validation — nunca hardcodear otro país.
   const minLen = c.id_min_length ?? 5;
   return { valid: v.length >= minLen, message: v.length >= minLen ? "" : `${c.id_type || "Documento"} debe tener al menos ${minLen} caracteres` };
 }

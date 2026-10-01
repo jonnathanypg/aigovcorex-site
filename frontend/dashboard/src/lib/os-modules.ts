@@ -66,12 +66,8 @@ export const OS_MODULES: OSModule[] = [
           { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
           { label: 'Registro de Niños', href: '/registro', icon: Baby },
           { label: 'Admisión', href: '/admision', icon: ClipboardList },
-          { label: 'Ficha Vulnerabilidad', href: '/admision/ficha-vulnerabilidad/nueva', icon: Shield },
-          { label: 'Ficha Socioeconómica', href: '/admision/ficha-socioeconomica/nueva', icon: FileText },
-          { label: 'Priorización CMCI', href: '/admision/priorizacion', icon: AlertTriangle },
-          { label: 'Dashboard CMCI', href: '/admision/dashboard-cmci', icon: LayoutGrid },
-          { label: 'Biblioteca', href: '/biblioteca', icon: BookOpen },
           { label: 'Asistencia', href: '/asistencia', icon: UserCheck },
+          { label: 'Biblioteca Documental', href: '/biblioteca', icon: BookOpen },
         ],
       },
       {
@@ -81,7 +77,6 @@ export const OS_MODULES: OSModule[] = [
           { label: 'Ficha Socioeconómica', href: '/admision/ficha-socioeconomica/nueva', icon: FileText },
           { label: 'Priorización', href: '/admision/priorizacion', icon: AlertTriangle },
           { label: 'Métricas e indicadores', href: '/admision/dashboard-cmci', icon: LayoutGrid },
-          { label: 'Biblioteca Documental', href: '/biblioteca', icon: BookOpen },
         ],
       },
       {

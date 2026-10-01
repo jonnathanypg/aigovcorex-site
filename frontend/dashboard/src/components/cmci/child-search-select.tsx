@@ -16,6 +16,8 @@ export interface ChildOption {
   birth_date: string | null;
   age_display?: string;
   gender?: string;
+  center_name?: string;
+  tenant_id?: number;
   family_id?: number;
   representative?: { full_name: string; relationship: string; phone?: string } | null;
 }
@@ -118,8 +120,15 @@ export function ChildSearchSelect({ label = "Vincular niño/a *", placeholder = 
                 onClick={() => pick(o)}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-muted/70 flex flex-col"
               >
-                <span className="font-medium">{o.full_name}</span>
-                <span className="text-xs text-muted-foreground">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{o.full_name}</span>
+                  {o.center_name && (
+                    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border">
+                      {o.center_name}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground mt-0.5">
                   {[o.cedula ? `CI ${o.cedula}` : null, o.birth_date ? `Nac. ${String(o.birth_date).slice(0, 10)}` : null, o.age_display ?? null].filter(Boolean).join(" · ")}
                 </span>
               </button>

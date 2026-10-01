@@ -98,8 +98,9 @@ export function OSSubNavPanel({ activeModule, isOpen, onClose, onNavigate }: OSS
                 {section.title}
               </p>
               {section.items.map((item) => {
-                const isActive =
-                  pathname === item.href || pathname.startsWith(item.href + '/');
+                const isExact = pathname === item.href;
+                const isChild = item.href !== '/dashboard' && item.href !== '/admision' && pathname.startsWith(item.href + '/');
+                const isActive = isExact || isChild;
                 const Icon = item.icon;
                 return (
                   <Link
@@ -200,8 +201,9 @@ export function OSSubNavPanel({ activeModule, isOpen, onClose, onNavigate }: OSS
               </p>
               <div className="grid grid-cols-1 gap-1">
                 {section.items.map((item) => {
-                  const isActive =
-                    pathname === item.href || pathname.startsWith(item.href + '/');
+                  const isExact = pathname === item.href;
+                  const isChild = item.href !== '/dashboard' && item.href !== '/admision' && pathname.startsWith(item.href + '/');
+                  const isActive = isExact || isChild;
                   const Icon = item.icon;
                   return (
                     <Link

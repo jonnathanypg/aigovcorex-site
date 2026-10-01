@@ -6,7 +6,12 @@ import logging
 import json
 import re
 from typing import Dict, List, Optional, Tuple
-from agents.llm_interface import get_llm
+
+try:
+    # Runtime principal: backend/modules/early-childhood en sys.path
+    from agents.llm_interface import get_llm
+except ImportError:  # servicio social standalone
+    from backend.modules.early_childhood.agents.llm_interface import get_llm  # type: ignore
 from models import db
 
 logger = logging.getLogger(__name__)
@@ -45,7 +50,10 @@ class PostulacionAgent:
         """
         Procesa el turno conversacional para el campo actual.
         """
-        from api.social_programs import _validate_field_value
+        try:
+            from api.social_programs import _validate_field_value
+        except ImportError:  # servicio social standalone
+            from backend.modules.social.api.social_programs import _validate_field_value  # type: ignore
 
         history = history or []
         label = current_field.get('label') or current_field.get('id')
@@ -95,7 +103,10 @@ class PostulacionAgent:
         3. Si NO lo proporcionó (o es duda, queja, reclamo o confusión), genera una respuesta
            humana, empática, contextualizada con el dato actual y el progreso previo.
         """
-        from api.social_programs import _validate_field_value
+        try:
+            from api.social_programs import _validate_field_value
+        except ImportError:  # servicio social standalone
+            from backend.modules.social.api.social_programs import _validate_field_value  # type: ignore
 
         label = field.get('label') or field.get('id')
         ftype = (field.get('type') or 'text').lower()

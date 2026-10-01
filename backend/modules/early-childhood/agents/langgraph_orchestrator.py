@@ -62,7 +62,8 @@ class LangGraphOrchestrator:
                  role: str = None, license_name: str = None, 
                  legal_name: str = None, ruc: str = None, 
                  centers_list: list = None, user_full_name: str = None,
-                 user_email: str = None):
+                 user_email: str = None, enabled_modules: list = None,
+                 programs_list: list = None):
         import logging
         # Setup Logger
         self.logger = logging.getLogger(f"Orchestrator-{tenant_id}")
@@ -83,6 +84,10 @@ class LangGraphOrchestrator:
         self.centers_list = centers_list or []
         self.user_full_name = user_full_name
         self.user_email = user_email
+        # Copiloto multi-módulo: kindicore/social/geo/channels/copilot por licencia.
+        # Orgs solo-social (sin kindicore) reciben persona Social AI, no infantil.
+        self.enabled_modules = enabled_modules or ['kindicore', 'social', 'geo', 'channels', 'copilot']
+        self.programs_list = programs_list or []
         self.config = get_config()
 
         # Identidad real del usuario (nombre/rol/centro) — evita alucinar "quién soy"
@@ -408,10 +413,16 @@ class LangGraphOrchestrator:
                 from datetime import date as _date
                 today_str = str(_date.today())
 
-            system_prompt = f"""Eres {self.agent_name}, un asistente inteligente para Centros de Cuidado Infantil.
+            system_prompt = f"""Eres {self.agent_name}, copiloto transversal de la plataforma AI GovCoreX OS
+({self.license_name_info or 'la organización'}). Atiendes CUALQUIER módulo habilitado,
+no solo cuidado infantil.
             
 PERSONALIDAD / INSTRUCCIONES DE COMPORTAMIENTO:
 {self.agent_prompt}
+
+MÓDULOS HABILITADOS DE ESTA ORGANIZACIÓN: {', '.join(self.enabled_modules)}
+{'IMPORTANTE: esta organización NO usa el módulo kindicore (primera infancia). Eres Social AI: hablas de programas sociales, beneficiarios, postulaciones y convocatorias. NO menciones centros infantiles ni asistencia de niños salvo que te lo pidan.' if 'kindicore' not in (self.enabled_modules or []) else ''}
+PROGRAMAS SOCIALES ACTIVOS: {', '.join([p.get('name', '') for p in self.programs_list]) if self.programs_list else 'ninguno registrado'}
 
 CONTEXTO ORGANIZACIONAL Y DE SEGURIDAD:{org_context}
 
@@ -438,10 +449,11 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
 7. PERSONAS/ORG: 'delegate_people_org' o directo 'manage_users' (list|get|create|deactivate) + 'manage_centers' (list|get|create|update|stats|global_stats|territorial) + 'manage_monitoring_staff' (kpis|staff_load|delegate).
 8. OPERACIÓN/TERRITORIO: 'delegate_operations_geo' o 'manage_geo_channels' (geo_points|geo_create|templates_list|template_create|broadcast) + 'manage_maintenance_task' + 'manage_planning'.
 9. NOTIFS/DOCS/KNOWLEDGE/REPORTES: 'manage_notifications' (list|create|read|delete), 'manage_documents_knowledge' (docs_list|knowledge_list|knowledge_delete), 'consult_knowledge_base', 'generate_report', 'delegate_knowledge_reports'.
-10. BASE DE CONOCIMIENTO: 'consult_knowledge_base' para políticas, protocolos, MIES, documentos.
-11. ANTES de usar una herramienta, REVISA LA HISTORIA. Si el dato ya está en el historial, NO re-ejecutes.
-12. Cuando menciones centro/institución, usa nombres reales, no IDs.
-13. SALUDO: Solo saluda EN EL PRIMER MENSAJE (sin historial). Si saludas: "Bienvenido a {self.license_name_info}" (admin) o nombre del centro (coordinador). Después, NO re-saludes.
+10. SOCIAL AI: programas/beneficiarios/postulaciones/convocatorias → 'delegate_social' o 'manage_social_programs' (list_programs|create_program|get_form|configure_form|register_applicant). Docs del programa (bases, requisitos, TDR) → 'consult_knowledge_base' con module='social' y el 'program_id' correspondiente. Puedes listar programas y guiar una postulación paso a paso.
+11. BASE DE CONOCIMIENTO: 'consult_knowledge_base' para políticas, protocolos, MIES, documentos.
+12. ANTES de usar una herramienta, REVISA LA HISTORIA. Si el dato ya está en el historial, NO re-ejecutes.
+13. Cuando menciones centro/institución/programa, usa nombres reales, no IDs.
+14. SALUDO: Solo saluda EN EL PRIMER MENSAJE (sin historial). Si saludas: "Bienvenido a {self.license_name_info}" (admin) o nombre del centro (coordinador). Después, NO re-saludes.
 
 **REGLA #1 - LENGUAJE HUMANO (CERO VARIABLES TÉCNICAS):**
 - PROHIBIDO usar nombres de variables internas o de base de datos (ej: `tenant_id`, `child_id`, `snake_case`).

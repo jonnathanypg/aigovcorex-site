@@ -3,6 +3,7 @@ RAG Tools for LangGraph Agent
 Provides the ConsultKnowledgeTool for searching the hierarchical knowledge base.
 """
 from langchain.tools import BaseTool
+from agents.tools._guard import graceful_tool
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,14 +20,24 @@ class ConsultKnowledgeTool(BaseTool):
         "policies, procedures, regulations, protocols, or any uploaded documents. "
         "Use this when the user asks about institutional rules, MIES regulations, "
         "protocols, or any topic that might be in the knowledge base. "
-        "Input: {'query': 'search term or question', 'license_id': 1, 'tenant_id': 1}"
+        "Para PROGRAMAS SOCIALES: pasa 'program_id' y/o module='social' para filtrar "
+        "por el programa (ej: bases del programa, requisitos, TDR). "
+        "Input: {'query': 'search term', 'license_id': 1, 'tenant_id': 1, "
+        "'module': 'kindicore|social|geo|channels', 'program_id': 2}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         """Execute knowledge base search with retry logic"""
         query = kwargs.get('query')
         license_id = kwargs.get('license_id')
         tenant_id = kwargs.get('tenant_id')
+        module = kwargs.get('module')
+        program_id = kwargs.get('program_id')
+        try:
+            program_id = int(program_id) if program_id else None
+        except (TypeError, ValueError):
+            program_id = None
 
         if not query:
             return {'found': False, 'message': 'Se requiere una consulta (query).'}
@@ -76,7 +87,8 @@ class ConsultKnowledgeTool(BaseTool):
 
                 from services.rag_service import RAGService
                 rag = RAGService(license_id=license_id, tenant_id=tenant_id)
-                results = rag.query(query, top_k=5, role=role)
+                results = rag.query(query, top_k=5, role=role,
+                                    module=module, program_id=program_id)
 
                 if results:
                     # Format results for the LLM

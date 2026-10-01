@@ -1426,6 +1426,34 @@ def conversational_step(program_id: int):
 
         remaining_fields = [f for f in fields if f.get('required', True) and not _is_answered(f)]
 
+        # ── CORRECCIÓN ("me equivoqué / corrige mi cédula"): borra el dato y re-pregunta ──
+        if user_message and current_data:
+            import re as _re
+            _norm_msg = user_message.strip().lower()
+            if _re.search(r'\b(corrige|corregir|correcci|me equivoqu|est[aá] mal|quiero cambiar|cambiar mi)\b', _norm_msg):
+                target_fid = None
+                for f in fields:
+                    for key in (f.get('id') or '', f.get('label') or ''):
+                        kl = str(key).lower()
+                        if kl and len(kl) > 2 and kl in _norm_msg and f.get('id') in current_data:
+                            target_fid = f.get('id')
+                            break
+                    if target_fid:
+                        break
+                if not target_fid:
+                    answered = [fid for fid in current_data.keys()
+                                if any(ff.get('id') == fid for ff in fields)]
+                    target_fid = answered[-1] if answered else None
+                if target_fid:
+                    dropped = current_data.pop(target_fid, None)
+                    fld = next((f for f in fields if f.get('id') == target_fid), {})
+                    q = fld.get('conversational_prompt') or f"Sin problema. Indícame de nuevo su {fld.get('label', target_fid)}:"
+                    pct = int(((len(fields) - len([f for f in fields if f.get('required', True) and not (current_data.get(f.get('id')) not in (None, ''))])) / max(len(fields), 1)) * 100)
+                    return jsonify({'success': True, 'completed': False,
+                                    'response': f"Entendido, descarté _{dropped}_. {q}",
+                                    'current_field': target_fid, 'progress_percent': pct,
+                                    'collected_data': current_data, 'corrected_field': target_fid}), 200
+
         # Sin mensaje (apertura): preguntar el primer pendiente
         if not user_message:
             if not remaining_fields:
@@ -1446,7 +1474,16 @@ def conversational_step(program_id: int):
 
             # 2. Delegar en PostulacionAgent (Sistema Multiagente) para procesamiento con contexto histórico
             from agents.postulacion_agent import PostulacionAgent
-            postulacion_agent = PostulacionAgent(tenant_id=1, user_id=1)
+            _agent_tenant = 1
+            try:
+                if getattr(program, 'license_id', None):
+                    from models.tenant import Tenant
+                    _t = Tenant.query.filter_by(license_id=program.license_id, is_active=True).first()
+                    if _t:
+                        _agent_tenant = _t.id
+            except Exception:
+                pass
+            postulacion_agent = PostulacionAgent(tenant_id=_agent_tenant, user_id=None)
             agent_result = postulacion_agent.process_step(
                 program_name=program.name,
                 current_field=current_field,
@@ -1479,6 +1516,24 @@ def conversational_step(program_id: int):
             score, notes = _calculate_eligibility_score(current_data, rules, program_id)
             ml_shadow = getattr(_calculate_eligibility_score,
                                 'last_ml_shadow', None) or {"mode": "shadow", "proba": None}
+
+            # ── ANTI-DUPLICADO: misma cédula ya postulada en este programa ──
+            ced = (current_data.get('cedula') or '').strip() if current_data.get('cedula') else None
+            if ced:
+                existing = ProgramBeneficiary.query.filter_by(program_id=program.id, cedula=ced).first()
+                if existing:
+                    return jsonify({
+                        'success': True,
+                        'completed': True,
+                        'duplicate': True,
+                        'response': (
+                            f"Buenas noticias: usted ya tiene una postulación registrada en *{program.name}* "
+                            f"con el código #{existing.id} (estado: {existing.status}). "
+                            f"No es necesario registrarla de nuevo. Si desea actualizar algún dato, indíqueme cuál."
+                        ),
+                        'beneficiary_id': existing.id,
+                        'collected_data': current_data
+                    }), 200
 
             beneficiary = ProgramBeneficiary(
                 program_id=program.id,

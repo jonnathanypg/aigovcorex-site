@@ -73,6 +73,23 @@ class ContextService:
             scope['allowed_actions'] = ['select', 'insert', 'update']
             scope['tenant_id'] = user.tenant_id
 
+        elif role_name in ('public_citizen', 'citizen', 'ciudadano'):
+            # Ciudadano externo (WhatsApp/Telegram/web pública): solo lectura del alcance
+            # de su licencia. Sin user vinculado no se puede resolver tenant: scope seguro.
+            lic_id = getattr(user, 'license_id', None)
+            if lic_id:
+                try:
+                    from models.tenant import Tenant
+                    tids = [t.id for t in Tenant.query.filter_by(license_id=int(lic_id), is_active=True).all()]
+                    scope['filter_sql'] = f"tenant_id IN ({','.join(map(str, tids))})" if tids else "1=0"
+                    scope['tenant_ids'] = tids
+                except Exception:
+                    scope['filter_sql'] = "1=0"
+            else:
+                scope['filter_sql'] = "1=0"
+            scope['access_level'] = 'license_read'
+            scope['allowed_actions'] = ['select']
+
         elif role_name in [ContextService.ROLE_EDUCATOR, 'educadora']:
             # Educator: ONLY assigned children (child_ids from assigned_educator_id)
             child_ids = [c.id for c in Child.query.filter_by(

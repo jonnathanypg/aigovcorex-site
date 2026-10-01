@@ -1052,6 +1052,8 @@ class ManageSocialProgramsTool(BaseTool):
         "  - 'get_form': inspect the dynamic form JSON schema for a program.\n"
         "  - 'configure_form': add or update fields, conversational prompts, and eligibility rules.\n"
         "  - 'register_applicant': submit a new applicant with custom form_data.\n"
+        "  - 'list_beneficiaries': list applicants/beneficiaries (filter by program_id/status).\n"
+        "  - 'program_stats': totals per program by status + occupancy (admin info/reportes).\n"
         "Input examples:\n"
         "  {'action': 'list_programs'}\n"
         "  {'action': 'create_program', 'name': 'Beca Nutrición Infantil', 'category': 'infancia', "
@@ -1249,6 +1251,44 @@ class ManageSocialProgramsTool(BaseTool):
                     'eligibility_score': score,
                     'status': beneficiary.status
                 }
+
+            # ── LIST BENEFICIARIES ──
+            elif action == 'list_beneficiaries':
+                program_id = kwargs.get('program_id')
+                status = kwargs.get('status')
+                q = ProgramBeneficiary.query
+                if program_id:
+                    q = q.filter_by(program_id=int(program_id))
+                elif license_id:
+                    prog_ids = [p.id for p in SocialProgram.query.filter_by(license_id=license_id).all()]
+                    q = q.filter(ProgramBeneficiary.program_id.in_(prog_ids)) if prog_ids else q.filter(False)
+                if status:
+                    q = q.filter_by(status=status)
+                rows = q.order_by(ProgramBeneficiary.id.desc()).limit(50).all()
+                return {'success': True, 'count': len(rows), 'beneficiarios': [
+                    {'id': b.id, 'programa_id': b.program_id, 'nombre': b.full_name,
+                     'cedula': b.cedula, 'estado': b.status,
+                     'score': b.eligibility_score, 'canal': b.intake_channel} for b in rows]}
+
+            # ── PROGRAM STATS (para el administrador: info y reportes) ──
+            elif action == 'program_stats':
+                progs = SocialProgram.query
+                if license_id:
+                    progs = progs.filter_by(license_id=license_id)
+                if kwargs.get('program_id'):
+                    progs = progs.filter_by(id=int(kwargs.get('program_id')))
+                out = []
+                for p in progs.limit(20).all():
+                    total = ProgramBeneficiary.query.filter_by(program_id=p.id).count()
+                    by_status = {}
+                    for st in ('applicant', 'approved', 'active', 'rejected', 'graduated'):
+                        by_status[st] = ProgramBeneficiary.query.filter_by(
+                            program_id=p.id, status=st).count()
+                    out.append({'id': p.id, 'nombre': p.name, 'estado': p.status,
+                                'total': total, 'por_estado': by_status,
+                                'cupos': p.max_beneficiaries,
+                                'ocupacion': f"{round(total / p.max_beneficiaries * 100, 1)}%" if p.max_beneficiaries else None})
+                return {'success': True, 'programas': out}
 
             return {'success': False, 'error': f'Acción desconocida: {action}'}
 

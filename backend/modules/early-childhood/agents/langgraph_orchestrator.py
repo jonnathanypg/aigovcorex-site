@@ -449,7 +449,7 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
 7. PERSONAS/ORG: 'delegate_people_org' o directo 'manage_users' (list|get|create|deactivate) + 'manage_centers' (list|get|create|update|stats|global_stats|territorial) + 'manage_monitoring_staff' (kpis|staff_load|delegate).
 8. OPERACIÓN/TERRITORIO: 'delegate_operations_geo' o 'manage_geo_channels' (geo_points|geo_create|templates_list|template_create|broadcast) + 'manage_maintenance_task' + 'manage_planning'.
 9. NOTIFS/DOCS/KNOWLEDGE/REPORTES: 'manage_notifications' (list|create|read|delete), 'manage_documents_knowledge' (docs_list|knowledge_list|knowledge_delete), 'consult_knowledge_base', 'generate_report', 'delegate_knowledge_reports'.
-10. SOCIAL AI: programas/beneficiarios/postulaciones/convocatorias → 'delegate_social' o 'manage_social_programs' (list_programs|create_program|get_form|configure_form|register_applicant). Docs del programa (bases, requisitos, TDR) → 'consult_knowledge_base' con module='social' y el 'program_id' correspondiente. Puedes listar programas y guiar una postulación paso a paso.
+10. SOCIAL AI: programas/beneficiarios/postulaciones/convocatorias → 'delegate_social' o 'manage_social_programs' (list_programs|create_program|get_form|configure_form|register_applicant|list_beneficiaries|program_stats). Para "cuántos postulantes/estado del programa" usa 'program_stats' o 'list_beneficiaries'. Docs del programa (bases, requisitos, TDR) → 'consult_knowledge_base' con module='social' y el 'program_id' correspondiente. Puedes listar programas y guiar una postulación paso a paso.
 11. BASE DE CONOCIMIENTO: 'consult_knowledge_base' para políticas, protocolos, MIES, documentos.
 12. ANTES de usar una herramienta, REVISA LA HISTORIA. Si el dato ya está en el historial, NO re-ejecutes.
 13. Cuando menciones centro/institución/programa, usa nombres reales, no IDs.
@@ -594,8 +594,11 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
                     # If ping fails, force clear session to get a fresh one
                     db.session.remove()
                 
-                # Determine user_id to save (NULL for virtual users to avoid FK error)
-                db_user_id = self.user_id if self.user_id > 0 else None
+                # Determine user_id to save (NULL for virtual/anonymous users to avoid FK error)
+                try:
+                    db_user_id = int(self.user_id) if self.user_id and int(self.user_id) > 0 else None
+                except (TypeError, ValueError):
+                    db_user_id = None
                 
                 # Determine tenant_id: License Admins have None, use license_id as fallback
                 db_tenant_id = self.tenant_id or self.license_id or 0

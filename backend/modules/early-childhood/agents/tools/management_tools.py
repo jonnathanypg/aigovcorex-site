@@ -3,6 +3,7 @@ Management Tools — CRUD tools for modules not yet exposed to the multi-agent s
 Covers: Planificaciones Lúdicas, Menú Semanal, Operaciones/Mantenimiento, Intervención Familiar.
 """
 from langchain.tools import BaseTool
+from agents.tools._guard import graceful_tool
 from models import db
 from datetime import date, datetime
 import logging
@@ -11,13 +12,16 @@ logger = logging.getLogger('ManagementTools')
 
 
 def _safe_session():
-    """Proactive session health-check before any DB operation."""
+    """Proactive session health-check. Nunca lanza: fuera de app-context solo avisa."""
     try:
         from sqlalchemy import text
         db.session.execute(text("SELECT 1"))
     except Exception:
-        db.session.rollback()
-        db.session.remove()
+        try:
+            db.session.rollback()
+            db.session.remove()
+        except Exception:
+            pass
 
 
 def _resolve_tenants(tenant_id, user_id):
@@ -53,6 +57,7 @@ class ManagePlanningTool(BaseTool):
         "  Update: {'action': 'update', 'planning_id': 5, 'status': 'aprobado', 'tenant_id': 1, 'user_id': 1}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -171,6 +176,7 @@ class ManageWeeklyMenuTool(BaseTool):
         "'ingredients': 'arroz, pollo, zanahoria'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -275,6 +281,7 @@ class ManageMaintenanceTaskTool(BaseTool):
         "  Update: {'action': 'update', 'task_id': 3, 'status': 'Completado', 'tenant_id': 1, 'user_id': 1}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -379,6 +386,7 @@ class ManageInterventionTool(BaseTool):
         "'interviewee_relationship': 'madre'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -473,6 +481,7 @@ class ManageAdmissionTool(BaseTool):
         "'priority': 'normal', 'notes': 'Referida por MIES'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -621,6 +630,7 @@ class ManageChildTool(BaseTool):
         "'family_address': 'Calle 5 y 10', 'family_city': 'Quito'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -765,6 +775,7 @@ class ManageIngestionTool(BaseTool):
         "  {'action': 'process_csv', 'entity': 'ninos', 'attachment_path': '/tmp/upload_123.csv', 'tenant_id': 1, 'user_id': 1}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list_entities')
@@ -897,7 +908,8 @@ class SendEmailTool(BaseTool):
         "  Send to email: {'action': 'send_to_email', 'to_email': 'juan@mail.com', 'subject': 'Asunto', 'body': '...'}\n"
     )
 
-    def _run(self, **kwargs) -> dict:
+    @graceful_tool
+    def _run(self, *args, **kwargs) -> dict:
         try:
             _safe_session()
             from services.email_service import EmailService
@@ -1049,6 +1061,7 @@ class ManageSocialProgramsTool(BaseTool):
         "'form_data': {'monthly_income': 180, 'children_count': 3}}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list_programs')
@@ -1264,6 +1277,7 @@ class ManageChannelsTool(BaseTool):
         "  {'action': 'link_program_channel', 'program_id': 2, 'parent_channel_id': 1, 'agent_name': 'Agente BDH'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list_channels')

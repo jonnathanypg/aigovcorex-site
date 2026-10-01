@@ -3,6 +3,7 @@ LangChain Tools for CDI Management System
 Each tool represents a specific database operation
 """
 from langchain.tools import BaseTool
+from agents.tools._guard import graceful_tool
 from typing import Optional, Type
 from models import db
 from models.child import Child
@@ -325,6 +326,7 @@ class RunSQLAgentTool(BaseTool):
     name: str = "run_sql_analysis"
     description: str = "Use this tool to answer questions that require querying the database for analytics, reports, summaries, or complex data retrieval. NEVER USE A FAKE TENANT ID. Input: {'query': 'the user request', 'user_id': 1}"
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         """Execute the SQL Agent"""
         # Safely reset session for long-running threads

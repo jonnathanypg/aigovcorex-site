@@ -4,6 +4,7 @@ Allows the agent to generate reports (PDF/CSV/Excel) and return a download link.
 Supports single-center and global (license_admin) reports.
 """
 from langchain.tools import BaseTool
+from agents.tools._guard import graceful_tool
 import os
 import logging
 from datetime import date, datetime, timedelta
@@ -99,6 +100,7 @@ class GenerateReportTool(BaseTool):
         "For license_admin, omit tenant_id or center_name to get a global report."
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         report_type = (kwargs.get('report_type') or 'general').lower()
         export_format = (kwargs.get('format') or kwargs.get('export_format') or 'pdf').lower()

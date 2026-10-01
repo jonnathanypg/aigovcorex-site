@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cmciService } from "@/services/cmci.service";
-import { VULN_RANGES, normalizeCenterLabel } from "@/lib/cmci/params";
+import { VULN_RANGES } from "@/lib/cmci/params";
 
 export default function DashboardCmciPage() {
   const [d, setD] = useState<Awaited<ReturnType<typeof cmciService.dashboard>> | null>(null);
@@ -14,7 +14,7 @@ export default function DashboardCmciPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard del centro</h1>
+        <h1 className="text-2xl font-bold">Dashboard CMCI</h1>
         <div className="flex gap-2">
           <Link href="/admision/priorizacion"><Button variant="outline">Priorización</Button></Link>
           <Link href="/admision/ficha-vulnerabilidad/nueva"><Button>Nueva valoración</Button></Link>
@@ -40,9 +40,9 @@ export default function DashboardCmciPage() {
             <div key={p} className="flex items-center justify-between text-sm"><span>{p}</span><b>{d.byPrio[p] ?? 0}</b></div>
           ))}
         </CardContent></Card>
-        <Card><CardHeader><CardTitle>Por centro</CardTitle></CardHeader><CardContent className="space-y-2">
+        <Card><CardHeader><CardTitle>Por CMCI</CardTitle></CardHeader><CardContent className="space-y-2">
           {Object.entries(d.byCmci).map(([c, n]) => (
-            <div key={c} className="flex items-center justify-between text-sm"><span>{normalizeCenterLabel(c)}</span><b>{n}</b></div>
+            <div key={c} className="flex items-center justify-between text-sm"><span>{c}</span><b>{n}</b></div>
           ))}
           {!Object.keys(d.byCmci).length && <p className="text-sm text-muted-foreground">Sin datos.</p>}
         </CardContent></Card>

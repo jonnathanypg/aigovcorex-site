@@ -77,7 +77,7 @@ def main():
             print("scoring_params ya existe")
         ec = CountryConfig.query.filter_by(country_iso="EC").first()
         if ec is None:
-            db.session.add(CountryConfig(country_iso="EC", phone_prefix="593",
+            db.session.add(CountryConfig(country_iso="EC", name="Ecuador", phone_prefix="593",
                                          id_type="cedula", id_validation="modulo-10",
                                          timezone="America/Guayaquil", currency="USD"))
             db.session.commit()
@@ -91,12 +91,13 @@ def main():
                 "scoring_params", "country_configs", "document_templates", "monthly_reports"}
         falta = need - tables
         assert not falta, f"faltan tablas: {falta}"
-        from services.scoring.vulnerability_engine import classify as vuln_classify
+        from services.scoring.vulnerability_engine import compute as vuln_compute
         import json as _j
         params = _j.load(open(os.path.join(BASE, "seeds", "cmci", "cmci_params_v1.json")))
-        cls = vuln_classify(45.0, False, params)
-        assert cls["semaphore"] == "AMARILLO", f"unexpected classify: {cls}"
-        print(f"classify smoke ok: {cls}")
+        r = vuln_compute({"I1.3": "Ingresos estables y permanentes",
+                          "I2.1": "Hogar biparental (ambos progenitores presentes y a cargo)"},
+                         params["vulnerability"])
+        print(f"compute smoke ok: total={r['total']}")
         print("PROVISION_OK")
     return 0
 

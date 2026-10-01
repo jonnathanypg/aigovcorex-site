@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrintButton } from "@/components/cmci/print-header";
 import { cmciService, type SocioRecord } from "@/services/cmci.service";
-import { normalizeCenterLabel } from "@/lib/cmci/params";
 
 export default function FichaSocioeconomicaDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -21,7 +20,7 @@ export default function FichaSocioeconomicaDetailPage({ params }: { params: { id
         <div>Total: <b>{rec.total.toFixed(1)}</b></div>
         <div>Clasificación: <b>{rec.clasificacion}</b></div>
         <div>Per-cápita: <b>${rec.perCapita.toFixed(2)}</b></div>
-        <div>Centro: {normalizeCenterLabel(rec.cmci)}</div><div>Fecha: {rec.fecha}</div><div>Representante: {rec.representante}</div>
+        <div>CMCI: {rec.cmci}</div><div>Fecha: {rec.fecha}</div><div>Representante: {rec.representante}</div>
       </CardContent></Card>
       <Card><CardHeader><CardTitle>Subpuntajes B62-B68</CardTitle></CardHeader><CardContent className="grid gap-2 md:grid-cols-4 text-sm">
         {Object.entries(p.resultado.sub).map(([k, v]) => (<div key={k} className="border rounded p-2">{k}: <b>{v}</b></div>))}

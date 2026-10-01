@@ -183,22 +183,8 @@ export const VULN_THRESHOLDS = {
   DepT_1: 1, DepT_2: 2, DepT_3: 3, DepT_4: 4, NnaT_2: 2, NnaT_3: 3, NnaT_4: 4, HacT_2: 2, HacT_3: 3,
 };
 
-export const CMCI_LIST = ["Guasmo", "Bahía", "Orquídeas", "Otro centro"];
-export const CMCI_CODES: Record<string, string> = { "Guasmo": "GU", "Bahía": "BH", "Orquídeas": "OR", "Otro centro": "XX" };
-
-/** Compatibilidad hacia atrás: históricos guardados con etiquetas "CMCI X" / "Otro Centro".
- * Solo normaliza etiquetas visibles de centro; los códigos GU/BH/OR/XX no cambian. */
-export const CMCI_LEGACY_ALIASES: Record<string, string> = {
-  "CMCI Guasmo": "Guasmo",
-  "CMCI Bahía": "Bahía",
-  "CMCI Orquídeas": "Orquídeas",
-  "Otro Centro": "Otro centro",
-};
-export function normalizeCenterLabel(center?: string | null): string {
-  if (!center) return "";
-  const t = center.trim();
-  return CMCI_LEGACY_ALIASES[t] ?? t;
-}
+export const CMCI_LIST = ["CMCI Guasmo", "CMCI Bahía", "CMCI Orquídeas", "Otro Centro"];
+export const CMCI_CODES: Record<string, string> = { "CMCI Guasmo": "GU", "CMCI Bahía": "BH", "CMCI Orquídeas": "OR", "Otro Centro": "XX" };
 export const VULN_ESTADOS = ["En proceso", "Completa", "Pendiente de revisión", "Validada", "Admitida", "No admitida", "Lista de espera"];
 export const AGE_MIN = 12; export const AGE_MAX = 42;
 

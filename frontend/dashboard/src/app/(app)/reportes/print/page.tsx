@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PrintHeader, PrintButton, semaforoBg } from "@/components/cmci/print-header";
 import { cmciService } from "@/services/cmci.service";
-import { normalizeCenterLabel } from "@/lib/cmci/params";
 import { reportsService, type Report } from "@/services/reports.service";
 
 export default function ReportesPrintPage() {
@@ -39,18 +38,18 @@ function ReportesPrintInner() {
         </p>
       )}
       <PrintHeader
-        title={report ? `Matriz general — ${report.title}` : "Matriz general de usuarios — del centro"}
+        title={report ? `Matriz general — ${report.title}` : "Matriz general de usuarios — CMCI"}
         codigo={reportId ? `reporte-${reportId}` : `corte-${new Date().toISOString().slice(0, 10)}`}
         fecha={new Date().toISOString().slice(0, 10)}
         periodo={periodo}
       />
       <table className="w-full text-xs border-collapse mt-3">
         <thead><tr className="border-b-2 border-black">
-          {["Z", "Código", "Niño", "Edad", "Centro", "Fecha", "Total", "Nivel", "Prioridad", "Alerta", "Estado"].map((h) => <th key={h} className="text-left pr-2">{h}</th>)}
+          {["Z", "Código", "Niño", "Edad", "CMCI", "Fecha", "Total", "Nivel", "Prioridad", "Alerta", "Estado"].map((h) => <th key={h} className="text-left pr-2">{h}</th>)}
         </tr></thead>
         <tbody>{rows.map((r, i) => (
           <tr key={r.id} className={`border-b ${i % 2 === 1 ? "print-row-alt" : ""}`}>
-            <td>{r.Z}</td><td>{r.codigo}</td><td>{r.nino}</td><td>{r.edadMeses}m</td><td>{normalizeCenterLabel(r.cmci)}</td><td>{r.fecha}</td>
+            <td>{r.Z}</td><td>{r.codigo}</td><td>{r.nino}</td><td>{r.edadMeses}m</td><td>{r.cmci}</td><td>{r.fecha}</td>
             <td>{r.total.toFixed(2)}</td>
             <td><span style={{ background: semaforoBg(r.semaforo, r.nivel), padding: "0 6px" }}>{r.nivel}</span></td>
             <td>{r.prioridad}</td><td>{r.alerta ? "Sí" : "No"}</td><td>{r.estado}</td>

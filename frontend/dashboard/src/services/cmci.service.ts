@@ -16,7 +16,6 @@
 import api from "./api";
 import { AxiosError } from "axios";
 import { rankRows, computeVulnerability } from "@/lib/cmci/engine";
-import { normalizeCenterLabel } from "@/lib/cmci/params";
 
 const VKEY = "cmci:vulnerability:v1";
 const SKEY = "cmci:socioeconomic:v1";
@@ -24,7 +23,7 @@ const SKEY = "cmci:socioeconomic:v1";
 // ─── Tipos frontend (compat UI existente) ───
 export interface VulnRecord {
   id: string; codigo: string; fecha: string; nino: string; nacimiento: string;
-  child_id?: number; edadMeses: number; enRango: boolean; sexo: string; cmci: string; sector: string;
+  edadMeses: number; enRango: boolean; sexo: string; cmci: string; sector: string;
   representante: string; parentesco: string; telefono: string; estado: string;
   hogar: { ingresoTotal: number; integrantes: number; perceptores: number; nna: number; dormitorios: number };
   scores: Record<string, number>; subtotals: Record<string, number>;
@@ -34,7 +33,7 @@ export interface VulnRecord {
 }
 export interface SocioRecord {
   id: string; codigo: string; fecha: string; nino: string; nacimiento: string; cmci: string;
-  child_id?: number; representante: string; telefono: string;
+  representante: string; telefono: string;
   total: number; clasificacion: string; perCapita: number; payload: unknown; createdAt: string;
 }
 export interface DashboardSummary {
@@ -125,7 +124,7 @@ function mapVulnBackendToFront(b: BackendVulnRecord): VulnRecord {
     nino: String(b.child_name ?? ""), nacimiento: String((answers as Record<string, unknown>).nacimiento ?? ""),
     edadMeses: Number((r as Record<string, unknown>).age_months ?? 0), enRango: true,
     sexo: String((answers as Record<string, unknown>).sexo ?? ""),
-    cmci: normalizeCenterLabel(String(b.center ?? "")), sector: String((answers as Record<string, unknown>).sector ?? ""),
+    cmci: String(b.center ?? ""), sector: String((answers as Record<string, unknown>).sector ?? ""),
     representante: String((answers as Record<string, unknown>).representante ?? ""),
     parentesco: String((answers as Record<string, unknown>).parentesco ?? ""),
     telefono: String((answers as Record<string, unknown>).telefono ?? ""),
@@ -147,7 +146,7 @@ function mapSocioBackendToFront(b: BackendSocioRecord): SocioRecord {
   return {
     id: String(b.id), codigo: String(b.code ?? ""), fecha: String(b.assessed_at ?? "").slice(0, 10),
     nino: String(b.child_name ?? ""), nacimiento: String(data.nacimiento ?? ""),
-    cmci: normalizeCenterLabel(String(b.center ?? "")), representante: String(data.representante ?? ""),
+    cmci: String(b.center ?? ""), representante: String(data.representante ?? ""),
     telefono: String(data.telefono ?? ""), total,
     clasificacion: String(res.classification ?? res.clasificacion ?? ""),
     perCapita: Number(res.per_capita ?? res.perCapita ?? 0),
@@ -171,8 +170,7 @@ function localDashboard(): DashboardSummary {
   for (const r of rows) {
     byNivel[r.nivel] = (byNivel[r.nivel] ?? 0) + 1;
     byPrio[r.prioridad] = (byPrio[r.prioridad] ?? 0) + 1;
-    const ck = normalizeCenterLabel(r.cmci);
-    byCmci[ck] = (byCmci[ck] ?? 0) + 1;
+    byCmci[r.cmci] = (byCmci[r.cmci] ?? 0) + 1;
     if (r.alerta) alertas += 1;
     suma += r.total;
   }
@@ -180,7 +178,7 @@ function localDashboard(): DashboardSummary {
 }
 
 function buildCSV(rows: PriorizacionRow[]): string {
-  const head = "Z;Codigo;Nino;EdadMeses;Centro;Fecha;Total;Nivel;Prioridad;Alerta;Estado";
+  const head = "Z;Codigo;Nino;EdadMeses;CMCI;Fecha;Total;Nivel;Prioridad;Alerta;Estado";
   const lines = rows.map((r) =>
     [r.Z, r.codigo, r.nino, r.edadMeses, r.cmci, r.fecha, r.total.toFixed(2), r.nivel, r.prioridad, r.alerta ? "Sí" : "No", r.estado].join(";"),
   );
@@ -228,7 +226,7 @@ export const cmciService = {
 
   async createVuln(r: Omit<VulnRecord, "id" | "createdAt">): Promise<VulnRecord> {
     const payload = {
-      code: r.codigo, child_name: r.nino, child_id: (r as VulnRecord).child_id, center: r.cmci, status: r.estado,
+      code: r.codigo, child_name: r.nino, center: r.cmci, status: r.estado,
       assessed_at: r.fecha, observations: r.observaciones,
       answers: { ...r.scores, nacimiento: r.nacimiento, sexo: r.sexo, sector: r.sector, representante: r.representante, parentesco: r.parentesco, telefono: r.telefono, hogar: r.hogar },
     };
@@ -286,7 +284,7 @@ export const cmciService = {
 
   async createSocio(r: Omit<SocioRecord, "id" | "createdAt">): Promise<SocioRecord> {
     const payload = {
-      code: r.codigo, child_name: r.nino, child_id: (r as SocioRecord).child_id, center: r.cmci, assessed_at: r.fecha,
+      code: r.codigo, child_name: r.nino, center: r.cmci, assessed_at: r.fecha,
       data: { ...(r.payload as Record<string, unknown> ?? {}), representante: r.representante, telefono: r.telefono, nacimiento: r.nacimiento },
     };
     try {
@@ -311,7 +309,7 @@ export const cmciService = {
       return (items as Record<string, unknown>[]).map((b, i) => ({
         id: String(b.id ?? i), codigo: String(b.code ?? ""), fecha: String(b.assessed_at ?? "").slice(0, 10),
         nino: String(b.child_name ?? ""), nacimiento: "", edadMeses: Number(b.age_months ?? 0),
-        enRango: true, sexo: "", cmci: normalizeCenterLabel(String(b.center ?? "")), sector: "",
+        enRango: true, sexo: "", cmci: String(b.center ?? ""), sector: "",
         representante: "", parentesco: "", telefono: "", estado: String(b.status ?? ""),
         hogar: { ingresoTotal: 0, integrantes: 1, perceptores: 1, nna: 1, dormitorios: 1 },
         scores: {}, subtotals: {},
@@ -336,12 +334,10 @@ export const cmciService = {
       }>("/api/cmci/dashboard", { params: filters });
       const byNivel: Record<string, number> = {};
       for (const [k, v] of Object.entries(data.by_level ?? {})) byNivel[k] = v.count;
-      const byCmci: Record<string, number> = {};
-      for (const [k, v] of Object.entries(data.by_center ?? {})) byCmci[normalizeCenterLabel(k)] = (byCmci[normalizeCenterLabel(k)] ?? 0) + v;
       return {
         total: data.total_E5 ?? 0, promedio: data.avg_I5 != null ? data.avg_I5 * 100 : 0,
         byNivel, byPrio: data.by_priority_D17_D19 ?? {},
-        byCmci, alertas: data.protection_alerts_E22 ?? 0,
+        byCmci: data.by_center ?? {}, alertas: data.protection_alerts_E22 ?? 0,
       };
     } catch (err) {
       if (isBackendUnreachable(err)) return localDashboard();
@@ -382,74 +378,4 @@ export const cmciService = {
       throw toApiError(err, "Error importando excels");
     }
   },
-
-  // — Actualizar fichas (educador/coordinador/propietario: recalcula + propaga) —
-  async updateVuln(id: string, payload: Record<string, unknown>): Promise<VulnRecord> {
-    try {
-      const { data } = await api.put<BackendVulnRecord>(`/api/cmci/vulnerability/${encodeURIComponent(id)}`, payload);
-      return mapVulnBackendToFront(data);
-    } catch (err) {
-      throw toApiError(err, "Error actualizando valoración");
-    }
-  },
-
-  async updateSocio(id: string, payload: Record<string, unknown>): Promise<SocioRecord> {
-    try {
-      const { data } = await api.put<BackendSocioRecord>(`/api/cmci/socioeconomic/${encodeURIComponent(id)}`, payload);
-      return mapSocioBackendToFront(data);
-    } catch (err) {
-      throw toApiError(err, "Error actualizando ficha socioeconómica");
-    }
-  },
-
-  // — Biblioteca documental (subida: propietario/coordinador; descarga: todos) —
-  async listBiblioteca(category?: string): Promise<BibliotecaTemplate[]> {
-    try {
-      const { data } = await api.get<{ templates: BibliotecaTemplate[] }>("/api/cmci/biblioteca", { params: category ? { category } : {} });
-      return data.templates ?? [];
-    } catch (err) {
-      throw toApiError(err, "Error listando biblioteca");
-    }
-  },
-
-  async uploadBiblioteca(args: { title: string; category: string; file: File; version?: string }): Promise<BibliotecaTemplate> {
-    try {
-      const form = new FormData();
-      form.append("title", args.title);
-      form.append("category", args.category);
-      if (args.version) form.append("version", args.version);
-      form.append("file", args.file);
-      const { data } = await api.post<{ template: BibliotecaTemplate }>("/api/cmci/biblioteca/upload", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return data.template;
-    } catch (err) {
-      throw toApiError(err, "Error subiendo plantilla (requiere propietario/coordinador)");
-    }
-  },
-
-  async downloadBiblioteca(id: number | string): Promise<Blob> {
-    try {
-      const { data } = await api.get(`/api/cmci/biblioteca/${encodeURIComponent(String(id))}/download`, { responseType: "blob" });
-      return data as Blob;
-    } catch (err) {
-      throw toApiError(err, "Error descargando plantilla");
-    }
-  },
-
-  async deleteBiblioteca(id: number | string): Promise<void> {
-    try {
-      await api.delete(`/api/cmci/biblioteca/${encodeURIComponent(String(id))}`);
-    } catch (err) {
-      throw toApiError(err, "Error eliminando plantilla");
-    }
-  },
 };
-
-export interface BibliotecaTemplate {
-  id: number;
-  title: string;
-  category: string;
-  file_url: string | null;
-  version: string | null;
-}

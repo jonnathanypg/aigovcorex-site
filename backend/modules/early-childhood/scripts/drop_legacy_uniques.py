@@ -290,10 +290,8 @@ def main(argv=None):
     url = resolve_database_url(args.database_url)
     _log(f"dialecto: {'mysql' if is_mysql(url) else 'sqlite'}")
     if is_mysql(url):
-        run_mysql(url, args.backup_dir)
-        return 0
-    run_sqlite(sqlite_path_from_url(url), args.backup_dir)
-    return 0
+        return run_mysql(url, args.backup_dir)
+    return run_sqlite(sqlite_path_from_url(url), args.backup_dir)
 
 
 if __name__ == "__main__":

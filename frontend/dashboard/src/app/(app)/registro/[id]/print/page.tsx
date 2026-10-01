@@ -37,7 +37,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   return (
     <div className="print-sheet bg-white text-black p-6 max-w-[210mm] mx-auto">
       <div className="print:hidden mb-4"><PrintButton /></div>
-      <PrintHeader title="Ficha integral del niño/a — del centro" codigo={String(id)} fecha={new Date().toISOString().slice(0, 10)} />
+      <PrintHeader title="Ficha integral del niño/a — CMCI" codigo={String(id)} fecha={new Date().toISOString().slice(0, 10)} />
       {!data ? <p className="text-sm mt-4">Cargando…</p> : (
         <>
           <p className="mt-3 text-sm">

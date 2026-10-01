@@ -2,7 +2,7 @@
 /** Print ficha vulnerabilidad: bloques A-F idénticos al Excel + semáforo + firmas físicas. */
 import { useEffect, useState } from "react";
 import { PrintHeader, PrintButton } from "@/components/cmci/print-header";
-import { VULN_INDICATORS, VULN_DIMS, normalizeCenterLabel } from "@/lib/cmci/params";
+import { VULN_INDICATORS, VULN_DIMS } from "@/lib/cmci/params";
 import { computeVulnerability } from "@/lib/cmci/engine";
 import { cmciService, type VulnRecord } from "@/services/cmci.service";
 
@@ -15,11 +15,11 @@ export default function AdmisionPrintPage({ params }: { params: { id: string } }
   return (
     <div className="print-sheet bg-white text-black p-6 max-w-[210mm] mx-auto">
       <div className="print:hidden mb-4"><PrintButton /></div>
-      <PrintHeader title="Matriz de valoración de vulnerabilidad familiar — del centro" codigo={rec.codigo} fecha={rec.fecha} />
+      <PrintHeader title="Matriz de valoración de vulnerabilidad familiar — CMCI" codigo={rec.codigo} fecha={rec.fecha} />
       <section className="mt-3 text-sm">
         <h2 className="font-bold uppercase text-xs mb-1">A · Identificación</h2>
         <div className="grid grid-cols-3 gap-1">
-          <div>Niño/a: <b>{rec.nino}</b></div><div>Edad: <b>{rec.edadMeses}m {rec.enRango ? "EN RANGO" : "FUERA DE RANGO"}</b></div><div>Centro: <b>{normalizeCenterLabel(rec.cmci)}</b></div>
+          <div>Niño/a: <b>{rec.nino}</b></div><div>Edad: <b>{rec.edadMeses}m {rec.enRango ? "EN RANGO" : "FUERA DE RANGO"}</b></div><div>CMCI: <b>{rec.cmci}</b></div>
           <div>Sector: {rec.sector}</div><div>Representante: {rec.representante} ({rec.parentesco})</div><div>Tel: {rec.telefono}</div>
         </div>
       </section>

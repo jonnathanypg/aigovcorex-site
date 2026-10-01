@@ -17,9 +17,9 @@ export interface ConvenioInfo {
 }
 
 export const CMCI_CONVENIO_DEFAULTS: Required<ConvenioInfo> = {
-  convenio: "Convenio de cooperación interinstitucional — Centros de cuidado infantil",
+  convenio: "Convenio de cooperación interinstitucional — Centros Municipales de Cuidado Infantil (CMCI)",
   finalidad: "Atención integral a niñas y niños de 12 a 42 meses en situación de vulnerabilidad",
-  poblacion: "Niñas y niños de 12 a 42 meses y sus familias (centros GU / BH / OR)",
+  poblacion: "Niñas y niños de 12 a 42 meses y sus familias (centros BH / GU / OR)",
   objetivo: "Garantizar cuidado, nutrición, salud y desarrollo infantil integral con priorización por vulnerabilidad",
   servicios: "Cuidado diario · Alimentación (4 tiempos) · Salud y crecimiento · Desarrollo infantil · Acompañamiento familiar",
 };

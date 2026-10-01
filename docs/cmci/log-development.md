@@ -164,3 +164,21 @@ Carpeta `IMPLEMETACION-Y-MEJORAS/2_CENTRO-INFANTIL-DOCUMENTACION-EJEMPLOS/` + `c
 
 ## 2026-09-27 — SEED XLSX + LIMPIEZA REMOTA [DONE]
 `backend/.gitignore *.xlsx` bloqueaba seed socio → `add -f`, push `95b49d4`. `IMPLEMETACION-Y-MEJORAS/` eliminada del remoto (0 rastros, verificado `ls-tree`); docs en `docs/cmci/`. Push `f2869dd`.
+
+## 2026-09-29 — ARQ BANCO DIGITAL [ANÁLISIS+DONE]
+Diagrama 146 nodos extraído (Lambda+Medallón+Mesh+Privacy+PII Vault+WORM). Plan maestro 9 secciones verificado en repo (C1-C9, puertos 0.0.0.0, to_dict PII, sin WEBHOOK_SECRET, DDL en arranque, sin subjects). Inventario: 0 Vault/KMS/streaming/TTS-local en código; `cryptography` declarado sin uso; edge-tts cloud. Plan `docs/cmci/PLAN_INTEGRACION_BANCO_DIGITAL.md`: NATS (no Kafka), DuckDB→MinIO/Spark, Piper/Kokoro, hash-chain ya/red después, F0-F4 con criterios.
+
+## 2026-09-29 — CORE DATOS LAB [ANÁLISIS+DONE]
+Inventario 16 proyectos (sensible máx: menores/salud/legal/chats; reutilizable: WA canónico, voz MediaSuite, RAG, AES LeFriApp, billing Aikrofy). Diseño `_core/` lab-wide con uid_enc único + ODCS + dominios + F0-F4. Doc `docs/cmci/ARQUITECTURA_CORE_DATOS_LAB.md`.
+
+## 2026-09-29 — MOTOR CORE DATOS [DONE]
+**Hito:** motor stdlib cero-deps `backend/common/core_engine/` (identity HMAC-SHA256+uid `cet_<32hex>`+vault memo/SQLite+merge_alias+sin-PII-logs, pseudonym PolicyFilter, mask ***4567/edad/***123, events envelope v1+memoria/JSONL/stub-NATS, audit hash-chain+verify, keys pepper versionado fail-closed+re-HMAC, contracts ODCS mínimo; upgrade AES-GCM documentado por función con `CORE_CRYPTO=std|aesgcm`) + `core_api.py` blueprint `/core/v1` (9 rutas incl. forget-tombstone) montado UNA vez en `early-childhood/app.py` (comentario CORE-MOTOR, verificado 9 rutas en url_map) + `core_server.py` wsgiref `:5050` + `core_client.py` urllib + `README_MOTOR.md` 5-min.
+**Archivos:** `backend/common/core_engine/__init__|identity|pseudonym|mask|events|audit|keys|contracts.py`, `backend/common/core_api|core_server|core_client.py`, `README_MOTOR.md`, `backend/common/tests/test_core_engine.py`, `app.py` (+12L).
+**Tests:** `pytest backend/common/tests/test_core_engine.py` → **11 passed** (identidad estable/normalizada, pepper cambia key, uid opaco, alias, policy recorta, masks, envelope ok/ko, audit verifica+tamper, forget agregados, e2e Flask, ODCS). `py_compile` OK. Standalone WSGI smoke OK (health/keys/resolve/forget).
+**Decisión:** sin tocar streaming real/frontend/modelos; sin instalar nada.
+
+## 2026-09-29 — LABCORE STANDALONE [DONE]
+**Hito:** proyecto `/Users/jonnathan/AI_LAB-WLT/labcore/` fuera del repo (sin git/push): copia `core_engine/` + server stdlib `:5060` (core v1 + ledger + `/health` + `/v1/metrics`).
+**Archivos labcore:** `src/{server,auth,ledger,client}.py`, `src/core_engine/*` (7, imports locales), `tests/test_labcore.py`, `Dockerfile` (3.12-slim, sin pip), `ecosystem.labcore.config.js`, `nginx-labcore-snippet.conf`, `.env.example`, `requirements.txt` (vacío), `README.md` (consumo remoto curl/python, tabla endpoints, roadmap F4). Ledger: cuentas ISO4217, débito=crédito, balance a cero, Idempotency-Key (replay/409), hash-chain + reuse `audit.py`. Auth: Bearer sha256+salt, roles admin|service|readonly (401/403), rate-limit memoria (429). aigovcorex intacto salvo esta entrada.
+**Tests:** `pytest` → **8 passed** (cuadre, desbalance, idempotencia, audit chain+tamper, roles, rate-limit, e2e HTTP 401/403/balance/verify, e2e 429); `py_compile` OK; smoke `:5060` OK (health 200, metrics 401 sin key, asiento 500 cuadra); `grep langchain|langgraph|openai|pinecone` limpio.
+**Próximo:** F4 bancario (persistencia SQLite/WAL, multi-moneda, maker-checker).

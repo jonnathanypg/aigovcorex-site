@@ -102,19 +102,16 @@ export function ageInRange(months: number, countryIso = DEFAULT_COUNTRY): boolea
 }
 
 /** Validación ID por country_config (EC default cédula módulo-10, sin hardcode en UI). */
-export function validateId(value: string, countryIso = DEFAULT_COUNTRY): { valid: boolean; warning?: boolean; message: string } {
+export function validateId(value: string, countryIso = DEFAULT_COUNTRY): { valid: boolean; message: string } {
   const c = COUNTRY_CONFIGS[countryIso] ?? COUNTRY_CONFIGS[DEFAULT_COUNTRY];
   const v = (value ?? "").trim();
   if (!v) return { valid: true, message: "" }; // opcional
   if (c.id_validation === "modulo-10") {
-    // Cédula ecuatoriana: 10 dígitos, módulo-10 con coeficientes 2,1
-    // alternados sobre los 9 primeros (igual que el backend
-    // _validate_ecuador_cedula, que NO exige tercer dígito).
-    // Tercer dígito >= 6 no es persona natural (6 = entidad pública,
-    // 9 = sociedad privada/extranjero): si el checksum pasa se acepta
-    // con advertencia ámbar (población migrante/refugiada, RUC), no error.
+    // Cédula ecuatoriana: 10 dígitos, tercer dígito < 6 (persona natural),
+    // módulo-10 con coeficientes 2,1 alternados sobre los 9 primeros.
     if (!/^\d{10}$/.test(v)) return { valid: false, message: `${c.id_type} debe tener 10 dígitos` };
     const digits = v.split("").map(Number);
+    if (digits[2] >= 6) return { valid: false, message: `${c.id_type} inválida (tercer dígito debe ser < 6)` };
     let sum = 0;
     for (let i = 0; i < 9; i++) {
       let d = digits[i] * (i % 2 === 0 ? 2 : 1);
@@ -122,9 +119,9 @@ export function validateId(value: string, countryIso = DEFAULT_COUNTRY): { valid
       sum += d;
     }
     const check = (10 - (sum % 10)) % 10;
-    if (check !== digits[9]) return { valid: false, message: `${c.id_type} inválida (módulo-10)` };
-    if (digits[2] >= 6) return { valid: true, warning: true, message: `${c.id_type} válida en checksum, pero el tercer dígito (${digits[2]}) no es de persona natural — verifique si es RUC o documento extranjero` };
-    return { valid: true, message: "" };
+    return check === digits[9]
+      ? { valid: true, message: "" }
+      : { valid: false, message: `${c.id_type} inválida (módulo-10)` };
   }
   // Estrategia genérica por país: longitud mínima desde country_config.
   // TODO(country): al agregar un país, definir id_min_length + id_validation

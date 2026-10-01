@@ -16,13 +16,23 @@ import operator
 from langchain_core.messages import ToolMessage
 from models.user import User
 
-try:
-    from langfuse import observe
-except ImportError:  # observabilidad opcional: sin SDK no se traza pero nada se rompe
-    def observe(_fn=None, **kwargs):
-        def wrap(fn):
-            return fn
-        return wrap(_fn) if callable(_fn) else wrap
+import os as _os
+
+def _noop_observe(_fn=None, **kwargs):
+    def wrap(fn):
+        return fn
+    return wrap(_fn) if callable(_fn) else wrap
+
+# Langfuse: solo trazar si está explícitamente habilitado y con host alcanzable.
+# El exporter daba Bad Gateway (labmonitor caído) y spameaba logs en prod.
+# Para reactivar: LANGFUSE_ENABLED=true + host válido.
+if _os.getenv("LANGFUSE_ENABLED", "false").lower() == "true":
+    try:
+        from langfuse import observe
+    except ImportError:  # observabilidad opcional: sin SDK no se traza pero nada se rompe
+        observe = _noop_observe
+else:
+    observe = _noop_observe
 
 # State definition
 class AgentState(TypedDict):
@@ -51,7 +61,9 @@ class LangGraphOrchestrator:
     def __init__(self, tenant_id: int, user_id: int, license_id: int = None, 
                  role: str = None, license_name: str = None, 
                  legal_name: str = None, ruc: str = None, 
-                 centers_list: list = None):
+                 centers_list: list = None, user_full_name: str = None,
+                 user_email: str = None, enabled_modules: list = None,
+                 programs_list: list = None):
         import logging
         # Setup Logger
         self.logger = logging.getLogger(f"Orchestrator-{tenant_id}")
@@ -70,7 +82,16 @@ class LangGraphOrchestrator:
         self.legal_name = legal_name
         self.ruc = ruc
         self.centers_list = centers_list or []
+        self.user_full_name = user_full_name
+        self.user_email = user_email
+        # Copiloto multi-módulo: kindicore/social/geo/channels/copilot por licencia.
+        # Orgs solo-social (sin kindicore) reciben persona Social AI, no infantil.
+        self.enabled_modules = enabled_modules or ['kindicore', 'social', 'geo', 'channels', 'copilot']
+        self.programs_list = programs_list or []
         self.config = get_config()
+
+        # Identidad real del usuario (nombre/rol/centro) — evita alucinar "quién soy"
+        self._load_user_identity()
         
         # Load center name
         self.center_name = self._load_center_name()
@@ -94,6 +115,27 @@ class LangGraphOrchestrator:
         # Build graph
         self.graph = self._build_graph()
     
+    def _load_user_identity(self):
+        """Carga nombre/email reales del usuario para responder '¿quién soy?' sin alucinar."""
+        if self.user_full_name:
+            return
+        try:
+            if self.user_id and int(self.user_id) > 0:
+                from models.user import User
+                from models import db
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                u = User.query.get(int(self.user_id))
+                if u:
+                    self.user_full_name = u.full_name
+                    self.user_email = u.email
+                    if not self.role and getattr(u, 'role', None):
+                        self.role = u.role.name
+        except Exception as e:
+            self.logger.warning(f"No se pudo cargar identidad del usuario {self.user_id}: {e}")
+
     def _load_center_name(self) -> str:
         """Load the center name from the tenant"""
         if not self.tenant_id:
@@ -189,13 +231,27 @@ class LangGraphOrchestrator:
         """Filtra herramientas de escritura según el rol (anti-bucle WhatsApp).
 
         public_citizen/padre (alias parent): sin SendWhatsApp/SendEmail ni
-        Manage* de escritura. Conserva lectura (consultas, reportes, contactos).
+        Manage* de escritura. Conserva lectura (consultas, reportes, contactos,
+        identidad, ausencias, capacidades).
         """
         role = (self.role or '').lower()
         if role not in ('public_citizen', 'padre', 'parent'):
             return tools
-        blocked_prefixes = ('send_whatsapp', 'send_email', 'manage_')
-        filtered = [t for t in tools if not (t.name or '').lower().startswith(blocked_prefixes)]
+        blocked_prefixes = ('send_whatsapp', 'send_email', 'send_parent_message', 'manage_', 'record_', 'log_')
+        # Lectura siempre permitida (identidad, ausencias, analytics, knowledge, search, capabilities)
+        always_allowed = {
+            'get_current_user_profile', 'get_assistant_capabilities',
+            'get_absent_children', 'get_attendance_today',
+            'search_child', 'get_child_summary', 'get_tenant_analytics',
+            'analyze_trends', 'run_sql_analysis', 'consult_knowledge_base',
+            'get_parent_contact', 'delegate_child_profile', 'delegate_health_nutrition',
+            'delegate_development', 'delegate_knowledge_reports',
+        }
+        filtered = [
+            t for t in tools
+            if (t.name or '').lower() in always_allowed
+            or not (t.name or '').lower().startswith(blocked_prefixes)
+        ]
         removed = len(tools) - len(filtered)
         self.logger.info(f"🔒 Tools filtradas por rol '{self.role}': {len(filtered)} activas ({removed} escritura bloqueadas)")
         return filtered
@@ -251,10 +307,10 @@ class LangGraphOrchestrator:
             self.logger.warning("⛔ Bucle de tools detectado: mismo tool+args falló 2 veces. Cortando sin re-invocar.")
             return {
                 "messages": [AIMessage(content=(
-                    "No pude completar el envío con los datos disponibles, "
-                    "así que prefiero no seguir intentándolo a ciegas. "
-                    "¿A qué centro o destinatario deseas enviar el mensaje "
-                    "y cuál es el contenido exacto?"
+                    "No pude completar tu solicitud con los datos disponibles "
+                    "después de intentarlo dos veces, así que prefiero no seguir "
+                    "intentándolo a ciegas. ¿Me confirmas el dato que falta "
+                    "(centro, fecha, nombre del niño o destinatario y contenido exacto)?"
                 ))]
             }
         self.logger.info(f"🤔 Thinking with {len(messages)} messages context...")
@@ -348,27 +404,56 @@ class LangGraphOrchestrator:
 - Centro asignado: {self.center_name}
 - El acceso está restringido únicamente a datos de este centro."""
 
-            system_prompt = f"""Eres {self.agent_name}, un asistente inteligente para Centros de Cuidado Infantil.
+            # Fecha actual (América/Guayaquil) para "hoy/ayer" sin alucinar
+            try:
+                from zoneinfo import ZoneInfo
+                from datetime import datetime as _dt
+                today_str = _dt.now(ZoneInfo("America/Guayaquil")).strftime("%Y-%m-%d")
+            except Exception:
+                from datetime import date as _date
+                today_str = str(_date.today())
+
+            system_prompt = f"""Eres {self.agent_name}, copiloto transversal de la plataforma AI GovCoreX OS
+({self.license_name_info or 'la organización'}). Atiendes CUALQUIER módulo habilitado,
+no solo cuidado infantil.
             
 PERSONALIDAD / INSTRUCCIONES DE COMPORTAMIENTO:
 {self.agent_prompt}
 
+MÓDULOS HABILITADOS DE ESTA ORGANIZACIÓN: {', '.join(self.enabled_modules)}
+{'IMPORTANTE: esta organización NO usa el módulo kindicore (primera infancia). Eres Social AI: hablas de programas sociales, beneficiarios, postulaciones y convocatorias. NO menciones centros infantiles ni asistencia de niños salvo que te lo pidan.' if 'kindicore' not in (self.enabled_modules or []) else ''}
+PROGRAMAS SOCIALES ACTIVOS: {', '.join([p.get('name', '') for p in self.programs_list]) if self.programs_list else 'ninguno registrado'}
+
 CONTEXTO ORGANIZACIONAL Y DE SEGURIDAD:{org_context}
 
-DATOS DEL USUARIO:
+DATOS DEL USUARIO (REAL, NO INVENTAR):
+- Nombre real: {self.user_full_name or 'No disponible'}
+- Email: {self.user_email or 'No disponible'}
 - Usuario ID: {self.user_id}
 - Rol: {self.role}
+- Fecha actual (America/Guayaquil): {today_str} — usa 'hoy' = {today_str}.
 
 INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
-1. TIENES ACCESO A LA BASE DE DATOS via la herramienta 'run_sql_analysis'.
-2. TIENES ACCESO A LA BASE DE CONOCIMIENTO via la herramienta 'consult_knowledge_base'.
-   - Úsala cuando el usuario pregunte sobre políticas, protocolos, regulaciones, normativas MIES, o cualquier documento institucional.
-   - La herramienta busca automáticamente en los documentos relevantes según el rol del usuario.
-3. ANTES de usar una herramienta, REVISA LA HISTORIA DE LA CONVERSACIÓN.
-   - Si el usuario pide un resumen o análisis de datos que YA TE MOSTRÓ una herramienta anterior, NO VUELVAS A EJECUTAR LA HERRAMIENTA.
-   - Usa los datos existentes en el historial para responder.
-4. Cuando menciones el centro o la institución, usa sus nombres reales, no IDs.
-5. SALUDO: Solo saluda al usuario EN EL PRIMER MENSAJE de la conversación (cuando no hay historial previo). Si ya hay mensajes anteriores en el historial, NO vuelvas a saludar, continúa la conversación de forma natural. Si saludas, hazlo de forma institucional: "Bienvenido a {self.license_name_info}" (administrador) o el nombre del centro (coordinador).
+1. IDENTIDAD: si preguntan 'quién soy / mi nombre / mi rol / mi centro', USA la herramienta
+   'get_current_user_profile' con tu user_id y responde con su 'hint_respuesta'. NUNCA inventes el nombre.
+   Ya sabes que el usuario es {self.user_full_name or 'el usuario autenticado'} ({self.role}).
+2. CAPACIDADES: si preguntan 'qué puedes hacer / ayuda', USA 'get_assistant_capabilities' y lista eso.
+3. AUSENCIAS/ASISTENCIA HOY: para 'quién faltó / no vino / ausentes / quién vino hoy / resumen asistencia hoy',
+   USA PRIMERO 'get_absent_children' o 'get_attendance_today' (date='hoy' salvo que pidan otra fecha).
+   Solo si piden un análisis complejo distinto usa 'run_sql_analysis'.
+4. NIÑO ESPECÍFICO / FICHA 360: para 'info/todo de [nombre]' USA 'delegate_child_profile'.
+   (Alternativa manual: 'search_child' + 'get_child_summary' + 'manage_family/view'.)
+5. SALUD/NUTRICIÓN: 'delegate_health_nutrition' (crecimiento, vacunas pendientes, raciones hoy, alertas).
+   Desarrollo IDII: 'delegate_development' o 'manage_milestones' (catalog|record|progress|alerts).
+6. CMCI/ADMISIÓN: 'delegate_cmci_admission' o 'manage_cmci' (fichas|priorizacion|ml_explain|monthly_list|compose_monthly) + 'manage_applications' (list|approve|reject|waitlist).
+7. PERSONAS/ORG: 'delegate_people_org' o directo 'manage_users' (list|get|create|deactivate) + 'manage_centers' (list|get|create|update|stats|global_stats|territorial) + 'manage_monitoring_staff' (kpis|staff_load|delegate).
+8. OPERACIÓN/TERRITORIO: 'delegate_operations_geo' o 'manage_geo_channels' (geo_points|geo_create|templates_list|template_create|broadcast) + 'manage_maintenance_task' + 'manage_planning'.
+9. NOTIFS/DOCS/KNOWLEDGE/REPORTES: 'manage_notifications' (list|create|read|delete), 'manage_documents_knowledge' (docs_list|knowledge_list|knowledge_delete), 'consult_knowledge_base', 'generate_report', 'delegate_knowledge_reports'.
+10. SOCIAL AI: programas/beneficiarios/postulaciones/convocatorias → 'delegate_social' o 'manage_social_programs' (list_programs|create_program|get_form|configure_form|register_applicant|list_beneficiaries|program_stats). Para "cuántos postulantes/estado del programa" usa 'program_stats' o 'list_beneficiaries'. Docs del programa (bases, requisitos, TDR) → 'consult_knowledge_base' con module='social' y el 'program_id' correspondiente. Puedes listar programas y guiar una postulación paso a paso.
+11. BASE DE CONOCIMIENTO: 'consult_knowledge_base' para políticas, protocolos, MIES, documentos.
+12. ANTES de usar una herramienta, REVISA LA HISTORIA. Si el dato ya está en el historial, NO re-ejecutes.
+13. Cuando menciones centro/institución/programa, usa nombres reales, no IDs.
+14. SALUDO: Solo saluda EN EL PRIMER MENSAJE (sin historial). Si saludas: "Bienvenido a {self.license_name_info}" (admin) o nombre del centro (coordinador). Después, NO re-saludes.
 
 **REGLA #1 - LENGUAJE HUMANO (CERO VARIABLES TÉCNICAS):**
 - PROHIBIDO usar nombres de variables internas o de base de datos (ej: `tenant_id`, `child_id`, `snake_case`).
@@ -509,8 +594,11 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
                     # If ping fails, force clear session to get a fresh one
                     db.session.remove()
                 
-                # Determine user_id to save (NULL for virtual users to avoid FK error)
-                db_user_id = self.user_id if self.user_id > 0 else None
+                # Determine user_id to save (NULL for virtual/anonymous users to avoid FK error)
+                try:
+                    db_user_id = int(self.user_id) if self.user_id and int(self.user_id) > 0 else None
+                except (TypeError, ValueError):
+                    db_user_id = None
                 
                 # Determine tenant_id: License Admins have None, use license_id as fallback
                 db_tenant_id = self.tenant_id or self.license_id or 0

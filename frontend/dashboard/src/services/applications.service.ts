@@ -12,8 +12,10 @@ export interface Application {
 }
 
 export const applicationsService = {
-    async getAll(status?: string): Promise<Application[]> {
-        const params = status ? { status } : {};
+    async getAll(status?: string, tenantId?: number): Promise<Application[]> {
+        const params: Record<string, any> = {};
+        if (status) params.status = status;
+        if (tenantId) params.tenant_id = tenantId;
         const { data } = await api.get<{ applications: Application[] }>('/api/applications/list', { params });
         return data.applications;
     },

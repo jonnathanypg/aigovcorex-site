@@ -70,11 +70,13 @@ export function KnowledgeClient() {
     }, [scopeFilter, toast]);
 
     useEffect(() => {
-        // Check role access on mount
+        // Check role access on mount (acepta alias 'coordinator' y roles globales)
         const user = authService.getStoredUser();
         if (user) {
-            const role = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-            if (role !== 'license_admin' && role !== 'center_coordinator') {
+            const rawRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+            const role = rawRole === 'coordinator' ? 'center_coordinator' : rawRole;
+            const allowed = ['license_admin', 'center_coordinator', 'supervisor', 'super_admin'];
+            if (!allowed.includes(role)) {
                 // Redirect unauthorized users
                 window.location.href = '/dashboard';
                 return;
@@ -110,8 +112,8 @@ export function KnowledgeClient() {
     );
 
     const canDelete = (doc: KnowledgeDocument) => {
-        if (userRole === "license_admin") return true;
-        if (userRole === "center_coordinator" && doc.tenant_id !== null) return true;
+        if (userRole === "license_admin" || userRole === "super_admin" || userRole === "supervisor") return true;
+        if ((userRole === "center_coordinator" || userRole === "coordinator") && doc.tenant_id !== null) return true;
         return false;
     };
 

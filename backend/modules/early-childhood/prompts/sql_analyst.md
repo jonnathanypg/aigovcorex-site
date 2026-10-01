@@ -287,6 +287,13 @@ Formato cuando NO es posible:
   "reasoning": "JOIN con children para nombres, filtro por status='ausente', ordenado descendente."
 }
 
+**Input:** "Dame los nombres de los niños que no asistieron hoy"
+{
+  "sql": "SELECT c.first_name, c.last_name, c.assigned_group, IFNULL(a.status, 'sin_registro') AS estado FROM children c LEFT JOIN attendance a ON a.child_id = c.id AND a.date = CURDATE() WHERE [MANDATORY FILTER AQUI] AND c.status = 'activo' AND (a.status = 'ausente' OR a.id IS NULL) ORDER BY c.last_name LIMIT 100;",
+  "intent": "Listar ausentes de hoy incluyendo sin registro",
+  "reasoning": "LEFT JOIN children vs attendance del día. Ausente = status ausente O sin fila (presunto ausente). Filtro obligatorio + activos."
+}
+
 **Input:** "Busca las operaciones activas asignadas a Jonnathan Prueba"
 {
   "sql": "SELECT mt.id, mt.description, mt.center_area, mt.status, mt.date_due, u.first_name, u.last_name FROM maintenance_tasks mt JOIN users u ON mt.assigned_to_id = u.id WHERE [MANDATORY FILTER AQUI] AND (mt.status = 'Pendiente' OR mt.status = 'En Progreso') AND u.first_name LIKE '%Jonnathan%' AND u.last_name LIKE '%Prueba%';",

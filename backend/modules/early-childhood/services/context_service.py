@@ -63,6 +63,33 @@ class ContextService:
             scope['allowed_actions'] = ['select', 'insert', 'update']
             scope['tenant_id'] = user.tenant_id
 
+        elif role_name in ('supervisor', 'doctor', 'nutritionist', 'psychologist',
+                           'social_worker', 'administrative', 'admin', 'coordinadora_centro',
+                           'coordinador_general', 'central', 'central_dase', 'central_mdh'):
+            # Staff clínico/soporte y supervisión: alcance total del centro (lectura+escritura
+            # operativa, sin borrado). Antes caían en Default Deny 1=0 y el SQL no devolvía nada.
+            scope['filter_sql'] = f"tenant_id = {user.tenant_id}"
+            scope['access_level'] = 'tenant_full'
+            scope['allowed_actions'] = ['select', 'insert', 'update']
+            scope['tenant_id'] = user.tenant_id
+
+        elif role_name in ('public_citizen', 'citizen', 'ciudadano'):
+            # Ciudadano externo (WhatsApp/Telegram/web pública): solo lectura del alcance
+            # de su licencia. Sin user vinculado no se puede resolver tenant: scope seguro.
+            lic_id = getattr(user, 'license_id', None)
+            if lic_id:
+                try:
+                    from models.tenant import Tenant
+                    tids = [t.id for t in Tenant.query.filter_by(license_id=int(lic_id), is_active=True).all()]
+                    scope['filter_sql'] = f"tenant_id IN ({','.join(map(str, tids))})" if tids else "1=0"
+                    scope['tenant_ids'] = tids
+                except Exception:
+                    scope['filter_sql'] = "1=0"
+            else:
+                scope['filter_sql'] = "1=0"
+            scope['access_level'] = 'license_read'
+            scope['allowed_actions'] = ['select']
+
         elif role_name in [ContextService.ROLE_EDUCATOR, 'educadora']:
             # Educator: ONLY assigned children (child_ids from assigned_educator_id)
             child_ids = [c.id for c in Child.query.filter_by(

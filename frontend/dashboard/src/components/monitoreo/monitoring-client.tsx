@@ -22,25 +22,29 @@ const iconMap: { [key: string]: React.ElementType } = {
 
 interface MonitoringClientProps {
   tenantId?: number;
+  from?: string;
+  to?: string;
 }
 
-export function MonitoringClient({ tenantId }: MonitoringClientProps) {
+export function MonitoringClient({ tenantId, from, to }: MonitoringClientProps) {
   const [kpis, setKpis] = useState<MonitoringKPI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchKpis = useCallback(async () => {
     try {
-      const data = await monitoringService.getKpis(tenantId);
+      const data = await monitoringService.getKpis(tenantId, { from, to });
       setKpis(data);
     } catch (error) {
       console.error("Error fetching KPIs:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, from, to]);
 
   useEffect(() => {
     fetchKpis();
+    const interval = setInterval(fetchKpis, 20000);
+    return () => clearInterval(interval);
   }, [fetchKpis]);
   useAgentRefresh(fetchKpis);
 

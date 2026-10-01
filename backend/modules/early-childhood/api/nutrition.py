@@ -583,7 +583,7 @@ def get_nutrition_alerts():
                 children = Child.query.join(Tenant).filter(
                     Tenant.license_id == lic_admin.license_id,
                     Child.status == 'activo'
-                ).all()
+                ).order_by(Child.last_name.asc(), Child.first_name.asc()).all()
             else:
                 children = []
         elif user.role.name in ['educadora', 'educator']:
@@ -591,9 +591,9 @@ def get_nutrition_alerts():
                 tenant_id=user.tenant_id,
                 assigned_educator_id=user.id,
                 status='activo'
-            ).all()
+            ).order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         else:
-            children = Child.query.filter_by(tenant_id=user.tenant_id, status='activo').all()
+            children = Child.query.filter_by(tenant_id=user.tenant_id, status='activo').order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         
         alerts = []
         

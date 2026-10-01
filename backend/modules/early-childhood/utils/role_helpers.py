@@ -12,7 +12,7 @@ def is_multi_center_role(user):
     if not user or not user.role:
         return False
     return user.role.name in (
-        'super_admin', 'license_admin', 'supervisor', 'coordinator',
+        'super_admin', 'license_admin', 'supervisor',
         'doctor', 'nutritionist', 'social_worker', 'administrative', 'admin'
     )
 

@@ -1,7 +1,13 @@
+"use client";
+
 import { RegisterClient } from "@/components/registro/register-client";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLicense } from "@/contexts/license-context";
 
 export default function RegistroPage() {
+    const { isLicenseAdmin, selectedCenterId } = useLicense();
+    const tenantId = (isLicenseAdmin && selectedCenterId !== 'all') ? Number(selectedCenterId) : undefined;
+
     return (
         <div className="space-y-6">
             <Card className="bg-card/10 backdrop-blur-lg border-border/20">
@@ -12,7 +18,7 @@ export default function RegistroPage() {
                     </CardDescription>
                 </CardHeader>
             </Card>
-            <RegisterClient />
+            <RegisterClient key={tenantId || 'all'} tenantId={tenantId} />
         </div>
     );
 }

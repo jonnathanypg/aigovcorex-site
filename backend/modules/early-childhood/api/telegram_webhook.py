@@ -483,6 +483,11 @@ def _process_ai_message(message: str, identity: dict, license_id: int, chat_id: 
         child_ids = identity.get('child_ids', [])
         context_prefix += f"\nHijos IDs: {child_ids}\nIMPORTANTE: Solo dar info de sus hijos."
         
+    try:
+        from api.chat import _build_license_context as _lic_ctx
+        _ctx = _lic_ctx(license_id) if license_id else {}
+    except Exception:
+        _ctx = {}
     orchestrator = LangGraphOrchestrator(
         tenant_id=identity.get('tenant_id') or 1,
         user_id=identity.get('user_id'),
@@ -491,7 +496,10 @@ def _process_ai_message(message: str, identity: dict, license_id: int, chat_id: 
         license_name=identity.get('license_name'),
         legal_name=identity.get('legal_name'),
         ruc=identity.get('ruc'),
-        centers_list=identity.get('centers_list')
+        centers_list=identity.get('centers_list') or _ctx.get('centers_list', []),
+        user_full_name=identity.get('user_name'),
+        enabled_modules=_ctx.get('enabled_modules') or [],
+        programs_list=_ctx.get('active_programs') or [],
     )
     
     full_message = f"{context_prefix}\n\nMensaje: {message}"

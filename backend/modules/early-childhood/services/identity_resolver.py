@@ -86,6 +86,9 @@ class IdentityResolver:
         Negative IDs -> Virtual Users (Representatives)
         """
         try:
+            if user_id is None:
+                return None
+            user_id = int(user_id)
             if user_id > 0:
                 return User.query.get(user_id)
             else:

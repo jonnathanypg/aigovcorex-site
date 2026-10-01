@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -48,9 +47,20 @@ export function UploadKnowledgeDialog({
     const [centers, setCenters] = useState<{ id: number; name: string }[]>([]);
     const { toast } = useToast();
 
-    // Load centers for license admins
+    const isCoordinatorRole = userRole === "center_coordinator" || userRole === "coordinator";
+    const isAdminRole =
+        userRole === "license_admin" || userRole === "super_admin" || userRole === "supervisor";
+
+    // Coordinadores siempre suben a su centro; evita que quede "global" por defecto
     useEffect(() => {
-        if (open && userRole === "license_admin") {
+        if (open && isCoordinatorRole) {
+            setScope("center");
+        }
+    }, [open, userRole]);
+
+    // Load centers for admins
+    useEffect(() => {
+        if (open && isAdminRole) {
             licenseAdminService
                 .getCenters()
                 .then(setCenters)
@@ -83,7 +93,7 @@ export function UploadKnowledgeDialog({
             return;
         }
 
-        if (scope === "center" && userRole === "license_admin" && !tenantId) {
+        if (scope === "center" && isAdminRole && !tenantId) {
             toast({ title: "Error", description: "Seleccione un centro", variant: "destructive" });
             return;
         }
@@ -130,10 +140,10 @@ export function UploadKnowledgeDialog({
             const parts = file.name.split(".");
             const ext = parts.length > 1 ? parts.pop()?.toLowerCase() : "";
 
-            if (!["pdf", "txt", "docx"].includes(ext || "")) {
+            if (!["pdf", "txt", "docx", "csv", "xlsx", "xls"].includes(ext || "")) {
                 toast({
                     title: "Formato no soportado",
-                    description: `Extensión detectada: .${ext}. Solo se permiten archivos .pdf, .docx y .txt`,
+                    description: `Extensión detectada: .${ext}. Se permiten .pdf, .docx, .txt, .csv, .xlsx y .xls`,
                     variant: "destructive",
                 });
                 return;
@@ -157,7 +167,7 @@ export function UploadKnowledgeDialog({
                         Subir Documento
                     </DialogTitle>
                     <DialogDescription>
-                        Añada documentos (PDF, Word, TXT) para que el asistente IA los utilice.
+                        Añada documentos (PDF, Word, TXT, CSV, Excel) para que el asistente IA los utilice.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -184,7 +194,7 @@ export function UploadKnowledgeDialog({
                                 variant={scope === "global" ? "default" : "outline"}
                                 onClick={() => setScope("global")}
                                 className="flex-1 gap-2"
-                                disabled={userRole === "center_coordinator"}
+                                disabled={isCoordinatorRole}
                             >
                                 <Globe className="h-4 w-4" />
                                 Global
@@ -206,8 +216,8 @@ export function UploadKnowledgeDialog({
                         </p>
                     </div>
 
-                    {/* Center Selector (License Admin + Center scope) */}
-                    {scope === "center" && userRole === "license_admin" && (
+                    {/* Center Selector (Admins + Center scope) */}
+                    {scope === "center" && isAdminRole && (
                         <div className="space-y-2 animate-in fade-in-0 duration-200">
                             <Label>
                                 Centro destino <span className="text-destructive">*</span>
@@ -261,7 +271,7 @@ export function UploadKnowledgeDialog({
                             <Input
                                 id="doc-file"
                                 type="file"
-                                accept=".pdf,.txt,.docx"
+                                accept=".pdf,.txt,.docx,.csv,.xlsx,.xls"
                                 onChange={handleFileChange}
                                 className="cursor-pointer"
                             />

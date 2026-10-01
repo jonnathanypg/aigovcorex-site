@@ -36,14 +36,14 @@ const statusLabelMap: { [key: string]: string } = {
   rejected: "RECHAZADO",
 };
 
-export function RecentAdmissions({ tenantId }: { tenantId?: number }) {
+export function RecentAdmissions({ tenantId, from, to }: { tenantId?: number; from?: string; to?: string }) {
   const [applications, setApplications] = useState<RecentApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchApplications = useCallback(async () => {
     try {
-      const data = await dashboardService.getRecentApplications(6, tenantId);
+      const data = await dashboardService.getRecentApplications(6, tenantId, { from, to });
       setApplications(data);
     } catch (err) {
       console.error("Error fetching recent applications:", err);
@@ -51,7 +51,7 @@ export function RecentAdmissions({ tenantId }: { tenantId?: number }) {
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, from, to]);
 
   useEffect(() => {
     fetchApplications();

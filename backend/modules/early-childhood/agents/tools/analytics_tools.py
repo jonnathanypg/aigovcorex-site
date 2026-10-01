@@ -18,15 +18,22 @@ logger = logging.getLogger(__name__)
 
 def resolve_tenant_ids(tenant_id, user_id):
     """
-    Resolve the list of tenant IDs for query scope.
+    Resolve the list of tenant IDs for query scope (UNIFICADO con role_helpers).
     - If tenant_id is provided and valid, returns [tenant_id].
-    - If tenant_id is None (license_admin), resolves ALL tenants under the user's license.
+    - If tenant_id is None/0 (license_admin o rol multi-centro), resuelve TODOS
+      los tenants bajo su licencia via get_tenant_ids_for_user().
     Returns a list of tenant IDs.
     """
     if tenant_id:
-        return [int(tenant_id)]
-    
-    # License Admin: resolve all tenants under their license
+        try:
+            tid = int(tenant_id)
+            if tid > 0:
+                return [tid]
+        except (TypeError, ValueError):
+            pass
+
+    # Sin tenant explícito: resolver por rol multi-centro (license_admin,
+    # supervisor, coordinator, doctor, nutritionist, social_worker, administrative...)
     if user_id:
         max_retries = 2
         for attempt in range(max_retries):
@@ -44,19 +51,22 @@ def resolve_tenant_ids(tenant_id, user_id):
                     except Exception:
                         db.session.rollback()
                         db.session.remove()
-                
+
                 from services.identity_resolver import IdentityResolver
-                user = IdentityResolver.get_user_or_virtual(user_id)
-                if user and hasattr(user, 'role') and user.role and user.role.name == 'license_admin':
-                    from models.license import LicenseAdmin
-                    from models.tenant import Tenant
-                    lic_admin = LicenseAdmin.query.filter_by(user_id=user.id, is_active=True).first()
-                    if lic_admin:
-                        tenants = Tenant.query.filter_by(license_id=lic_admin.license_id, is_active=True).all()
-                        ids = [t.id for t in tenants]
-                        logger.info(f"📊 Analytics: License Admin scope resolved to {len(ids)} tenants: {ids}")
-                        return ids
-                break  # Query succeeded but user wasn't license_admin or not found
+                from utils.role_helpers import get_tenant_ids_for_user
+                try:
+                    uid = int(user_id)
+                except (TypeError, ValueError):
+                    break
+                user = IdentityResolver.get_user_or_virtual(uid)
+                if not user:
+                    break
+                ids = get_tenant_ids_for_user(user) or []
+                ids = [int(x) for x in ids if x]
+                if ids:
+                    logger.info(f"📊 Analytics: scope multi-tenant resuelto a {len(ids)} tenants: {ids}")
+                    return ids
+                break  # Query succeeded but no tenants (rol sin alcance)
             except Exception as e:
                 error_msg = str(e).lower()
                 is_conn = any(x in error_msg for x in ['gone away', 'broken pipe', 'lost connection', 'rollback'])
@@ -64,7 +74,7 @@ def resolve_tenant_ids(tenant_id, user_id):
                     logger.warning(f"⚠️ DB connection error in resolve_tenant_ids (retry {attempt+1}): {e}")
                     continue
                 logger.warning(f"⚠️ Could not resolve tenant scope for user {user_id}: {e}")
-    
+
     return []
 
 

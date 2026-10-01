@@ -43,12 +43,25 @@ def create_app(config_name=None):
     from api.telegram_webhook import telegram_webhook_bp
     from api.channels_os_webhook import channels_os_webhook_bp
     from api.knowledge import knowledge_bp
+    from api.document_templates import document_templates_bp
     from api.reports import reports_bp
     from api.voice import voice_bp
     from api.public_chat import public_chat_bp
     from api.chat_upload import chat_upload_bp
     # Canonical Social AI module at backend/modules/social
     from social.api.social_programs import social_programs_bp
+
+    # CORE-MOTOR: blueprint unico del motor de datos lab-wide (backend/common).
+    # No duplicar este registro; otros proyectos consumen via HTTP (core_server :5050).
+    try:
+        import sys as _sys, os as _os
+        _COMMON = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', '..', 'common'))
+        if _COMMON not in _sys.path:
+            _sys.path.insert(0, _COMMON)
+        from core_api import core_bp as _core_bp
+        app.register_blueprint(_core_bp)
+    except Exception:
+        pass
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
@@ -60,6 +73,7 @@ def create_app(config_name=None):
     app.register_blueprint(telegram_webhook_bp)
     app.register_blueprint(channels_os_webhook_bp)
     app.register_blueprint(knowledge_bp)
+    app.register_blueprint(document_templates_bp)
     app.register_blueprint(voice_bp, url_prefix='/api/voice')
     app.register_blueprint(public_chat_bp)
     app.register_blueprint(chat_upload_bp)

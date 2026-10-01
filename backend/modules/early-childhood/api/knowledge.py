@@ -1,6 +1,7 @@
 """
 Knowledge Base API - Gestión de Documentos RAG
-Accesible por usuarios con rol license_admin o center_coordinator.
+Accesible por license_admin, center_coordinator (alias coordinator),
+supervisor y super_admin (bypass operativo).
 """
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -21,7 +22,25 @@ logger = logging.getLogger(__name__)
 knowledge_bp = Blueprint('knowledge', __name__, url_prefix='/api/knowledge')
 
 # Allowed file extensions for knowledge documents
-ALLOWED_KNOWLEDGE_EXTENSIONS = {'pdf', 'txt', 'docx'}
+# Incluye formatos de informe: CSV y Excel además de PDF/TXT/DOCX
+ALLOWED_KNOWLEDGE_EXTENSIONS = {'pdf', 'txt', 'docx', 'csv', 'xlsx', 'xls'}
+
+
+def _resolve_license_id(user, user_id):
+    """Resuelve license_id para roles globales (super_admin/supervisor).
+
+    Orden: tabla LicenseAdmin -> tenant del usuario -> primera licencia activa.
+    """
+    license_admin = LicenseAdmin.query.filter_by(user_id=user_id, is_active=True).first()
+    if license_admin:
+        return license_admin.license_id
+    if getattr(user, 'tenant_id', None):
+        tenant = Tenant.query.get(user.tenant_id)
+        if tenant and tenant.license_id:
+            return tenant.license_id
+    from models.license import License
+    active_lic = License.query.filter_by(status='active').first()
+    return active_lic.id if active_lic else None
 
 
 def _get_user_context():
@@ -36,10 +55,24 @@ def _get_user_context():
         return None, None, None, None, (jsonify({'error': 'Usuario no encontrado'}), 404)
 
     role_name = user.role.name if user.role else None
-    
-    # Standardize role alias
+
+    # Standardize role alias (frontend guarda 'coordinator', backend usa 'center_coordinator')
     if role_name == 'coordinator':
         role_name = 'center_coordinator'
+
+    # Super Admin: bypass operativo, opera sobre su licencia mapeada o la primera activa
+    if role_name == 'super_admin':
+        license_id = _resolve_license_id(user, user_id)
+        if not license_id:
+            return None, None, None, None, (jsonify({'error': 'No hay licencia activa asignada'}), 400)
+        return user, license_id, None, 'super_admin', None
+
+    # Supervisor: vista global multicentro, misma resolución de licencia
+    if role_name == 'supervisor':
+        license_id = _resolve_license_id(user, user_id)
+        if not license_id:
+            return None, None, None, None, (jsonify({'error': 'No hay licencia activa asignada'}), 400)
+        return user, license_id, None, 'supervisor', None
 
     # License Admin
     if role_name == 'license_admin':
@@ -58,7 +91,7 @@ def _get_user_context():
         return user, tenant.license_id, user.tenant_id, 'center_coordinator', None
 
     # Other roles → access denied
-    return None, None, None, None, (jsonify({'error': 'Acceso denegado. Solo License Admin y Coordinadores pueden gestionar la base de conocimiento.'}), 403)
+    return None, None, None, None, (jsonify({'error': 'Acceso denegado. Solo License Admin, Supervisores y Coordinadores pueden gestionar la base de conocimiento.'}), 403)
 
 
 @knowledge_bp.route('', methods=['GET'])
@@ -91,6 +124,9 @@ def list_documents():
         elif scope_filter == 'center':
             if tenant_id:
                 query = query.filter(KnowledgeDocument.tenant_id == tenant_id)
+            else:
+                # Admins sin centro: 'center' = todos los docs con tenant asignado
+                query = query.filter(KnowledgeDocument.tenant_id.isnot(None))
 
         documents = query.order_by(KnowledgeDocument.created_at.desc()).all()
 
@@ -159,7 +195,7 @@ def upload_document():
         if role == 'center_coordinator':
             scope = 'center'
             target_tenant_id = tenant_id
-        elif role == 'license_admin':
+        elif role in ('license_admin', 'super_admin', 'supervisor'):
             if scope == 'center' and target_tenant_id:
                 target_tenant_id = int(target_tenant_id)
                 # Verify the tenant belongs to this license
@@ -204,7 +240,7 @@ def upload_document():
                 # Extract text from file
                 extracted_text = TextExtractor.extract(full_path)
 
-        if role not in ['license_admin', 'center_coordinator']:
+        if role not in ['license_admin', 'center_coordinator', 'super_admin', 'supervisor']:
             return jsonify({'error': 'No autorizado'}), 403
 
         if not extracted_text:
@@ -213,10 +249,17 @@ def upload_document():
         # Determine source type
         source_type = 'text'
         if file_path_saved:
-            if file_path_saved.endswith('.pdf'):
+            lowered = file_path_saved.lower()
+            if lowered.endswith('.pdf'):
                 source_type = 'pdf'
-            elif file_path_saved.endswith('.docx'):
+            elif lowered.endswith('.docx'):
                 source_type = 'docx'
+            elif lowered.endswith('.csv'):
+                source_type = 'csv'
+            elif lowered.endswith('.xlsx') or lowered.endswith('.xls'):
+                source_type = 'xlsx'
+            elif lowered.endswith('.txt'):
+                source_type = 'txt'
 
         # ── 3. Save to DB (with retry logic for MySQL Gone Away) ──
         final_tenant_id = int(target_tenant_id) if target_tenant_id else None

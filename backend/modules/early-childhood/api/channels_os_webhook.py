@@ -125,6 +125,179 @@ def _send_telegram_response(channel, chat_id: str, text: str):
         return False
 
 
+def _process_program_intake(channel, conversation, program, user_message: str, contact_phone: str = None):
+    """Flujo de postulación paso a paso para canales vinculados a un programa social.
+
+    Mismo motor que el widget web (validación determinista + PostulacionAgent),
+    con estado persistido en ChannelConversation.form_data_collected. Si el canal
+    no tiene programa, se usa el orchestrator genérico.
+    """
+    import re as _re
+    try:
+        from agents.postulacion_agent import PostulacionAgent
+        try:
+            from social.api.social_programs import (
+                _validate_field_value, _calculate_eligibility_score)
+        except ImportError:
+            from api.social_programs import (
+                _validate_field_value, _calculate_eligibility_score)
+        from models.social_program import ProgramBeneficiary
+    except Exception as e:
+        logger.error(f'[Intake] imports: {e}')
+        return None
+
+    try:
+        form_def = program.form_definition
+        if not form_def or not form_def.fields:
+            return (f"Bienvenido/a al programa {program.name}. "
+                    f"Cuénteme su situación para evaluar su postulación.")
+
+        fields = form_def.fields or []
+        collected = dict(conversation.form_data_collected or {})
+        collected = {k: v for k, v in collected.items() if not str(k).startswith('_meta')}
+        history = []
+        try:
+            recent = ChannelMessage.query.filter_by(conversation_id=conversation.id)\
+                .order_by(ChannelMessage.created_at.desc()).limit(8).all()
+            for m in reversed(recent):
+                history.append({'role': 'user' if m.role == 'user' else 'assistant',
+                                'content': m.content or ''})
+        except Exception:
+            pass
+
+        def _answered(f):
+            v = collected.get(f.get('id'))
+            return v is not None and v != ''
+
+        # ── Corrección ("me equivoqué / corrige mi cédula") ──
+        um = (user_message or '').strip()
+        uml = um.lower()
+        if um and collected and _re.search(
+                r'\b(corrige|corregir|correcci|me equivoqu|est[aá] mal|quiero cambiar|cambiar mi)\b', uml):
+            target = None
+            for f in fields:
+                for key in (f.get('id') or '', f.get('label') or ''):
+                    kl = str(key).lower()
+                    if kl and len(kl) > 2 and kl in uml and f.get('id') in collected:
+                        target = f.get('id')
+                        break
+                if target:
+                    break
+            if not target:
+                answered = [fid for fid in collected.keys()
+                            if any(ff.get('id') == fid for ff in fields)]
+                target = answered[-1] if answered else None
+            if target:
+                dropped = collected.pop(target, None)
+                fld = next((f for f in fields if f.get('id') == target), {})
+                q = fld.get('conversational_prompt') or f"Sin problema. Indíqueme de nuevo su {fld.get('label', target)}:"
+                conversation.form_data_collected = collected
+                conversation.current_step = target
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                return f"Entendido, descarté _{dropped}_. {q}"
+
+        remaining = [f for f in fields if f.get('required', True) and not _answered(f)]
+        if not um:
+            nxt = remaining[0] if remaining else None
+            if nxt:
+                return nxt.get('conversational_prompt') or f"Por favor indíqueme su {nxt.get('label')}:"
+        current = remaining[0] if remaining else None
+
+        # Tenant para el agente (cosmético: el agente solo usa LLM)
+        agent_tenant = 1
+        try:
+            if getattr(program, 'license_id', None):
+                from models.tenant import Tenant
+                _t = Tenant.query.filter_by(license_id=program.license_id, is_active=True).first()
+                if _t:
+                    agent_tenant = _t.id
+        except Exception:
+            pass
+
+        if um and current:
+            ok, cleaned, hint = _validate_field_value(current, um)
+            agent = PostulacionAgent(tenant_id=agent_tenant, user_id=None)
+            res = agent.process_step(
+                program_name=program.name, current_field=current,
+                user_message=um, collected_data=collected,
+                history=history, deterministic_validation=(ok, cleaned, hint))
+            if not res.get('valid'):
+                conversation.form_data_collected = collected
+                conversation.current_step = current.get('id')
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                return res.get('response')
+
+            collected[current.get('id')] = res.get('cleaned_value') or cleaned
+            remaining = [f for f in remaining if f.get('id') != current.get('id')]
+
+        if not remaining:
+            rules = form_def.eligibility_rules or []
+            score, notes = _calculate_eligibility_score(collected, rules, program.id)
+            ced = (collected.get('cedula') or '').strip() if collected.get('cedula') else None
+            if ced:
+                dup = ProgramBeneficiary.query.filter_by(program_id=program.id, cedula=ced).first()
+                if dup:
+                    conversation.status = 'completed'
+                    conversation.beneficiary_id = dup.id
+                    conversation.form_data_collected = collected
+                    try:
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                    return (f"Buenas noticias: usted ya tiene una postulación registrada en *{program.name}* "
+                            f"con el código #{dup.id} (estado: {dup.status}). No es necesario registrarla de nuevo.")
+            ben = ProgramBeneficiary(
+                program_id=program.id,
+                full_name=collected.get('full_name') or 'Postulante WhatsApp/Telegram',
+                cedula=ced, phone=collected.get('phone') or contact_phone,
+                intake_channel=channel.channel_type or 'messaging',
+                intake_conversation_id=str(conversation.external_id or conversation.id),
+                form_data=collected,
+                status='applicant' if score < 70 else 'approved',
+                eligibility_score=score, eligibility_notes=notes)
+            db.session.add(ben)
+            db.session.commit()
+            conversation.status = 'completed'
+            conversation.beneficiary_id = ben.id
+            conversation.form_data_collected = collected
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            return (form_def.success_message or
+                    f"✅ ¡Excelente! Su postulación al programa *{program.name}* quedó registrada "
+                    f"con el código #{ben.id}.")
+
+        nxt = remaining[0]
+        q = nxt.get('conversational_prompt') or f"Por favor indíqueme su {nxt.get('label')}:"
+        ack = ''
+        if collected:
+            last = list(collected.items())[-1]
+            ack = f"Perfecto, registré _{last[1]}_. "
+        conversation.form_data_collected = collected
+        conversation.current_step = nxt.get('id')
+        if not conversation.program_id:
+            conversation.program_id = program.id
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return f"{ack}{q}" if ack else q
+    except Exception as e:
+        logger.error(f'[Intake] error: {e}')
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return None
+
+
 def _process_with_ai_orchestrator(channel, conversation, user_message: str, contact_name: str = None, contact_phone: str = None):
     """Process message through LangGraph orchestrator and return AI response."""
     try:
@@ -153,11 +326,22 @@ def _process_with_ai_orchestrator(channel, conversation, user_message: str, cont
 
     # Get program info if channel is linked to a program
     program_name = None
+    program = None
     if channel.program_id:
         from models.social_program import SocialProgram
         prog = SocialProgram.query.get(channel.program_id)
         if prog:
+            program = prog
             program_name = prog.name
+
+    # ── Canales vinculados a programa: intake conversacional estructurado ──
+    if program is not None:
+        intake_resp = _process_program_intake(
+            channel=channel, conversation=conversation, program=program,
+            user_message=user_message, contact_phone=contact_phone)
+        if intake_resp:
+            return intake_resp
+        # Si el intake falla, continuar al orchestrator genérico como respaldo
 
     # Build system context
     context_parts = [
@@ -189,7 +373,7 @@ def _process_with_ai_orchestrator(channel, conversation, user_message: str, cont
         tenant_id=tenant_id,
         user_id=None,  # Anonymous/citizen user
         license_id=license_id or 1,
-        role='citizen',
+        role='public_citizen',
         license_name=channel.channel_name or 'GovCore OS',
     )
 

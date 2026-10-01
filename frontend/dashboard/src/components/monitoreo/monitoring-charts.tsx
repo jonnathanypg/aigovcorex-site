@@ -60,9 +60,11 @@ const nutritionConfig: ChartConfig = {
 interface MonitoringChartsProps {
     tenantId?: number;
     isLicenseAdmin?: boolean;
+    from?: string;
+    to?: string;
 }
 
-export function MonitoringCharts({ tenantId, isLicenseAdmin }: MonitoringChartsProps) {
+export function MonitoringCharts({ tenantId, isLicenseAdmin, from, to }: MonitoringChartsProps) {
     const [attendanceData, setAttendanceData] = useState<AttendanceTrendPoint[]>([]);
     const [healthData, setHealthData] = useState<HealthOverviewPoint[]>([]);
     const [healthTotal, setHealthTotal] = useState(0);
@@ -75,10 +77,10 @@ export function MonitoringCharts({ tenantId, isLicenseAdmin }: MonitoringChartsP
         setIsLoading(true);
         try {
             const [att, health, nutrition, centers] = await Promise.all([
-                monitoringService.getAttendanceTrend(tenantId),
-                monitoringService.getHealthOverview(tenantId),
-                monitoringService.getNutritionBmi(tenantId),
-                isLicenseAdmin ? monitoringService.getCentersComparison(tenantId) : Promise.resolve([]),
+                monitoringService.getAttendanceTrend(tenantId, { from, to }),
+                monitoringService.getHealthOverview(tenantId, { from, to }),
+                monitoringService.getNutritionBmi(tenantId, { from, to }),
+                isLicenseAdmin ? monitoringService.getCentersComparison(tenantId, { from, to }) : Promise.resolve([]),
             ]);
             setAttendanceData(att);
             setHealthData(health.chart_data);
@@ -91,10 +93,12 @@ export function MonitoringCharts({ tenantId, isLicenseAdmin }: MonitoringChartsP
         } finally {
             setIsLoading(false);
         }
-    }, [tenantId, isLicenseAdmin]);
+    }, [tenantId, isLicenseAdmin, from, to]);
 
     useEffect(() => {
         load();
+        const interval = setInterval(load, 20000);
+        return () => clearInterval(interval);
     }, [load]);
 
     useAgentRefresh(load);
@@ -143,7 +147,7 @@ export function MonitoringCharts({ tenantId, isLicenseAdmin }: MonitoringChartsP
                         <TrendingUp className="h-5 w-5 text-emerald-400" />
                         Tendencia de Asistencia
                     </CardTitle>
-                    <CardDescription>Últimos 30 días — distribución diaria</CardDescription>
+                    <CardDescription>{from || to ? `Periodo ${from ?? "…"} → ${to ?? "…"}` : "Últimos 30 días — distribución diaria"}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={attendanceConfig} className="min-h-[260px] w-full">

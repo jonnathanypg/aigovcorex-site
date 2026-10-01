@@ -29,6 +29,8 @@ def _build_license_context(license_id):
         'legal_name': None,
         'ruc': None,
         'centers_list': [],
+        'enabled_modules': [],
+        'active_programs': [],
     }
     
     if not license_id:
@@ -47,6 +49,18 @@ def _build_license_context(license_id):
             # Get center names under this license
             centers = Tenant.query.filter_by(license_id=license_id).all()
             context['centers_list'] = [c.name for c in centers if c.name]
+            # Módulos habilitados (kindicore/social/geo/channels/copilot) — para copiloto multi-módulo
+            try:
+                context['enabled_modules'] = license_record.get_enabled_modules()
+            except Exception:
+                pass
+            # Programas sociales activos (para ruteo del copiloto a Social AI)
+            try:
+                from models.social_program import SocialProgram
+                progs = SocialProgram.query.filter_by(license_id=license_id, status='active').limit(20).all()
+                context['active_programs'] = [{'id': p.id, 'name': p.name} for p in progs]
+            except Exception:
+                pass
     except Exception as e:
         import logging
         logging.getLogger('chat').warning(f"Could not load license context: {e}")
@@ -113,6 +127,10 @@ def send_message():
             legal_name=lic_ctx['legal_name'],
             ruc=lic_ctx['ruc'],
             centers_list=lic_ctx['centers_list'],
+            user_full_name=getattr(user, 'full_name', None) or f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip() or None,
+            user_email=getattr(user, 'email', None),
+            enabled_modules=lic_ctx.get('enabled_modules') or [],
+            programs_list=lic_ctx.get('active_programs') or [],
         )
         
         # Process message through the orchestrator
@@ -210,6 +228,10 @@ def stream_message():
             legal_name=lic_ctx['legal_name'],
             ruc=lic_ctx['ruc'],
             centers_list=lic_ctx['centers_list'],
+            user_full_name=getattr(user, 'full_name', None) or f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip() or None,
+            user_email=getattr(user, 'email', None),
+            enabled_modules=lic_ctx.get('enabled_modules') or [],
+            programs_list=lic_ctx.get('active_programs') or [],
         )
         
         # Wrap with streaming - pass Flask app for context in background thread

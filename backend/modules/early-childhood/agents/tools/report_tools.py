@@ -4,6 +4,7 @@ Allows the agent to generate reports (PDF/CSV/Excel) and return a download link.
 Supports single-center and global (license_admin) reports.
 """
 from langchain.tools import BaseTool
+from agents.tools._guard import graceful_tool
 import os
 import logging
 from datetime import date, datetime, timedelta
@@ -28,11 +29,13 @@ def resolve_report_tenant_ids(tenant_id, user_id, center_name: str = None):
     from models.tenant import Tenant
 
     if center_name:
-        # Search for tenant by name (case-insensitive partial match)
+        # Search for tenant by name DENTRO del alcance del usuario (anti-IDOR)
+        allowed = set(resolve_tenant_ids(None, user_id))
         matches = Tenant.query.filter(
             Tenant.name.ilike(f'%{center_name}%'),
             Tenant.is_active == True
         ).all()
+        matches = [t for t in matches if not allowed or t.id in allowed]
 
         if not matches:
             return [], f'No se encontró ningún centro con el nombre "{center_name}"'
@@ -97,6 +100,7 @@ class GenerateReportTool(BaseTool):
         "For license_admin, omit tenant_id or center_name to get a global report."
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         report_type = (kwargs.get('report_type') or 'general').lower()
         export_format = (kwargs.get('format') or kwargs.get('export_format') or 'pdf').lower()

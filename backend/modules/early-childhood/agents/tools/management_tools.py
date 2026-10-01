@@ -3,6 +3,7 @@ Management Tools — CRUD tools for modules not yet exposed to the multi-agent s
 Covers: Planificaciones Lúdicas, Menú Semanal, Operaciones/Mantenimiento, Intervención Familiar.
 """
 from langchain.tools import BaseTool
+from agents.tools._guard import graceful_tool
 from models import db
 from datetime import date, datetime
 import logging
@@ -11,13 +12,16 @@ logger = logging.getLogger('ManagementTools')
 
 
 def _safe_session():
-    """Proactive session health-check before any DB operation."""
+    """Proactive session health-check. Nunca lanza: fuera de app-context solo avisa."""
     try:
         from sqlalchemy import text
         db.session.execute(text("SELECT 1"))
     except Exception:
-        db.session.rollback()
-        db.session.remove()
+        try:
+            db.session.rollback()
+            db.session.remove()
+        except Exception:
+            pass
 
 
 def _resolve_tenants(tenant_id, user_id):
@@ -53,6 +57,7 @@ class ManagePlanningTool(BaseTool):
         "  Update: {'action': 'update', 'planning_id': 5, 'status': 'aprobado', 'tenant_id': 1, 'user_id': 1}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -171,6 +176,7 @@ class ManageWeeklyMenuTool(BaseTool):
         "'ingredients': 'arroz, pollo, zanahoria'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -275,6 +281,7 @@ class ManageMaintenanceTaskTool(BaseTool):
         "  Update: {'action': 'update', 'task_id': 3, 'status': 'Completado', 'tenant_id': 1, 'user_id': 1}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -379,6 +386,7 @@ class ManageInterventionTool(BaseTool):
         "'interviewee_relationship': 'madre'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -473,6 +481,7 @@ class ManageAdmissionTool(BaseTool):
         "'priority': 'normal', 'notes': 'Referida por MIES'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -621,6 +630,7 @@ class ManageChildTool(BaseTool):
         "'family_address': 'Calle 5 y 10', 'family_city': 'Quito'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list')
@@ -765,6 +775,7 @@ class ManageIngestionTool(BaseTool):
         "  {'action': 'process_csv', 'entity': 'ninos', 'attachment_path': '/tmp/upload_123.csv', 'tenant_id': 1, 'user_id': 1}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list_entities')
@@ -897,7 +908,8 @@ class SendEmailTool(BaseTool):
         "  Send to email: {'action': 'send_to_email', 'to_email': 'juan@mail.com', 'subject': 'Asunto', 'body': '...'}\n"
     )
 
-    def _run(self, **kwargs) -> dict:
+    @graceful_tool
+    def _run(self, *args, **kwargs) -> dict:
         try:
             _safe_session()
             from services.email_service import EmailService
@@ -1040,6 +1052,8 @@ class ManageSocialProgramsTool(BaseTool):
         "  - 'get_form': inspect the dynamic form JSON schema for a program.\n"
         "  - 'configure_form': add or update fields, conversational prompts, and eligibility rules.\n"
         "  - 'register_applicant': submit a new applicant with custom form_data.\n"
+        "  - 'list_beneficiaries': list applicants/beneficiaries (filter by program_id/status).\n"
+        "  - 'program_stats': totals per program by status + occupancy (admin info/reportes).\n"
         "Input examples:\n"
         "  {'action': 'list_programs'}\n"
         "  {'action': 'create_program', 'name': 'Beca Nutrición Infantil', 'category': 'infancia', "
@@ -1049,6 +1063,7 @@ class ManageSocialProgramsTool(BaseTool):
         "'form_data': {'monthly_income': 180, 'children_count': 3}}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list_programs')
@@ -1237,6 +1252,44 @@ class ManageSocialProgramsTool(BaseTool):
                     'status': beneficiary.status
                 }
 
+            # ── LIST BENEFICIARIES ──
+            elif action == 'list_beneficiaries':
+                program_id = kwargs.get('program_id')
+                status = kwargs.get('status')
+                q = ProgramBeneficiary.query
+                if program_id:
+                    q = q.filter_by(program_id=int(program_id))
+                elif license_id:
+                    prog_ids = [p.id for p in SocialProgram.query.filter_by(license_id=license_id).all()]
+                    q = q.filter(ProgramBeneficiary.program_id.in_(prog_ids)) if prog_ids else q.filter(False)
+                if status:
+                    q = q.filter_by(status=status)
+                rows = q.order_by(ProgramBeneficiary.id.desc()).limit(50).all()
+                return {'success': True, 'count': len(rows), 'beneficiarios': [
+                    {'id': b.id, 'programa_id': b.program_id, 'nombre': b.full_name,
+                     'cedula': b.cedula, 'estado': b.status,
+                     'score': b.eligibility_score, 'canal': b.intake_channel} for b in rows]}
+
+            # ── PROGRAM STATS (para el administrador: info y reportes) ──
+            elif action == 'program_stats':
+                progs = SocialProgram.query
+                if license_id:
+                    progs = progs.filter_by(license_id=license_id)
+                if kwargs.get('program_id'):
+                    progs = progs.filter_by(id=int(kwargs.get('program_id')))
+                out = []
+                for p in progs.limit(20).all():
+                    total = ProgramBeneficiary.query.filter_by(program_id=p.id).count()
+                    by_status = {}
+                    for st in ('applicant', 'approved', 'active', 'rejected', 'graduated'):
+                        by_status[st] = ProgramBeneficiary.query.filter_by(
+                            program_id=p.id, status=st).count()
+                    out.append({'id': p.id, 'nombre': p.name, 'estado': p.status,
+                                'total': total, 'por_estado': by_status,
+                                'cupos': p.max_beneficiaries,
+                                'ocupacion': f"{round(total / p.max_beneficiaries * 100, 1)}%" if p.max_beneficiaries else None})
+                return {'success': True, 'programas': out}
+
             return {'success': False, 'error': f'Acción desconocida: {action}'}
 
         except Exception as e:
@@ -1264,6 +1317,7 @@ class ManageChannelsTool(BaseTool):
         "  {'action': 'link_program_channel', 'program_id': 2, 'parent_channel_id': 1, 'agent_name': 'Agente BDH'}"
     )
 
+    @graceful_tool
     def _run(self, *args, **kwargs) -> dict:
         _safe_session()
         action = kwargs.get('action', 'list_channels')

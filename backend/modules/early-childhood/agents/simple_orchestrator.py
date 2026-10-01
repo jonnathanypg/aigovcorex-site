@@ -15,10 +15,13 @@ class SimpleOrchestrator:
     No LangChain/LangGraph dependencies
     """
     
-    def __init__(self, tenant_id: int, user_id: int, license_id: int = None):
+    def __init__(self, tenant_id: int, user_id: int, license_id: int = None, **kwargs):
         self.tenant_id = tenant_id
         self.user_id = user_id
         self.license_id = license_id
+        # Compatibilidad con LangGraphOrchestrator (role, license_name, user_full_name...)
+        for k, v in (kwargs or {}).items():
+            setattr(self, k, v)
         self.llm_provider = self._detect_llm_provider()
     
     def _get_custom_prompt(self) -> str | None:

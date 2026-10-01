@@ -7,7 +7,7 @@ import { Check, X, Clock, UserCheck, UserX, Loader2, Search, Pencil, ClipboardLi
 import { Input } from "@/components/ui/input";
 
 import { useRole } from "@/hooks/use-role";
-import { useAgentRefresh } from "@/hooks/use-agent-refresh";
+import { useAgentRefresh, dispatchAgentDataChanged } from "@/hooks/use-agent-refresh";
 
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +35,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { childrenService, attendanceService } from "@/services";
 import type { Child, AttendanceRecord } from "@/types";
 
@@ -61,6 +62,7 @@ interface AttendanceClientProps {
 
 export function AttendanceClient({ readOnly = false, tenantId }: AttendanceClientProps) {
     const { role, center } = useRole();
+    const { toast } = useToast();
     const [children, setChildren] = React.useState<Child[]>([]);
     const [attendanceMap, setAttendanceMap] = React.useState<Record<number, AttendanceStatus>>({});
     const [attendanceDetails, setAttendanceDetails] = React.useState<Record<number, { arrival_time?: string; notes?: string }>>({});
@@ -160,8 +162,15 @@ export function AttendanceClient({ readOnly = false, tenantId }: AttendanceClien
                     [childId]: { ...prev[childId], arrival_time: currentTime }
                 }));
             }
+            // Notificar a monitoreo y analítica en tiempo real
+            dispatchAgentDataChanged();
         } catch (error) {
             console.error("Error marking attendance:", error);
+            toast({
+                title: "Error al registrar asistencia",
+                description: error instanceof Error ? error.message : "No se pudo guardar la asistencia en el servidor.",
+                variant: "destructive"
+            });
         } finally {
             setIsLoading(false); // Should be setIsUpdating(false) mostly, but just to be sure
             setIsUpdating(false);

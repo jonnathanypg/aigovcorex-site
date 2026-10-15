@@ -456,11 +456,18 @@ textarea:focus {
 .print-sheet .print-row-alt { background: #f3f4f6; }
 @media print {
   .os-module-rail, .os-subnav-panel, .os-bottom-nav, .app-header,
-  .os-shell-root > div:first-child, header.app-header { display: none !important; }
-  body { background: #fff !important; animation: none; }
+  .os-shell-root > div:first-child, header.app-header,
+  #kindicore-chat-open-btn, audio { display: none !important; }
+  
+  /* Hide any open modal overlays, backdrop, dialogs during print, except print-sheet */
+  [role="dialog"]:not(:has(.print-sheet)),
+  [data-state="open"]:not(:has(.print-sheet)),
+  [data-radix-popper-content-wrapper] { display: none !important; }
+
+  body { background: #fff !important; animation: none; overflow: visible !important; }
   body * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .print-sheet { box-shadow: none !important; margin: 0 !important; max-width: none !important; font-size: 11pt; }
-  .print-only { display: block; }
+  .print-sheet { box-shadow: none !important; margin: 0 auto !important; max-width: 100% !important; font-size: 11pt; }
+  .print-only { display: block !important; }
   thead { display: table-header-group; }
   table { page-break-inside: avoid; }
   tr { page-break-inside: avoid; }

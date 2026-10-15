@@ -29,6 +29,16 @@ import {
 
 import { useLicense } from '@/contexts/license-context';
 import { authService } from '@/services/auth.service';
+import { notificationsService, type Notification } from '@/services/notifications.service';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
 
 const routeLabels: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -96,6 +106,25 @@ export function AppHeader() {
       const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
       setUserRole(roleName);
     }
+  }, []);
+
+  const [unreadNotifications, setUnreadNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      try {
+        const notifs = await notificationsService.getAll();
+        const unread = notifs.filter(n => !n.read);
+        setUnreadNotifications(unread.slice(0, 5));
+        setUnreadCount(unread.length);
+      } catch {
+        // silent
+      }
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 60000); // refresh every minute
+    return () => clearInterval(interval);
   }, []);
 
   // Filter modules based on user license and role
@@ -181,15 +210,75 @@ export function AppHeader() {
             <Search className="w-4 h-4 text-muted-foreground hover:text-foreground" />
           </button>
 
-          {/* Notifications Button (Navigates to /notificaciones) */}
-          <button
-            onClick={() => router.push('/notificaciones')}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-accent border border-border relative cursor-pointer"
-            title="Ver Notificaciones"
-          >
-            <Bell className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-500" />
-          </button>
+          {/* Notifications Dropdown (Visual alerts + Quick Preview) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-accent border border-border relative cursor-pointer"
+                title={unreadCount > 0 ? `${unreadCount} alerta(s) o notificaciones sin leer` : "Notificaciones"}
+              >
+                <Bell className={unreadCount > 0 ? "w-4 h-4 text-amber-500 animate-pulse" : "w-4 h-4 text-muted-foreground hover:text-foreground"} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-80 bg-background/95 backdrop-blur-xl border-border/40 shadow-xl" align="end" forceMount>
+              <DropdownMenuLabel className="flex items-center justify-between py-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Alertas del Sistema</span>
+                {unreadCount > 0 ? (
+                  <span className="text-[10px] bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded font-semibold border border-amber-500/20">
+                    {unreadCount} nueva(s)
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground">Al día</span>
+                )}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="max-h-[260px] overflow-y-auto divide-y divide-border/20">
+                {unreadNotifications.length > 0 ? (
+                  unreadNotifications.map(n => (
+                    <DropdownMenuItem
+                      key={n.id}
+                      onClick={() => {
+                        notificationsService.markRead(n.id).catch(() => {});
+                        router.push('/notificaciones');
+                      }}
+                      className="flex flex-col items-start gap-1 p-2.5 cursor-pointer hover:bg-muted/50"
+                    >
+                      <div className="flex items-center gap-1.5 w-full">
+                        {n.type === 'Alerta' ? (
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                        ) : (
+                          <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        )}
+                        <span className="text-xs font-semibold text-foreground truncate flex-1">{n.title}</span>
+                      </div>
+                      {n.description && (
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 pl-5">
+                          {n.description}
+                        </p>
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <div className="py-6 text-center text-xs text-muted-foreground">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1.5 opacity-80" />
+                    No tienes alertas pendientes sin leer.
+                  </div>
+                )}
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => router.push('/notificaciones')}
+                className="text-xs text-primary font-medium text-center justify-center cursor-pointer py-2 hover:bg-primary/5"
+              >
+                Ver todas las notificaciones
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <CenterSelector />
           <ThemeSwitcher />

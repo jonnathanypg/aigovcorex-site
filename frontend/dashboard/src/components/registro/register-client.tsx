@@ -440,7 +440,11 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                             <div><span className="text-muted-foreground block text-xs uppercase">Ingreso</span>{viewChild.enrollment_date}</div>
                             <div><span className="text-muted-foreground block text-xs uppercase">Completitud</span>{getCompleteness(viewChild).pct}% {getCompleteness(viewChild).complete ? "(completo)" : "(incompleto: salud + IDII + tomas vigentes)"}</div>
                             <div className="col-span-2 flex gap-2 pt-2">
-                                <Link href={`/registro/${viewChild.id}/print`}><Button variant="outline" size="sm"><Printer className="mr-1 h-3 w-3" /> Imprimir ficha</Button></Link>
+                                <Link href={`/registro/${viewChild.id}/print`} target="_blank">
+                                    <Button variant="outline" size="sm" onClick={() => setViewChild(null)}>
+                                        <Printer className="mr-1 h-3 w-3" /> Imprimir ficha
+                                    </Button>
+                                </Link>
                                 {!readOnly && <Button size="sm" onClick={() => { openEdit(viewChild); setViewChild(null); }}>Editar</Button>}
                             </div>
                         </div>

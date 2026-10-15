@@ -519,7 +519,7 @@ export function ChatWidget() {
                 <button
                     onClick={() => setIsOpen(true)}
                     className={cn(
-                        "fixed right-4 sm:right-6 z-[99] h-14 w-14 rounded-full flex items-center justify-center",
+                        "print:hidden fixed right-4 sm:right-6 z-[99] h-14 w-14 rounded-full flex items-center justify-center",
                         "bottom-20 sm:bottom-6", // elevated on mobile to clear bottom nav
                         "shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 cursor-pointer",
                         "bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-500",
@@ -539,7 +539,7 @@ export function ChatWidget() {
             {/* ─── Responsive Sidebar Container (Desktop right drawer, Mobile bottom 75vh sheet - Aikrofy style) ─── */}
             <div
                 className={cn(
-                    "fixed z-[150] flex flex-col overflow-hidden transition-all duration-300 ease-out",
+                    "print:hidden fixed z-[150] flex flex-col overflow-hidden transition-all duration-300 ease-out",
                     // Mobile: bottom 75% sheet, curved top-left/right corners, full shadow
                     "bottom-0 left-0 right-0 h-[75dvh] max-h-[75dvh] rounded-t-3xl border-t border-border/80 shadow-[0_-10px_35px_rgba(0,0,0,0.4)]",
                     // Desktop: full height right drawer

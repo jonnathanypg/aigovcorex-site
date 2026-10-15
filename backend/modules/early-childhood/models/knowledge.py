@@ -5,6 +5,7 @@ Supports hierarchical scoping: License (global) and Tenant (center-specific).
 """
 from models import db, BaseModel
 from datetime import datetime
+from sqlalchemy.dialects.mysql import LONGTEXT
 
 
 class KnowledgeDocument(db.Model, BaseModel):
@@ -27,7 +28,7 @@ class KnowledgeDocument(db.Model, BaseModel):
     
     # Content  
     title = db.Column(db.String(255), nullable=False)
-    content = db.Column(db.Text, nullable=False)  # Original text backup
+    content = db.Column(db.Text().with_variant(LONGTEXT, 'mysql'), nullable=False)  # Original text backup (LONGTEXT up to 4GB in MySQL)
     
     # Source metadata
     source_type = db.Column(db.String(20), default='text')  # text, pdf, web

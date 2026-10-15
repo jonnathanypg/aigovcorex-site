@@ -68,6 +68,8 @@ export const OS_MODULES: OSModule[] = [
           { label: 'Admisión', href: '/admision', icon: ClipboardList },
           { label: 'Asistencia', href: '/asistencia', icon: UserCheck },
           { label: 'Biblioteca Documental', href: '/biblioteca', icon: BookOpen },
+          { label: 'Gestión de Centros', href: '/license-admin/centers', icon: Network },
+          { label: 'Usuarios y Colaboradores', href: '/license-admin/users', icon: Users },
         ],
       },
       {

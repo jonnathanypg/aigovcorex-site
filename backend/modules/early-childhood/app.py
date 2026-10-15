@@ -229,8 +229,18 @@ def create_app(config_name=None):
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-                
-            app.logger.info("Migration: Verified licenses schema with AI GovCoreX OS columns")
+            # Ensure knowledge_documents content and pinecone_ids are LONGTEXT (avoid 1406 Data too long)
+            for col_sql in [
+                "ALTER TABLE knowledge_documents MODIFY COLUMN content LONGTEXT NOT NULL",
+                "ALTER TABLE knowledge_documents MODIFY COLUMN pinecone_ids LONGTEXT NULL",
+            ]:
+                try:
+                    db.session.execute(text(col_sql))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+            app.logger.info("Migration: Verified licenses schema with AI GovCoreX OS columns and knowledge LONGTEXT")
         except Exception as e:
             pass
     

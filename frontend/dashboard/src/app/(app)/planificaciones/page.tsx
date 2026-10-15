@@ -44,7 +44,12 @@ import {
     CheckCircle2,
 } from "lucide-react";
 
-const AGE_GROUPS = ["12-18 meses", "18-24 meses", "24-36 meses"];
+const AGE_GROUPS = [
+    "12 a 18 meses",
+    "19 a 24 meses",
+    "25 a 36 meses",
+    "37 a 42 meses"
+];
 const STATUS_OPTIONS = [
     { value: "borrador", label: "Borrador", color: "bg-yellow-500/10 text-yellow-700" },
     { value: "aprobado", label: "Aprobado", color: "bg-green-500/10 text-green-700" },

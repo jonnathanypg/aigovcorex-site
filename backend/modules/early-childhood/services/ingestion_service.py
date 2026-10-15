@@ -135,8 +135,8 @@ ENTITY_DEFINITIONS = {
         'label': 'Planificaciones Lúdicas',
         'columns': [
             {'name': 'planning_date', 'label': 'Fecha * (YYYY-MM-DD)', 'required': True, 'example': '2026-02-24'},
-            {'name': 'age_group', 'label': 'Grupo Etario * (12-18 meses/18-24 meses/24-36 meses)', 'required': True, 'example': '24-36 meses',
-             'valid_values': ['12-18 meses', '18-24 meses', '24-36 meses']},
+            {'name': 'age_group', 'label': 'Grupo Etario * (12 a 18 meses/19 a 24 meses/25 a 36 meses/37 a 42 meses)', 'required': True, 'example': '25 a 36 meses',
+             'valid_values': ['12 a 18 meses', '19 a 24 meses', '25 a 36 meses', '37 a 42 meses', '12-18 meses', '18-24 meses', '24-36 meses', '37-42 meses']},
             {'name': 'week_number', 'label': 'Número de Semana', 'required': False, 'example': '8'},
             {'name': 'month', 'label': 'Mes', 'required': False, 'example': 'Febrero'},
             {'name': 'year', 'label': 'Año', 'required': False, 'example': '2026'},

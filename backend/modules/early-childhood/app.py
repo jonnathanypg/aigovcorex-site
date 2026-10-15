@@ -48,6 +48,8 @@ def create_app(config_name=None):
     from api.voice import voice_bp
     from api.public_chat import public_chat_bp
     from api.chat_upload import chat_upload_bp
+    from api.lem import lem_bp as _lem_bp  # Proxy LEM-V4 (keys privadas solo server-side)
+    from api.llm_config import llm_config_bp  # BYOT por empresa + creditos LEM-V4
     # Canonical Social AI module at backend/modules/social
     from social.api.social_programs import social_programs_bp
     from social.api.documents import documents_bp
@@ -79,6 +81,8 @@ def create_app(config_name=None):
     app.register_blueprint(voice_bp, url_prefix='/api/voice')
     app.register_blueprint(public_chat_bp)
     app.register_blueprint(chat_upload_bp)
+    app.register_blueprint(_lem_bp)  # /api/lem/verify + /api/lem/health
+    app.register_blueprint(llm_config_bp)  # /api/license-admin/llm-* (BYOT)
     app.register_blueprint(social_programs_bp, url_prefix='/api/social')
     app.register_blueprint(documents_bp, url_prefix='/api/social/documents')
     app.register_blueprint(social_knowledge_bp, url_prefix='/api/social/knowledge')
@@ -194,6 +198,8 @@ def create_app(config_name=None):
                 "ALTER TABLE licenses ADD COLUMN allow_whatsapp_public BOOLEAN DEFAULT 1",
                 "ALTER TABLE licenses ADD COLUMN allow_telegram_public BOOLEAN DEFAULT 1",
                 "ALTER TABLE licenses ADD COLUMN public_org_slug VARCHAR(100) NULL",
+                "ALTER TABLE licenses ADD COLUMN lem_credits_balance INT NOT NULL DEFAULT 1000",
+                "ALTER TABLE licenses ADD COLUMN lem_enabled BOOLEAN DEFAULT 1",
             ]:
                 try:
                     db.session.execute(text(col_sql))

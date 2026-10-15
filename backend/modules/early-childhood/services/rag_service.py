@@ -141,8 +141,13 @@ class RAGService:
     # ================================================================
 
     def create_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Create embeddings using the configured LLM provider"""
-        return self.llm.get_embeddings(texts)
+        """Create embeddings via gateway BYOT (licencia) con fallback legacy."""
+        try:
+            from services.llm_gateway import get_embeddings as _gw_emb
+            return _gw_emb(texts, license_id=self.license_id)
+        except Exception as e:
+            logger.warning(f"Gateway embeddings fallo, fallback legacy: {e}")
+            return self.llm.get_embeddings(texts)
 
     # ================================================================
     # Vector ID Generation

@@ -141,11 +141,11 @@ class GetAbsentChildrenTool(BaseTool):
 
 
 class GetAttendanceTodayTool(BaseTool):
-    """Resumen completo de asistencia de una fecha (presentes/ausentes/justificados/tardanzas)."""
+    """Resumen completo de asistencia de una fecha (presentes/ausentes/justificados/tardanzas) y conteo de centros con asistencia."""
     name: str = "get_attendance_today"
     description: str = (
-        "Resumen de asistencia de una fecha con conteos y listados por estado. "
-        "Úsala para 'resumen de asistencia de hoy', 'quién vino hoy', 'asistencia de hoy'. "
+        "Resumen de asistencia de una fecha con conteos y listados por estado y por centros. "
+        "Úsala para 'resumen de asistencia de hoy', 'quién vino hoy', 'asistencia de hoy', 'cuántos centros registraron asistencia hoy'. "
         "Input: {'tenant_id': 1, 'user_id': 1, 'date': 'hoy' o 'YYYY-MM-DD'}."
     )
 
@@ -154,9 +154,32 @@ class GetAttendanceTodayTool(BaseTool):
         res = tool._run(**kwargs)
         if not res.get("success"):
             return res
-        # Re-etiquetar para el LLM: ya trae todo lo necesario
+        
+        # Calcular centros con registros de asistencia
+        from models.attendance import Attendance
+        from models.tenant import Tenant
+        from agents.tools.analytics_tools import resolve_tenant_ids
+        target = _parse_target_date(kwargs.get("date"))
+        target_ids = resolve_tenant_ids(kwargs.get("tenant_id"), kwargs.get("user_id")) or []
+        
+        centers_with_records = []
+        if target_ids:
+            recorded_tids = [
+                row[0] for row in Attendance.query.with_entities(Attendance.tenant_id).filter(
+                    Attendance.tenant_id.in_(target_ids),
+                    Attendance.date == target
+                ).distinct().all()
+            ]
+            t_names = dict(Tenant.query.filter(Tenant.id.in_(target_ids)).values(Tenant.id, Tenant.name))
+            centers_with_records = [t_names.get(tid, f"Centro {tid}") for tid in recorded_tids]
+        
+        res["centros_con_asistencia_count"] = len(centers_with_records)
+        res["centros_con_asistencia"] = centers_with_records
+        res["total_centros_alcance"] = len(target_ids)
+        
         res["text_hint"] = (
-            f"El {res['date']}: {res['presentes']} presentes, {res['ausentes_count']} ausentes/sin registro, "
-            f"{res['justificados']} justificados, {res['tardanzas']} tardanzas, sobre {res['total_activos']} activos."
+            f"El {res['date']}: {len(centers_with_records)} de {len(target_ids)} centros registraron asistencia. "
+            f"Presentes: {res['presentes']}, Ausentes/sin registro: {res['ausentes_count']}, "
+            f"Justificados: {res['justificados']}, Tardanzas: {res['tardanzas']} sobre {res['total_activos']} niños activos."
         )
         return res

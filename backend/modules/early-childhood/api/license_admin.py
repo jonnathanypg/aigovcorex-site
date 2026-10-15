@@ -727,7 +727,7 @@ def create_user(license_admin):
         center_id = data.get('center_id')
         center = None
         
-        # Verificar centro si se proporciona
+        # Verificar centro si se proporciona; si no viene y se requiere, autoseleccionar el primero activo de la licencia
         if center_id:
             center = Tenant.query.filter_by(
                 id=center_id, 
@@ -739,6 +739,12 @@ def create_user(license_admin):
                 
             if not center.is_active:
                  return jsonify({'error': 'El centro seleccionado está inactivo'}), 400
+        else:
+            # Fallback automático al primer centro activo de la licencia para educadoras/coordinadores
+            center = Tenant.query.filter_by(
+                license_id=license_admin.license_id,
+                is_active=True
+            ).first()
              
         # Verificar email único
         if User.query.filter_by(email=data['email']).first():

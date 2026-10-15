@@ -288,14 +288,14 @@ export default function BibliotecaPage() {
                   type="file"
                   ref={fileInputRef}
                   className="mt-1"
-                  accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt"
+                  accept=".pdf,.docx,.doc,.xlsx,.xls,.xlsm,.xltm,.csv,.txt"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) setFileToUpload(f);
                   }}
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Formatos permitidos: PDF, Word (.docx), Excel (.xlsx, .csv).
+                  Formatos permitidos: PDF, Word (.docx), Excel (.xlsx, .xlsm, .csv).
                 </p>
               </div>
             </div>

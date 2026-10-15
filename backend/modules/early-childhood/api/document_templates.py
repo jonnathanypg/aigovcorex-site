@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 document_templates_bp = Blueprint('document_templates', __name__, url_prefix='/api/document-templates')
 
-ALLOWED_TEMPLATE_EXTENSIONS = {'pdf', 'txt', 'docx', 'csv', 'xlsx', 'xls'}
+ALLOWED_TEMPLATE_EXTENSIONS = {'pdf', 'txt', 'docx', 'doc', 'csv', 'xlsx', 'xls', 'xlsm', 'xltm'}
 
 # Slugs del frontend (params.ts, con guiones) + CATEGORIES del modelo (guion bajo).
 # Se aceptan ambos; se guardan tal cual llegan para no romper el front.

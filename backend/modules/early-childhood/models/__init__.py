@@ -40,6 +40,7 @@ class BaseModel:
 def init_models():
     """Initialize all models - call this after db.init_app()"""
     from models.license import License, LicenseAdmin
+    from models.llm_config import LLMProviderConfig, LEMCreditLedger
     from models.tenant import Tenant
     from models.user import User, Role
     from models.child import Child, Family, Representative
@@ -71,6 +72,8 @@ def init_models():
     return {
         'License': License,
         'LicenseAdmin': LicenseAdmin,
+        'LLMProviderConfig': LLMProviderConfig,
+        'LEMCreditLedger': LEMCreditLedger,
         'Tenant': Tenant,
         'User': User,
         'Role': Role,

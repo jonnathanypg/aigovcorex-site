@@ -126,14 +126,15 @@ class SocialRAGService:
         return chunks
 
     def create_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Create embeddings for a list of texts"""
-        if not self.llm:
-            logger.warning("LLM not available - cannot create embeddings")
-            return [[] for _ in texts]
-
+        """Create embeddings via gateway BYOT (licencia)."""
         try:
-            embeddings = self.llm.embed(texts)
-            return embeddings
+            import sys as _sys
+            import os as _os
+            _base = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", "..", ".."))
+            if _base not in _sys.path:
+                _sys.path.insert(0, _base)
+            from early_childhood.services.llm_gateway import get_embeddings as _gw_emb
+            return _gw_emb(texts, license_id=self.license_id)
         except Exception as e:
             logger.error(f"Error creating embeddings: {e}")
             return [[] for _ in texts]

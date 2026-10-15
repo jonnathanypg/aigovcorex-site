@@ -90,6 +90,12 @@ class License(db.Model):
     allow_whatsapp_public = db.Column(db.Boolean, default=True)
     allow_telegram_public = db.Column(db.Boolean, default=True)
 
+    # ── LEM-V4: solo licencia/inferencia. Tokens LLM los paga la empresa (BYOT) ──
+    lem_credits_balance = db.Column(db.Integer, nullable=False, default=1000)
+    lem_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    # Permiso controlado por Super Admin para permitir o bloquear conexión de llaves propias de IA
+    allow_custom_llm = db.Column(db.Boolean, nullable=False, default=False)
+
     # Slug único para el chatbot público web de esta organización
     # Acceso: /api/public/org/{public_org_slug}
     public_org_slug = db.Column(db.String(100), nullable=True)
@@ -162,6 +168,9 @@ class License(db.Model):
             'allow_whatsapp_public': self.allow_whatsapp_public,
             'allow_telegram_public': self.allow_telegram_public,
             'public_org_slug': self.public_org_slug,
+            'lem_credits_balance': int(self.lem_credits_balance or 0),
+            'lem_enabled': bool(self.lem_enabled),
+            'allow_custom_llm': bool(self.allow_custom_llm),
         }
 
     # ── Métodos de estado ─────────────────────────────────────────────

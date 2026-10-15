@@ -20,9 +20,11 @@ langchain
 langchain-core
 langchain-openai
 langchain-google-genai
+langchain-anthropic
 langgraph
 langsmith
 openai
+anthropic
 google-generativeai
 
 # Messaging

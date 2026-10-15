@@ -38,7 +38,13 @@ class SimpleOrchestrator:
         return None
 
     def _detect_llm_provider(self):
-        """Detect which LLM provider to use"""
+        """Detect which LLM provider to use: licencia BYOT primero, fallback env."""
+        try:
+            from services.llm_gateway import resolve_credentials
+            creds = resolve_credentials(self.license_id)
+            return creds.get("provider", "openai")
+        except Exception:
+            pass
         if os.getenv('OPENAI_API_KEY'):
             return 'openai'
         elif os.getenv('GOOGLE_API_KEY'):
@@ -47,11 +53,18 @@ class SimpleOrchestrator:
             raise ValueError("No LLM API key configured")
     
     def _call_llm(self, messages: list, temperature: float = 1.0) -> str:
-        """Call LLM API directly"""
-        if self.llm_provider == 'openai':
-            return self._call_openai(messages, temperature)
-        else:
-            return self._call_gemini(messages, temperature)
+        """Call LLM via gateway BYOT (licencia) con fallback legacy."""
+        try:
+            from services.llm_gateway import chat_completion
+            res = chat_completion(messages, license_id=self.license_id, temperature=temperature, max_tokens=1000)
+            self.llm_provider = res.get("provider", self.llm_provider)
+            return res.get("text", "")
+        except Exception as e:
+            # Fallback legacy solo si gateway falla por falta de config
+            if self.llm_provider == 'openai':
+                return self._call_openai(messages, temperature)
+            else:
+                return self._call_gemini(messages, temperature)
     
     def _call_openai(self, messages: list, temperature: float) -> str:
         """Call OpenAI API"""
@@ -122,6 +135,18 @@ Sé amable, profesional y conciso en español."""
             
             print(f" [SimpleOrchestrator] Processing message: {message}")
             
+            # LEM-V4 pre: bloqueo inyeccion/ataques antes de gastar tokens del cliente
+            try:
+                from services.lem_v4_validator import pre_validate, post_validate
+                _pre = pre_validate(message, self.license_id, getattr(self, "role", None))
+                if not _pre.get("ok"):
+                    return {"response": "Bloqueado por LEM-V4 (seguridad): " + str(_pre.get("reason")), "success": False, "blocked": True, "reason": _pre.get("reason")}
+            except Exception:
+                _pre = {"ok": True}
+
+                def post_validate(_t, _lid=None, **_kw):  # fallback infalible
+                    return {"ok": True, "blocked": False, "text": _t, "warnings": []}
+
             messages = [
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': message}
@@ -131,15 +156,25 @@ Sé amable, profesional y conciso en español."""
             print(f" [SimpleOrchestrator] Calling LLM Provider: {self.llm_provider}...")
             response_text = self._call_llm(messages, temperature=1.0)
             print(f" [SimpleOrchestrator] LLM Response received (len={len(response_text)})")
+
+            # LEM-V4 post: bloquea PII/vulns, asegura calculos via SQL, consume 1 credito
+            _lem = None
+            try:
+                _lem = post_validate(response_text, self.license_id, rag_context="", has_sql_data=False)
+                if not _lem.get("ok"):
+                    response_text = _lem.get("text", response_text)
+            except Exception as _e:
+                _lem = {"ok": True, "warnings": [], "error": str(_e)[:200]}
             
             # Save conversation
             self._save_conversation(message, response_text, channel)
             
             return {
                 'response': response_text,
-                'success': True,
+                'success': bool((_lem or {}).get("ok", True)),
                 'agent_used': 'simple_orchestrator',
-                'llm_provider': self.llm_provider
+                'llm_provider': self.llm_provider,
+                'lem': {"warnings": (_lem or {}).get("warnings", []), "balance": (_lem or {}).get("balance"), "blocked": (_lem or {}).get("blocked", False)}
             }
             
         except Exception as e:

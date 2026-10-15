@@ -180,7 +180,36 @@ class LangGraphOrchestrator:
             return None
 
     def _init_llm(self):
-        """Initialize LLM based on available API keys"""
+        """Initialize LLM BYOT por licencia con fallback global."""
+        try:
+            from services.llm_gateway import resolve_credentials
+            creds = resolve_credentials(self.license_id)
+            provider = (creds.get("provider") or "openai").lower()
+            model = creds.get("model")
+            api_key = creds.get("api_key")
+            base_url = creds.get("base_url")
+            if provider in ("openai", "grok", "nvidia", "openrouter", "groq"):
+                kwargs = {"model_name": model or self.config.OPENAI_MODEL, "temperature": 0.7, "api_key": api_key}
+                if base_url:
+                    kwargs["base_url"] = base_url
+                return ChatOpenAI(**kwargs)
+            if provider in ("google", "gemini"):
+                try:
+                    from langchain_google_genai import ChatGoogleGenerativeAI
+                    return ChatGoogleGenerativeAI(model=model or self.config.GEMINI_MODEL, temperature=0.7, google_api_key=api_key)
+                except ImportError:
+                    raise ValueError("Google GenAI no compatible en este entorno. Use OpenAI/BYOT.")
+            if provider == "anthropic":
+                try:
+                    from langchain_anthropic import ChatAnthropic
+                    return ChatAnthropic(model=model or "claude-3-5-sonnet-latest", temperature=0.7, api_key=api_key)
+                except ImportError:
+                    raise ValueError("Falta langchain-anthropic. Instale o use proveedor OpenAI-compatible.")
+            raise ValueError(f"Proveedor no soportado: {provider}")
+        except ValueError:
+            raise
+        except Exception:
+            pass
         if self.config.OPENAI_API_KEY:
             return ChatOpenAI(
                 model_name=self.config.OPENAI_MODEL,
@@ -360,6 +389,17 @@ class LangGraphOrchestrator:
             self.sender_identifier = sender_identifier if sender_identifier else str(self.user_id)
             self.logger.info(f"🆔 Conversation Identity: {self.sender_identifier} (Channel: {channel})")
 
+            # LEM-V4 pre: bloquea inyeccion/ataques antes de gastar tokens BYOT del cliente
+            try:
+                from services.lem_v4_validator import pre_validate as _lem_pre
+                _pv = _lem_pre(message, self.license_id, self.role)
+                if not _pv.get("ok"):
+                    blocked_msg = "Bloqueado por LEM-V4 (seguridad): " + str(_pv.get("reason"))
+                    self._save_conversation(message, blocked_msg, channel)
+                    return {"response": blocked_msg, "success": False, "agent_used": self.agent_name, "blocked": True, "reason": _pv.get("reason")}
+            except Exception as _e:
+                self.logger.warning(f"LEM pre fallo (fail-open controlado): {_e}")
+
             # Fast path for theme changes and quick navigation to minimize LLM usage and response time
             msg_lower = message.lower().strip()
             # Theme Claro
@@ -510,6 +550,19 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
             final_response = final_state['messages'][-1].content
             self.logger.info(f"✅ Final Response Generated:\n{final_response}")
 
+            # LEM-V4 post: bloquea PII/vulns, advierte cifras sin fuente, consume 1 credito
+            _lem_info: dict = {}
+            try:
+                from services.lem_v4_validator import post_validate as _lem_post
+                _pv2 = _lem_post(final_response, self.license_id, rag_context="", has_sql_data=True)
+                _lem_info = {"warnings": _pv2.get("warnings", []), "balance": _pv2.get("balance"), "blocked": _pv2.get("blocked", False)}
+                if not _pv2.get("ok"):
+                    final_response = _pv2.get("text", final_response)
+                    self._save_conversation(message, final_response, channel)
+                    return {"response": final_response, "success": False, "agent_used": self.agent_name, "blocked": True, "reason": _pv2.get("reason"), "lem": _lem_info}
+            except Exception as _e:
+                self.logger.warning(f"LEM post fallo: {_e}")
+
             # Save conversation to database
             self._save_conversation(message, final_response, channel)
             
@@ -517,6 +570,7 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
                 'response': final_response,
                 'success': True,
                 'agent_used': self.agent_name,
+                'lem': _lem_info,
             }
             
         except Exception as e:

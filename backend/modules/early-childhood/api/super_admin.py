@@ -76,7 +76,9 @@ def create_license():
             allow_public_chatbot=data.get('allow_public_chatbot', True),
             allow_whatsapp_public=data.get('allow_whatsapp_public', data.get('allow_whatsapp', True)),
             allow_telegram_public=data.get('allow_telegram_public', data.get('allow_telegram', True)),
-            public_org_slug=data.get('public_org_slug')
+            public_org_slug=data.get('public_org_slug'),
+            allow_custom_llm=bool(data.get('allow_custom_llm', False)),
+            lem_credits_balance=int(data.get('lem_credits_balance', 1000) or 1000)
         )
         
         # Asignar módulos si fueron especificados
@@ -171,6 +173,10 @@ def update_license(license_id):
         if 'public_org_slug' in data:
             slug = data['public_org_slug'].lower().strip().replace(' ', '-') if data['public_org_slug'] else None
             license.public_org_slug = slug
+        if 'allow_custom_llm' in data:
+            license.allow_custom_llm = bool(data['allow_custom_llm'])
+        if 'lem_credits_balance' in data:
+            license.lem_credits_balance = int(data['lem_credits_balance'] or 0)
         if 'enabled_modules' in data and isinstance(data['enabled_modules'], list):
             license.set_enabled_modules(data['enabled_modules'])
         

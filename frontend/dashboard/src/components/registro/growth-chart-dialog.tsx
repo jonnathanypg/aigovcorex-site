@@ -73,7 +73,7 @@ export function GrowthChartDialog({ open, onOpenChange, child }: GrowthChartDial
     const [weightCurves, setWeightCurves] = useState<WHOReferencePoint[]>([]);
 
     // View filters
-    const [ageRange, setAgeRange] = useState<"0-24" | "24-60">("0-24");
+    const [ageRange, setAgeRange] = useState<"0-24" | "24-60" | "0-60">("0-24");
     const [activeTab, setActiveTab] = useState<string>("height");
 
     // New measurement quick form
@@ -176,7 +176,7 @@ export function GrowthChartDialog({ open, onOpenChange, child }: GrowthChartDial
     };
 
     // Filter curves and points by active age range
-    const minAge = ageRange === "0-24" ? 0 : 24;
+    const minAge = ageRange === "24-60" ? 24 : 0;
     const maxAge = ageRange === "0-24" ? 24 : 60;
 
     // Build chart data combining WHO Curves + Child Measurements
@@ -375,7 +375,7 @@ export function GrowthChartDialog({ open, onOpenChange, child }: GrowthChartDial
                                 </TabsTrigger>
                             </TabsList>
 
-                            {/* Selector de Rango de Edad OMS: 0 a 2 años / 2 a 5 años */}
+                            {/* Selector de Rango de Edad OMS: 0 a 2 años / 2 a 5 años / 0 a 5 años (completo) */}
                             {activeTab !== "history" && (
                                 <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border border-border/30">
                                     <span className="text-xs text-muted-foreground px-2 font-medium">Tramo OMS:</span>
@@ -396,6 +396,15 @@ export function GrowthChartDialog({ open, onOpenChange, child }: GrowthChartDial
                                         className="h-7 text-xs px-3"
                                     >
                                         2 a 5 Años (24-60 m)
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={ageRange === "0-60" ? "default" : "ghost"}
+                                        onClick={() => setAgeRange("0-60")}
+                                        className="h-7 text-xs px-3"
+                                    >
+                                        0 a 5 Años (0-60 m)
                                     </Button>
                                 </div>
                             )}

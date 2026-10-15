@@ -13,7 +13,13 @@ export default function LicenseAdminLayout({
     children: React.ReactNode;
 }) {
     return (
-        <RoleGuard allowedRoles={['license_admin', 'supervisor', 'admin']} redirectTo="/dashboard">
+        <RoleGuard
+            allowedRoles={[
+                'license_admin', 'supervisor', 'admin', 'super_admin',
+                'coordinator', 'center_coordinator', 'psychologist', 'administrative'
+            ]}
+            redirectTo="/dashboard"
+        >
             <OSShellLayout>
                 {children}
             </OSShellLayout>

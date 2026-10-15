@@ -55,21 +55,42 @@ def get_public_config():
 
 
 def require_license_admin(f):
-
-    """Decorator to require license_admin or supervisor role"""
+    """Decorator to require license_admin, supervisor, coordinator, psychologist or administrative role"""
     @jwt_required()
     def decorated_function(*args, **kwargs):
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         
-        if not user or user.role.name not in ('license_admin', 'supervisor'):
-            return jsonify({'error': 'Acceso denegado. Se requiere rol de License Admin o Supervisor'}), 403
+        allowed_roles = (
+            'license_admin', 'supervisor', 'super_admin',
+            'coordinator', 'center_coordinator', 'psychologist', 'administrative'
+        )
+        if not user or user.role.name not in allowed_roles:
+            return jsonify({'error': 'Acceso denegado. No tiene permisos para gestionar personal de centro'}), 403
         
-        # Obtener la licencia del admin/supervisor
+        # Obtener la licencia del admin/supervisor/personal
         license_admin = LicenseAdmin.query.filter_by(user_id=user_id, is_active=True).first()
         
         if not license_admin:
-            return jsonify({'error': 'No tiene una licencia asignada'}), 403
+            # Fallback a través del tenant del usuario
+            from utils.role_helpers import get_license_id_for_user
+            lic_id = get_license_id_for_user(user)
+            if lic_id:
+                # Objeto proxy sintético compatible
+                from models.license import License
+                lic_obj = License.query.get(lic_id)
+                class _ProxyLicenseAdmin:
+                    id = 0
+                    license_id = lic_id
+                    user_id = user.id
+                    can_create_centers = False
+                    can_delete_centers = False
+                    can_manage_users = True
+                    is_active = True
+                    license = lic_obj
+                license_admin = _ProxyLicenseAdmin()
+            else:
+                return jsonify({'error': 'No tiene una licencia asignada'}), 403
         
         # Pasar la licencia al contexto
         kwargs['license_admin'] = license_admin

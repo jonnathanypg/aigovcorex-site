@@ -626,10 +626,13 @@ def update_child(child_id):
         if not child:
             return jsonify({'error': 'Niño no encontrado'}), 404
         
-        # Educator/coordinator without manage_center can only edit their assigned children (already enforced above for educator)
-        if current_user.role.name not in ['license_admin', 'supervisor', 'center_coordinator', 'coordinator'] and current_user.role.name not in ['educadora', 'educator']:
-            if not current_user.has_permission('manage_center'):
-                return jsonify({'error': 'Permiso denegado'}), 403
+        # Roles autorizados para gestionar y actualizar ficha/estado de niños
+        allowed_child_managers = [
+            'license_admin', 'supervisor', 'center_coordinator', 'coordinator',
+            'educadora', 'educator', 'psychologist', 'social_worker', 'doctor', 'administrative'
+        ]
+        if current_user.role.name not in allowed_child_managers and not current_user.has_permission('manage_center'):
+            return jsonify({'error': 'Permiso denegado'}), 403
         
         data = request.get_json()
         

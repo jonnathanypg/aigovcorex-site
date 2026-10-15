@@ -20,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, FileEdit, Trash2, UserPlus, Loader2, Users, TrendingUp, FileDown, Eye, Printer } from "lucide-react";
+import { MoreHorizontal, FileEdit, Trash2, UserPlus, Loader2, Users, TrendingUp, FileDown, Eye, Printer, LogOut, UserCheck } from "lucide-react";
 import { Progress } from "../ui/progress";
 import { completeness } from "@/lib/cmci/engine";
 import Link from "next/link";
@@ -367,6 +367,37 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                                         <DropdownMenuItem onClick={() => openEdit(record)}>
                                                             <FileEdit className="mr-2 h-4 w-4" /> Editar Información
                                                         </DropdownMenuItem>
+                                                        {record.status === 'activo' ? (
+                                                            <DropdownMenuItem
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await childrenService.update(record.id, { status: 'egresado' });
+                                                                        toast({ title: "Estado Actualizado", description: `${record.full_name} marcado como Egresado.` });
+                                                                        loadChildren();
+                                                                    } catch (err: any) {
+                                                                        toast({ title: "Error", description: err.response?.data?.error || "No se pudo cambiar el estado", variant: "destructive" });
+                                                                    }
+                                                                }}
+                                                                className="text-amber-500 font-medium"
+                                                            >
+                                                                <LogOut className="mr-2 h-4 w-4" /> Marcar como Egresado
+                                                            </DropdownMenuItem>
+                                                        ) : (
+                                                            <DropdownMenuItem
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await childrenService.update(record.id, { status: 'activo' });
+                                                                        toast({ title: "Estado Actualizado", description: `${record.full_name} reactivado como Activo.` });
+                                                                        loadChildren();
+                                                                    } catch (err: any) {
+                                                                        toast({ title: "Error", description: err.response?.data?.error || "No se pudo cambiar el estado", variant: "destructive" });
+                                                                    }
+                                                                }}
+                                                                className="text-emerald-500 font-medium"
+                                                            >
+                                                                <UserCheck className="mr-2 h-4 w-4" /> Reactivar a Activo
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuItem onClick={() => openReps(record)}>
                                                             <Users className="mr-2 h-4 w-4" /> Representantes
                                                         </DropdownMenuItem>

@@ -311,29 +311,6 @@ export function ChildRecordForm({ form, onSubmit, onCancel, isEditing, effective
               </div>
             )}
 
-            {/* If Admin, show Status separately or reuse layout */}
-            {isLicenseAdmin && (
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estado</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="activo">Activo</SelectItem>
-                        <SelectItem value="inactivo">Inactivo</SelectItem>
-                        <SelectItem value="egresado">Egresado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
           </TabsContent>
 
           {/* ─── Tab 2: Familia ─── */}

@@ -57,12 +57,20 @@ export function UsersClient() {
     const loadData = useCallback(async () => {
         try {
             setIsLoading(true);
-            const [usersData, centersData] = await Promise.all([
+            const [usersRes, centersRes] = await Promise.allSettled([
                 licenseAdminService.getUsers(),
                 licenseAdminService.getCenters()
             ]);
-            setUsers(usersData);
-            setCenters(centersData);
+            if (usersRes.status === "fulfilled") {
+                setUsers(usersRes.value);
+            } else {
+                console.error("Error loading users:", usersRes.reason);
+            }
+            if (centersRes.status === "fulfilled") {
+                setCenters(centersRes.value);
+            } else {
+                console.error("Error loading centers in users view:", centersRes.reason);
+            }
         } catch (error) {
             console.error("Error loading data:", error);
         } finally {

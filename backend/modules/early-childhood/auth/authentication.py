@@ -65,9 +65,11 @@ def _get_user_modules(user) -> list:
                 if lic:
                     return lic.get_enabled_modules()
         
-        return ALL_MODULES
-    except Exception:
-        return ALL_MODULES
+        return ['kindicore']
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error resolving user modules: {e}")
+        return ['kindicore']
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -173,7 +175,7 @@ def get_license_modules():
         current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         if not user:
-            return jsonify({'enabled_modules': ['kindicore', 'social', 'geo', 'channels', 'copilot']}), 200
+            return jsonify({'enabled_modules': ['kindicore']}), 200
         
         modules = _get_user_modules(user)
         return jsonify({
@@ -181,7 +183,7 @@ def get_license_modules():
             'is_super_admin': bool(user.role and user.role.name == 'super_admin')
         }), 200
     except Exception as e:
-        return jsonify({'enabled_modules': ['kindicore', 'social', 'geo', 'channels', 'copilot']}), 200
+        return jsonify({'enabled_modules': ['kindicore']}), 200
 
 
 @auth_bp.route('/logout', methods=['POST'])

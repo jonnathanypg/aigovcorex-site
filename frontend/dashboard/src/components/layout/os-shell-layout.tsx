@@ -9,6 +9,9 @@ import { AppHeader } from './app-header';
 import { ChatWidget } from '@/components/chat';
 import { OS_MODULES, getModuleByRoute, type ModuleId } from '@/lib/os-modules';
 import { cn } from '@/lib/utils';
+import { useLicense } from '@/contexts/license-context';
+import { Lock, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function OSShellLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -58,7 +61,9 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
     [activeModule, router],
   );
 
+  const { hasModule, isSuperAdmin, isLoading: licenseLoading } = useLicense();
   const currentMod = OS_MODULES.find(m => m.id === activeModule);
+  const isModuleAllowed = !currentMod || isSuperAdmin || hasModule(currentMod.id);
 
   return (
     <div className="os-shell-root flex h-screen w-full overflow-hidden bg-background">
@@ -101,7 +106,31 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
             'pb-4 md:pb-0 mb-16 md:mb-0',
           )}
         >
-          <div className="p-4 lg:p-6 min-h-full">{children}</div>
+          <div className="p-4 lg:p-6 min-h-full">
+            {!licenseLoading && !isModuleAllowed ? (
+              <div className="flex flex-col items-center justify-center min-h-[450px] p-8 text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                  <Lock className="w-8 h-8" />
+                </div>
+                <div className="space-y-1.5 max-w-md">
+                  <h2 className="text-xl font-bold text-foreground">Módulo No Habilitado</h2>
+                  <p className="text-sm text-muted-foreground">
+                    El módulo <span className="font-semibold text-foreground">{currentMod?.label}</span> no está habilitado para la licencia de su organización.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push('/dashboard')}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Volver a KindiCore
+                </Button>
+              </div>
+            ) : (
+              children
+            )}
+          </div>
         </main>
       </div>
 

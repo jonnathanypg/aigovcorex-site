@@ -28,7 +28,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
     const [centers, setCenters] = useState<Center[]>([]);
     const [selectedCenterId, setSelectedCenterId] = useState<number | 'all'>('all');
     const [isLoading, setIsLoading] = useState(true);
-    const [enabledModules, setEnabledModules] = useState<string[]>(ALL_MODULES);
+    const [enabledModules, setEnabledModules] = useState<string[]>(['kindicore']);
     const pathname = usePathname();
 
     const loadEnabledModules = useCallback(async (user: any) => {
@@ -42,27 +42,39 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            // 1. Check if user object from login/me already has enabled_modules
+            // 1. Fetch from authoritative API directly (validates active license modules)
+            try {
+                const { data } = await api.get('/api/auth/license-modules');
+                if (data?.enabled_modules && Array.isArray(data.enabled_modules)) {
+                    setEnabledModules(data.enabled_modules);
+                    // Sync updated modules to localStorage so stale caches are overwritten
+                    if (typeof window !== 'undefined') {
+                        const stored = localStorage.getItem('user');
+                        if (stored) {
+                            try {
+                                const parsed = JSON.parse(stored);
+                                parsed.enabled_modules = data.enabled_modules;
+                                localStorage.setItem('user', JSON.stringify(parsed));
+                            } catch { }
+                        }
+                    }
+                    return;
+                }
+            } catch (err) {
+                console.warn("[license-context] Could not fetch license-modules from API, using fallback:", err);
+            }
+
+            // 2. Offline / network error fallback: use stored user modules if present
             if (user?.enabled_modules && Array.isArray(user.enabled_modules) && user.enabled_modules.length > 0) {
                 setEnabledModules(user.enabled_modules);
                 return;
             }
 
-            // 2. Fetch from dedicated API
-            try {
-                const { data } = await api.get('/api/auth/license-modules');
-                if (data?.enabled_modules && Array.isArray(data.enabled_modules)) {
-                    setEnabledModules(data.enabled_modules);
-                    return;
-                }
-            } catch {
-                // Fallback to default
-            }
-
-            setEnabledModules(ALL_MODULES);
+            // Default safe fallback: core module only
+            setEnabledModules(['kindicore']);
         } catch (error) {
             console.error("Error loading enabled modules:", error);
-            setEnabledModules(ALL_MODULES);
+            setEnabledModules(['kindicore']);
         }
     }, []);
 
@@ -153,8 +165,8 @@ export function useLicense() {
             setSelectedCenterId: () => { },
             isLoading: false,
             refreshCenters: async () => { },
-            enabledModules: ALL_MODULES,
-            hasModule: () => true,
+            enabledModules: ['kindicore'],
+            hasModule: (moduleId: string) => moduleId === 'kindicore',
         } as LicenseContextType;
     }
     return context;

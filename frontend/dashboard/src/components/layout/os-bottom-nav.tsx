@@ -30,7 +30,7 @@ export function OSBottomNav({ activeModule, onModuleChange, isSubNavOpen, onTogg
   ).slice(0, 5);
 
   return (
-    <nav className="os-bottom-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 md:hidden">
+    <nav className="os-bottom-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 md:hidden print:hidden">
       {visibleModules.map((mod) => {
         const Icon = mod.icon;
         const isActive = activeModule === mod.id;

@@ -111,6 +111,10 @@ class License(db.Model):
     servicios_text = db.Column(db.Text, nullable=True)               # Servicios brindados
     print_footer_note = db.Column(db.String(500), nullable=True)     # Nota legal al pie de expedientes
 
+    # ── Membrete Oficial (Cabecera y Pie de página con marca de agua) ──
+    header_banner_path = db.Column(db.String(500), nullable=True)    # Imagen de cabecera de membrete
+    footer_banner_path = db.Column(db.String(500), nullable=True)    # Imagen de pie de membrete (fondo detrás del contenido)
+
 
     # ── Métodos de módulos ───────────────────────────────────────────
 
@@ -192,6 +196,8 @@ class License(db.Model):
             'objetivo_text': self.objetivo_text,
             'servicios_text': self.servicios_text,
             'print_footer_note': self.print_footer_note,
+            'header_banner_path': self.header_banner_path,
+            'footer_banner_path': self.footer_banner_path,
         }
 
     # ── Métodos de estado ─────────────────────────────────────────────

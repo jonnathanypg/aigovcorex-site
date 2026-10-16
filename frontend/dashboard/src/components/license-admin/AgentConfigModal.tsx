@@ -48,19 +48,24 @@ export function AgentConfigModal({ isOpen, onClose }: AgentConfigModalProps) {
     // Sponsor Logos State
     const [logos, setLogos] = useState<SponsorLogo[]>([]);
 
+    // Official Membrete Banners State
+    const [headerBanner, setHeaderBanner] = useState<string | null>(null);
+    const [footerBanner, setFooterBanner] = useState<string | null>(null);
+    const [isUploadingBanner, setIsUploadingBanner] = useState<string | null>(null);
+
     // API URL Base for image display (assuming backend serves static files)
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     const getImageUrl = (path: string | null) => {
         if (!path) return null;
-        if (path.startsWith('http')) return path;
-        return `${API_URL}${path}`;
+        if (path.startsWith('http') || path.startsWith('blob:')) return path;
+        return `${API_URL}${path.startsWith('/') ? path : `/${path}`}`;
     };
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
-            // Load License Data (Agent Config)
+            // Load License Data (Agent Config + Membretes)
             const dashboardData = await licenseAdminService.getDashboard();
             if (dashboardData.license) {
                 setAgentName(dashboardData.license.agent_name || 'KindiCore AI');
@@ -68,6 +73,8 @@ export function AgentConfigModal({ isOpen, onClose }: AgentConfigModalProps) {
                 setAgentIcon(dashboardData.license.agent_icon_path || null);
                 setAgentVoice(dashboardData.license.agent_voice || 'es-EC-LuisNeural');
                 setTimezone(dashboardData.license.timezone || 'America/Guayaquil');
+                setHeaderBanner((dashboardData.license as any).header_banner_path || '/membretes/membrete-gasiba-cabezera.png');
+                setFooterBanner((dashboardData.license as any).footer_banner_path || '/membretes/membrete-gasiba-pie.png');
             }
 
             // Load Sponsor Logos
@@ -162,13 +169,58 @@ export function AgentConfigModal({ isOpen, onClose }: AgentConfigModalProps) {
         }
     };
 
+    const handleUploadBanner = async (type: 'header_banner' | 'footer_banner', e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || !e.target.files[0]) return;
+        const file = e.target.files[0];
+        try {
+            setIsUploadingBanner(type);
+            const res = await licenseAdminService.uploadBanner(type, file);
+            if (type === 'header_banner') {
+                setHeaderBanner(res.file_path);
+            } else {
+                setFooterBanner(res.file_path);
+            }
+            queryClient.invalidateQueries({ queryKey: ['licenseAdminDashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['publicConfig'] });
+            toast.success(type === 'header_banner' ? 'Cabecera de membrete actualizada' : 'Pie de membrete actualizado');
+        } catch (error) {
+            console.error('Error uploading banner:', error);
+            toast.error('Error al subir imagen del membrete');
+        } finally {
+            setIsUploadingBanner(null);
+            e.target.value = '';
+        }
+    };
+
+    const handleRemoveBanner = async (type: 'header_banner' | 'footer_banner') => {
+        try {
+            setIsUploadingBanner(type);
+            await licenseAdminService.updateOrganization({
+                [type]: null as any
+            });
+            if (type === 'header_banner') {
+                setHeaderBanner(null);
+            } else {
+                setFooterBanner(null);
+            }
+            queryClient.invalidateQueries({ queryKey: ['licenseAdminDashboard'] });
+            queryClient.invalidateQueries({ queryKey: ['publicConfig'] });
+            toast.success('Membrete removido');
+        } catch (error) {
+            console.error('Error removing banner:', error);
+            toast.error('Error al remover membrete');
+        } finally {
+            setIsUploadingBanner(null);
+        }
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[650px] max-h-[88vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Configuración de Licencia</DialogTitle>
+                    <DialogTitle>Personalización de Licencia y Branding</DialogTitle>
                     <DialogDescription>
-                        Personalice la identidad del agente, zona horaria y patrocinadores.
+                        Personalice identidad del agente, zona horaria, logos de patrocinadores y membretes oficiales de impresión.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -291,41 +343,147 @@ export function AgentConfigModal({ isOpen, onClose }: AgentConfigModalProps) {
                             </DialogFooter>
                         </TabsContent>
 
-                        <TabsContent value="sponsors" className="space-y-4 py-4">
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors cursor-pointer relative">
-                                <Upload className="h-8 w-8 text-gray-400" />
-                                <span className="text-sm font-medium text-gray-600">
-                                    Clic para subir logo de patrocinador
-                                </span>
-                                <Input
-                                    type="file"
-                                    accept="image/*"
-                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                    onChange={handleAddLogo}
-                                />
+                        <TabsContent value="sponsors" className="space-y-6 py-4">
+                            {/* Membretes Oficiales para Impresión (Cabecera y Pie de página) */}
+                            <div className="space-y-4 rounded-xl border border-border/60 bg-muted/20 p-4">
+                                <div>
+                                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                        📄 Membretes Oficiales para Fichas y Reportes
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        Configure la cabecera institucional y el pie de página con marca de agua que se aplican automáticamente a la impresión en ancho total.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Casilla 1: Cabecera de Membrete */}
+                                    <div className="flex flex-col gap-2 p-3 border rounded-lg bg-card/60">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs font-semibold">Cabecera de Membrete</Label>
+                                            {headerBanner && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveBanner('header_banner')}
+                                                    className="h-6 px-1.5 text-xs text-destructive hover:bg-destructive/10"
+                                                    disabled={isUploadingBanner === 'header_banner'}
+                                                >
+                                                    <Trash2 className="h-3 w-3 mr-1" /> Quitar
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <div className="relative border-2 border-dashed border-border/80 rounded-md p-3 flex flex-col items-center justify-center min-h-[90px] bg-background/50 hover:bg-background/80 transition-colors">
+                                            {headerBanner ? (
+                                                <img
+                                                    src={getImageUrl(headerBanner) || ''}
+                                                    alt="Cabecera Membrete"
+                                                    className="max-h-16 w-auto object-contain rounded"
+                                                />
+                                            ) : (
+                                                <div className="text-center">
+                                                    <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
+                                                    <span className="text-[11px] text-muted-foreground block">
+                                                        Subir Cabecera (PNG/JPG)
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <Input
+                                                type="file"
+                                                accept="image/*"
+                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                disabled={isUploadingBanner === 'header_banner'}
+                                                onChange={(e) => handleUploadBanner('header_banner', e)}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Aparece arriba en toda la hoja (ej. DASE EP / GASIBA).
+                                        </p>
+                                    </div>
+
+                                    {/* Casilla 2: Pie de Membrete */}
+                                    <div className="flex flex-col gap-2 p-3 border rounded-lg bg-card/60">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs font-semibold">Pie de Membrete (Fondo)</Label>
+                                            {footerBanner && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveBanner('footer_banner')}
+                                                    className="h-6 px-1.5 text-xs text-destructive hover:bg-destructive/10"
+                                                    disabled={isUploadingBanner === 'footer_banner'}
+                                                >
+                                                    <Trash2 className="h-3 w-3 mr-1" /> Quitar
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <div className="relative border-2 border-dashed border-border/80 rounded-md p-3 flex flex-col items-center justify-center min-h-[90px] bg-background/50 hover:bg-background/80 transition-colors">
+                                            {footerBanner ? (
+                                                <img
+                                                    src={getImageUrl(footerBanner) || ''}
+                                                    alt="Pie de Membrete"
+                                                    className="max-h-16 w-auto object-contain rounded"
+                                                />
+                                            ) : (
+                                                <div className="text-center">
+                                                    <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
+                                                    <span className="text-[11px] text-muted-foreground block">
+                                                        Subir Pie de Membrete (PNG/JPG)
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <Input
+                                                type="file"
+                                                accept="image/*"
+                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                disabled={isUploadingBanner === 'footer_banner'}
+                                                onChange={(e) => handleUploadBanner('footer_banner', e)}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            Se posiciona al fondo por detrás del texto ocupando el ancho total.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4 mt-4">
-                                {logos.map((logo) => (
-                                    <div key={logo.id} className="relative group border rounded-lg p-2 flex items-center justify-center bg-white aspect-square shadow-sm">
-                                        <img
-                                            src={getImageUrl(logo.logo_path) || ''}
-                                            alt="Sponsor Logo"
-                                            className="max-w-full max-h-full object-contain"
-                                        />
-                                        <button
-                                            onClick={() => handleDeleteLogo(logo.id)}
-                                            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-                                        >
-                                            <Trash2 className="h-3 w-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                                {logos.length === 0 && (
-                                    <div className="col-span-3 text-center text-muted-foreground py-8 text-sm">
-                                        No hay logos registrados.
-                                    </div>
-                                )}
+                            {/* Logos de Patrocinadores Adicionales */}
+                            <div className="space-y-3">
+                                <Label className="text-xs font-semibold">Logos de Patrocinadores y Aliados</Label>
+                                <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer relative">
+                                    <Upload className="h-6 w-6 text-gray-400" />
+                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                                        Clic para agregar logo adicional
+                                    </span>
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                        onChange={handleAddLogo}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-3 mt-3">
+                                    {logos.map((logo) => (
+                                        <div key={logo.id} className="relative group border rounded-lg p-2 flex items-center justify-center bg-white aspect-square shadow-sm">
+                                            <img
+                                                src={getImageUrl(logo.logo_path) || ''}
+                                                alt="Sponsor Logo"
+                                                className="max-w-full max-h-full object-contain"
+                                            />
+                                            <button
+                                                onClick={() => handleDeleteLogo(logo.id)}
+                                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {logos.length === 0 && (
+                                        <div className="col-span-3 text-center text-muted-foreground py-4 text-xs">
+                                            No hay logos adicionales registrados.
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </TabsContent>
                     </Tabs>

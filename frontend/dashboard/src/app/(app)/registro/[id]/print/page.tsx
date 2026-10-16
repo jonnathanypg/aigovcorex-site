@@ -77,6 +77,8 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
     servicios_text: childLicense.servicios_text || orgConfig?.servicios_text,
     print_footer_note: childLicense.print_footer_note || orgConfig?.print_footer_note,
     license_name: childLicense.name || orgConfig?.license_name,
+    header_banner_path: childLicense.header_banner_path || orgConfig?.header_banner_path || '/membretes/membrete-gasiba-cabezera.png',
+    footer_banner_path: childLicense.footer_banner_path || orgConfig?.footer_banner_path || '/membretes/membrete-gasiba-pie.png',
   };
 
   const institutionsHeader = activeConfig.institutions_header || "DASE EP  ·  FUNDACIÓN GASIBA  ·  M.I. MUNICIPALIDAD DE GUAYAQUIL";
@@ -87,6 +89,18 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   const objetivo = activeConfig.objetivo_text || CMCI_CONVENIO_DEFAULTS.objetivo;
   const servicios = activeConfig.servicios_text || CMCI_CONVENIO_DEFAULTS.servicios;
   const footerNote = activeConfig.print_footer_note || "Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.";
+
+  const headerBannerUrl = activeConfig.header_banner_path ? (
+    activeConfig.header_banner_path.startsWith('http') || activeConfig.header_banner_path.startsWith('/') 
+      ? activeConfig.header_banner_path 
+      : `/${activeConfig.header_banner_path}`
+  ) : null;
+
+  const footerBannerUrl = activeConfig.footer_banner_path ? (
+    activeConfig.footer_banner_path.startsWith('http') || activeConfig.footer_banner_path.startsWith('/')
+      ? activeConfig.footer_banner_path
+      : `/${activeConfig.footer_banner_path}`
+  ) : null;
 
   // Semáforo de completitud de expediente
   const checks: Array<[string, unknown]> = [
@@ -162,8 +176,33 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 1
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="p-8 print:p-8 min-h-[297mm] flex flex-col justify-between print:break-after-page">
-            <div>
+          <div className="relative p-8 print:p-8 min-h-[297mm] flex flex-col justify-between print:break-after-page overflow-hidden">
+            {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
+            {footerBannerUrl && (
+              <div 
+                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-90 overflow-hidden flex items-end justify-center"
+                style={{ height: '140mm' }}
+              >
+                <img
+                  src={footerBannerUrl}
+                  alt="Pie de membrete"
+                  className="w-full h-auto object-contain object-bottom opacity-95"
+                />
+              </div>
+            )}
+
+            <div className="relative z-10">
+              {/* Cabecera Gráfica de Membrete Oficial (Ancho total) */}
+              {headerBannerUrl && (
+                <div className="w-full mb-3 -mt-2">
+                  <img
+                    src={headerBannerUrl}
+                    alt="Cabecera Membrete"
+                    className="w-full h-auto object-contain max-h-[38mm]"
+                  />
+                </div>
+              )}
+
               {/* Encabezado Superior: Instituciones Cooperantes Dinámicas */}
               <div className="border-b-2 border-black pb-1 mb-2">
                 <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
@@ -378,8 +417,33 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 2
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="p-8 print:p-8 min-h-[297mm] flex flex-col justify-between border-t print:border-none">
-            <div>
+          <div className="relative p-8 print:p-8 min-h-[297mm] flex flex-col justify-between border-t print:border-none overflow-hidden">
+            {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
+            {footerBannerUrl && (
+              <div 
+                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-90 overflow-hidden flex items-end justify-center"
+                style={{ height: '140mm' }}
+              >
+                <img
+                  src={footerBannerUrl}
+                  alt="Pie de membrete"
+                  className="w-full h-auto object-contain object-bottom opacity-95"
+                />
+              </div>
+            )}
+
+            <div className="relative z-10">
+              {/* Cabecera Gráfica de Membrete Oficial (Ancho total) */}
+              {headerBannerUrl && (
+                <div className="w-full mb-3 -mt-2">
+                  <img
+                    src={headerBannerUrl}
+                    alt="Cabecera Membrete"
+                    className="w-full h-auto object-contain max-h-[38mm]"
+                  />
+                </div>
+              )}
+
               {/* Encabezado Superior Página 2 */}
               <div className="border-b-2 border-black pb-1 mb-3">
                 <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
@@ -536,9 +600,9 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 </div>
               </div>
 
-              {/* SECCIÓN DE FIRMAS FÍSICAS (EDUCADORA, COORDINADORA Y REPRESENTANTE LEGAL SEGÚN FORMATO DASE/GASIBA) */}
+              {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
               <div className="mt-14 pt-4">
-                <div className="grid grid-cols-3 gap-8 px-2">
+                <div className="grid grid-cols-2 gap-16 px-12">
                   {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">
                     <div className="border-t border-slate-400 pt-1.5">
@@ -552,14 +616,6 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                     <div className="border-t border-slate-400 pt-1.5">
                       <p className="font-semibold text-[10.5px] text-slate-600">Coordinadora del Centro</p>
                       <p className="text-[10px] text-slate-500 mt-0.5">Firma, sello y fecha</p>
-                    </div>
-                  </div>
-
-                  {/* Firma 3: Representante Legal */}
-                  <div className="text-center">
-                    <div className="border-t border-slate-400 pt-1.5">
-                      <p className="font-semibold text-[10.5px] text-slate-600">Representante legal</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{cell(primaryRep.full_name || `${primaryRep.first_name || ""} ${primaryRep.last_name || ""}`.trim(), "Firma")}</p>
                     </div>
                   </div>
                 </div>

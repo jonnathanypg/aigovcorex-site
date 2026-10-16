@@ -78,6 +78,17 @@ def get_children():
                     db.func.concat(Child.first_name, ' ', Child.last_name).ilike(f'%{search}%')
                 )
             )
+
+        # Filtro por educadora asignada (para coordinadoras, supervisores y administradores)
+        educator_id = request.args.get('educator_id')
+        if educator_id and educator_id != 'all':
+            if educator_id == 'unassigned' or educator_id == 'none':
+                query = query.filter(Child.assigned_educator_id.is_(None))
+            else:
+                try:
+                    query = query.filter(Child.assigned_educator_id == int(educator_id))
+                except (ValueError, TypeError):
+                    pass
         
         children = query.order_by(Child.last_name.asc(), Child.first_name.asc()).all()
         

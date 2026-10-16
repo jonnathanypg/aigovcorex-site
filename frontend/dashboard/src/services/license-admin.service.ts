@@ -217,6 +217,18 @@ export const licenseAdminService = {
         await api.delete(`/api/license-admin/logos/${logoId}`);
     },
 
+    uploadBanner: async (type: 'header_banner' | 'footer_banner', file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_type', type);
+        const response = await api.post<{ message: string; file_path: string; upload_type: string }>(
+            '/api/license-admin/upload',
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        return response.data;
+    },
+
     getPublicConfig: async () => {
         const response = await api.get<{
             license_name: string;
@@ -232,6 +244,8 @@ export const licenseAdminService = {
             objetivo_text?: string | null;
             servicios_text?: string | null;
             print_footer_note?: string | null;
+            header_banner_path?: string | null;
+            footer_banner_path?: string | null;
         }>('/api/license-admin/public-config');
         return response.data;
     },
@@ -264,6 +278,8 @@ export const licenseAdminService = {
             objetivo_text?: string | null;
             servicios_text?: string | null;
             print_footer_note?: string | null;
+            header_banner_path?: string | null;
+            footer_banner_path?: string | null;
         }>('/api/license-admin/organization');
         return response.data;
     },
@@ -284,6 +300,8 @@ export const licenseAdminService = {
         objetivo_text?: string;
         servicios_text?: string;
         print_footer_note?: string;
+        header_banner_path?: string;
+        footer_banner_path?: string;
     }) => {
         const response = await api.put<{
             message: string;
@@ -292,6 +310,8 @@ export const licenseAdminService = {
             description: string;
             institutions_header?: string;
             project_name?: string;
+            header_banner_path?: string;
+            footer_banner_path?: string;
         }>('/api/license-admin/organization', data);
         return response.data;
     },

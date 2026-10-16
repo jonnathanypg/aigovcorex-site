@@ -5,6 +5,7 @@ interface GetChildrenParams {
     status?: string;
     search?: string;
     tenantId?: number;
+    educatorId?: string | number;
 }
 
 interface ChildrenResponse {
@@ -30,8 +31,9 @@ export interface EducatorsResponse {
 }
 
 export const childrenService = {
-    async getEducators(tenantId: number): Promise<EducatorsResponse> {
-        const { data } = await api.get<EducatorsResponse>(`/api/children/educators?tenant_id=${tenantId}`);
+    async getEducators(tenantId?: number): Promise<EducatorsResponse> {
+        const url = tenantId ? `/api/children/educators?tenant_id=${tenantId}` : '/api/children/educators';
+        const { data } = await api.get<EducatorsResponse>(url);
         return data;
     },
 
@@ -40,6 +42,7 @@ export const childrenService = {
         if (params?.status) queryParams.append('status', params.status);
         if (params?.search) queryParams.append('search', params.search);
         if (params?.tenantId) queryParams.append('tenant_id', params.tenantId.toString());
+        if (params?.educatorId) queryParams.append('educator_id', params.educatorId.toString());
 
         const url = queryParams.toString()
             ? `/api/children?${queryParams.toString()}`

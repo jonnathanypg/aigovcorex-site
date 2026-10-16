@@ -155,6 +155,20 @@ def create_app(config_name=None):
     def health():
         """Health check endpoint"""
         return jsonify({'status': 'healthy'}), 200
+
+    @app.route('/uploads/<path:filename>')
+    def serve_uploads(filename):
+        """Serve uploaded media files safely"""
+        from flask import send_from_directory
+        uploads_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+        return send_from_directory(uploads_dir, filename)
+
+    @app.route('/membretes/<path:filename>')
+    def serve_membretes(filename):
+        """Serve official membrete header and footer images"""
+        from flask import send_from_directory
+        membretes_dir = os.path.join(os.path.dirname(__file__), 'uploads', 'membretes')
+        return send_from_directory(membretes_dir, filename)
     
     # Initialize database
     with app.app_context():
@@ -208,6 +222,8 @@ def create_app(config_name=None):
                 "ALTER TABLE licenses ADD COLUMN objetivo_text TEXT NULL",
                 "ALTER TABLE licenses ADD COLUMN servicios_text TEXT NULL",
                 "ALTER TABLE licenses ADD COLUMN print_footer_note VARCHAR(500) NULL",
+                "ALTER TABLE licenses ADD COLUMN header_banner_path VARCHAR(500) NULL",
+                "ALTER TABLE licenses ADD COLUMN footer_banner_path VARCHAR(500) NULL",
             ]:
                 try:
                     db.session.execute(text(col_sql))
@@ -236,7 +252,9 @@ def create_app(config_name=None):
                     l.poblacion_text = IF(l.poblacion_text IS NULL OR l.poblacion_text = '', 'Niñas y niños de 12 a 42 meses y sus familias (centros BH / GU / OR)', l.poblacion_text),
                     l.objetivo_text = IF(l.objetivo_text IS NULL OR l.objetivo_text = '', 'Garantizar cuidado, nutrición, salud y desarrollo infantil integral con priorización por vulnerabilidad', l.objetivo_text),
                     l.servicios_text = IF(l.servicios_text IS NULL OR l.servicios_text = '', 'Cuidado diario · Alimentación (4 tiempos) · Salud y crecimiento · Desarrollo infantil · Acompañamiento familiar', l.servicios_text),
-                    l.print_footer_note = IF(l.print_footer_note IS NULL OR l.print_footer_note = '', 'Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.', l.print_footer_note)
+                    l.print_footer_note = IF(l.print_footer_note IS NULL OR l.print_footer_note = '', 'Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.', l.print_footer_note),
+                    l.header_banner_path = IF(l.header_banner_path IS NULL OR l.header_banner_path = '', '/membretes/membrete-gasiba-cabezera.png', l.header_banner_path),
+                    l.footer_banner_path = IF(l.footer_banner_path IS NULL OR l.footer_banner_path = '', '/membretes/membrete-gasiba-pie.png', l.footer_banner_path)
                 WHERE u.email = 'jgastiaburo@gasiba.org' OR l.id = 1
                 """
                 db.session.execute(text(seed_sql))

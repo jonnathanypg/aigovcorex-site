@@ -148,7 +148,7 @@ export function OSSubNavPanel({ activeModule, isOpen, onClose, onNavigate }: OSS
       {/* Mobile Drawer (Bottom Sheet or Slide-up above Bottom Nav) */}
       <div
         className={cn(
-          'fixed inset-x-0 bottom-14 z-40 max-h-[75vh] flex flex-col rounded-t-2xl shadow-2xl border-t border-border/80 md:hidden transition-transform duration-300 ease-in-out',
+          'fixed inset-x-0 bottom-14 z-40 max-h-[75vh] flex flex-col rounded-t-2xl shadow-2xl border-t border-border/80 md:hidden print:hidden transition-transform duration-300 ease-in-out',
           'bg-background/95 backdrop-blur-2xl text-foreground',
           isOpen ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'
         )}

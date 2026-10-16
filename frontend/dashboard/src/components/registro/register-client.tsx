@@ -76,6 +76,10 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
     const [onlyIncomplete, setOnlyIncomplete] = useState(false);
     const [viewChild, setViewChild] = useState<Child | null>(null);
 
+    // Filtro de Educadora asignada (Audio 1 y Audio 2)
+    const [educatorFilter, setEducatorFilter] = useState<string>("all");
+    const [educatorsList, setEducatorsList] = useState<Array<{ id: number; full_name: string }>>([]);
+
     /** Completitud §10.4 heurística cliente (TODO F1-backend: profile_completeness real con IDII/tomas vigentes). */
     const getCompleteness = (r: Child) => completeness({
         vuln: !!(r.cedula && r.enrollment_date),
@@ -88,6 +92,25 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
     useEffect(() => {
         setStatusFilter(tab === "activos" ? "activo" : tab === "egresados" ? "egresado" : "all");
     }, [tab]);
+
+    // Cargar educadoras del centro o licencia para el selector de filtro
+    useEffect(() => {
+        const loadEducators = async () => {
+            try {
+                const targetTenant = tenantId || center?.id;
+                const res = await childrenService.getEducators(targetTenant);
+                if (res?.educators) {
+                    setEducatorsList(res.educators.map((e: any) => ({
+                        id: e.id,
+                        full_name: e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim()
+                    })));
+                }
+            } catch (err) {
+                // Silencioso si el rol no tiene permiso o no hay centro
+            }
+        };
+        loadEducators();
+    }, [tenantId, center?.id]);
 
     // Edit Dialog State
     const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -106,7 +129,8 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
             setIsLoading(true);
             const data = await childrenService.getAll({
                 status: statusFilter,
-                tenantId
+                tenantId,
+                educatorId: educatorFilter
             });
             setRecords(data);
         } catch (error) {
@@ -115,7 +139,7 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
         } finally {
             setIsLoading(false);
         }
-    }, [statusFilter, tenantId, toast]);
+    }, [statusFilter, tenantId, educatorFilter, toast]);
 
     useEffect(() => {
         loadChildren();
@@ -256,23 +280,39 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                     </Button>
                 </div>
                 <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
-                    <div className="flex flex-col sm:flex-row gap-2 w-full md:max-w-xl">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:max-w-3xl">
                         <Input
                             placeholder="Buscar por nombre o cédula..."
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
-                            className="bg-background/50 flex-1"
+                            className="bg-background/50 flex-1 min-w-[180px]"
                         />
                         <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full sm:w-[160px] bg-background/50">
+                            <SelectTrigger className="w-full sm:w-[140px] bg-background/50">
                                 <SelectValue placeholder="Estado" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
+                                <SelectItem value="all">Todos los estados</SelectItem>
                                 <SelectItem value="activo">Activos</SelectItem>
                                 <SelectItem value="inactivo">Inactivos</SelectItem>
                                 <SelectItem value="egresado">Egresados</SelectItem>
                                 <SelectItem value="lista_espera">Lista de Espera</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {/* Filtro por Educadora (Audio 1 y Audio 2) */}
+                        <Select value={educatorFilter} onValueChange={setEducatorFilter}>
+                            <SelectTrigger className="w-full sm:w-[200px] bg-background/50">
+                                <SelectValue placeholder="Filtrar por Educadora" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las educadoras</SelectItem>
+                                <SelectItem value="unassigned">⚠️ Sin educadora asignada</SelectItem>
+                                {educatorsList.map((edu) => (
+                                    <SelectItem key={edu.id} value={String(edu.id)}>
+                                        👩‍🏫 {edu.full_name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -294,6 +334,7 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                             <TableRow className="hidden md:table-row hover:bg-transparent">
                                 <TableHead>Cédula Identidad</TableHead>
                                 <TableHead>Nombre Completo</TableHead>
+                                <TableHead>Educadora Asignada</TableHead>
                                 <TableHead>Edad</TableHead>
                                 <TableHead>Completitud</TableHead>
                                 <TableHead>Estado</TableHead>
@@ -303,7 +344,7 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                         <TableBody>
                             {filteredRecords.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-4">No se encontraron registros</TableCell>
+                                    <TableCell colSpan={7} className="text-center py-4">No se encontraron registros</TableCell>
                                 </TableRow>
                             ) : filteredRecords.map((record) => {
                                 const comp = getCompleteness(record);
@@ -319,6 +360,18 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                         <TableCell>
                                             <div className="font-medium text-base">{record.full_name}</div>
                                             <div className="text-sm text-muted-foreground">{record.cedula || 'S/C'}</div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="font-semibold md:hidden mr-2">Educadora:</span>
+                                            {record.assigned_educator_name || (record as any).educator_name ? (
+                                                <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
+                                                    👩‍🏫 {record.assigned_educator_name || (record as any).educator_name}
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="secondary" className="text-xs text-amber-600 dark:text-amber-400">
+                                                    ⚠️ Sin educadora
+                                                </Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell><span className="font-semibold md:hidden mr-2">Edad:</span>{record.age_display}</TableCell>
                                         <TableCell><span className="font-semibold md:hidden mr-2">Completitud:</span>{compCell}</TableCell>
@@ -343,6 +396,17 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                     <TableRow className="hidden md:table-row hover:bg-white/5">
                                         <TableCell className="font-medium">{record.cedula || 'S/C'}</TableCell>
                                         <TableCell>{record.full_name}</TableCell>
+                                        <TableCell>
+                                            {record.assigned_educator_name || (record as any).educator_name ? (
+                                                <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
+                                                    👩‍🏫 {record.assigned_educator_name || (record as any).educator_name}
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="secondary" className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20">
+                                                    ⚠️ Sin asignar
+                                                </Badge>
+                                            )}
+                                        </TableCell>
                                         <TableCell>{record.age_display}</TableCell>
                                         <TableCell>{compCell}</TableCell>
                                         <TableCell>

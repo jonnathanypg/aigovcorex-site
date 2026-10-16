@@ -56,6 +56,8 @@ def get_public_config():
             'objetivo_text': license_obj.objetivo_text if license_obj else None,
             'servicios_text': license_obj.servicios_text if license_obj else None,
             'print_footer_note': license_obj.print_footer_note if license_obj else None,
+            'header_banner_path': license_obj.header_banner_path if license_obj else None,
+            'footer_banner_path': license_obj.footer_banner_path if license_obj else None,
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -226,6 +228,8 @@ def get_organization(license_admin):
             'objetivo_text': license.objetivo_text,
             'servicios_text': license.servicios_text,
             'print_footer_note': license.print_footer_note,
+            'header_banner_path': license.header_banner_path,
+            'footer_banner_path': license.footer_banner_path,
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -263,6 +267,10 @@ def update_organization(license_admin):
             license.servicios_text = data['servicios_text']
         if 'print_footer_note' in data:
             license.print_footer_note = data['print_footer_note']
+        if 'header_banner_path' in data:
+            license.header_banner_path = data['header_banner_path']
+        if 'footer_banner_path' in data:
+            license.footer_banner_path = data['footer_banner_path']
         
         # SMTP Configuration
         if 'smtp_host' in data:
@@ -289,6 +297,8 @@ def update_organization(license_admin):
             'objetivo_text': license.objetivo_text,
             'servicios_text': license.servicios_text,
             'print_footer_note': license.print_footer_note,
+            'header_banner_path': license.header_banner_path,
+            'footer_banner_path': license.footer_banner_path,
             'smtp_host': license.smtp_host,
             'smtp_port': license.smtp_port,
             'smtp_user': license.smtp_user,
@@ -1213,6 +1223,8 @@ def upload_license_file(license_admin):
             specific_folder = 'icons'
         elif upload_type == 'sponsor_logo':
             specific_folder = 'logos'
+        elif upload_type in ('header_banner', 'footer_banner'):
+            specific_folder = 'membretes'
         else:
             return jsonify({'error': 'Tipo de subida no válido'}), 400
             
@@ -1227,13 +1239,16 @@ def upload_license_file(license_admin):
         
         file.save(file_path)
 
-        # Si es un icono de agente, actualizamos la licencia directamente
+        license_obj = license_admin.license
+        # Actualizamos la licencia según el tipo
         if upload_type == 'agent_icon':
-            license_obj = license_admin.license
-            # Opcional: eliminar el icono anterior si existe
-            # if license_obj.agent_icon_path and os.path.exists(license_obj.agent_icon_path):
-            #     os.remove(license_obj.agent_icon_path)
             license_obj.agent_icon_path = file_path
+            db.session.commit()
+        elif upload_type == 'header_banner':
+            license_obj.header_banner_path = file_path
+            db.session.commit()
+        elif upload_type == 'footer_banner':
+            license_obj.footer_banner_path = file_path
             db.session.commit()
 
         return jsonify({

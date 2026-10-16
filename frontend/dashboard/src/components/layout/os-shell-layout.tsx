@@ -102,11 +102,11 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
         {/* Content Canvas */}
         <main
           className={cn(
-            'flex-1 overflow-y-auto',
-            'pb-4 md:pb-0 mb-16 md:mb-0',
+            'flex-1 overflow-y-auto print:overflow-visible',
+            'pb-4 md:pb-0 mb-16 md:mb-0 print:mb-0 print:pb-0',
           )}
         >
-          <div className="p-4 lg:p-6 min-h-full">
+          <div className="p-4 lg:p-6 min-h-full print:p-0 print:m-0">
             {!licenseLoading && !isModuleAllowed ? (
               <div className="flex flex-col items-center justify-center min-h-[450px] p-8 text-center space-y-4">
                 <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">

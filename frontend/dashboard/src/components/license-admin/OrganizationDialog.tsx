@@ -32,6 +32,16 @@ export function OrganizationDialog({ open, onOpenChange }: OrganizationDialogPro
     const [description, setDescription] = useState("");
     const [licenseName, setLicenseName] = useState("");
 
+    // Institutional and Convenio Fields (para Fichas e Impresión dinámica)
+    const [institutionsHeader, setInstitutionsHeader] = useState("");
+    const [projectName, setProjectName] = useState("");
+    const [convenioText, setConvenioText] = useState("");
+    const [finalidadText, setFinalidadText] = useState("");
+    const [poblacionText, setPoblacionText] = useState("");
+    const [objetivoText, setObjetivoText] = useState("");
+    const [serviciosText, setServiciosText] = useState("");
+    const [printFooterNote, setPrintFooterNote] = useState("");
+
     // SMTP Fields
     const [smtpHost, setSmtpHost] = useState("");
     const [smtpPort, setSmtpPort] = useState("587");
@@ -50,6 +60,14 @@ export function OrganizationDialog({ open, onOpenChange }: OrganizationDialogPro
                 setRuc(org.ruc || "");
                 setDescription(org.description || "");
                 setLicenseName(org.license_name || "");
+                setInstitutionsHeader(org.institutions_header || "");
+                setProjectName(org.project_name || "");
+                setConvenioText(org.convenio_text || "");
+                setFinalidadText(org.finalidad_text || "");
+                setPoblacionText(org.poblacion_text || "");
+                setObjetivoText(org.objetivo_text || "");
+                setServiciosText(org.servicios_text || "");
+                setPrintFooterNote(org.print_footer_note || "");
                 setSmtpHost(org.smtp_host || "");
                 setSmtpPort(String(org.smtp_port || 587));
                 setSmtpUser(org.smtp_user || "");
@@ -73,6 +91,14 @@ export function OrganizationDialog({ open, onOpenChange }: OrganizationDialogPro
                 legal_name: legalName,
                 ruc: ruc,
                 description: description,
+                institutions_header: institutionsHeader,
+                project_name: projectName,
+                convenio_text: convenioText,
+                finalidad_text: finalidadText,
+                poblacion_text: poblacionText,
+                objetivo_text: objetivoText,
+                servicios_text: serviciosText,
+                print_footer_note: printFooterNote,
                 smtp_host: smtpHost,
                 smtp_port: parseInt(smtpPort) || 587,
                 smtp_user: smtpUser,
@@ -149,6 +175,99 @@ export function OrganizationDialog({ open, onOpenChange }: OrganizationDialogPro
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={3}
                             />
+                        </div>
+
+                        {/* ── Encabezado Institucional y Convenio (Fichas e Impresión Oficial) ── */}
+                        <Separator />
+                        <div className="space-y-3">
+                            <div>
+                                <Label className="text-base font-semibold">Instituciones y Convenio (Impresión de Fichas)</Label>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Configuración dinámica de cooperantes, títulos y convenios para que las fichas impresas muestren los datos exactos de su organización sin textos estáticos.
+                                </p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label htmlFor="org-inst-header">Instituciones / Cooperantes (Encabezado Superior)</Label>
+                                <Input
+                                    id="org-inst-header"
+                                    placeholder="Ej: DASE EP · FUNDACIÓN GASIBA · M.I. MUNICIPALIDAD DE GUAYAQUIL"
+                                    value={institutionsHeader}
+                                    onChange={(e) => setInstitutionsHeader(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label htmlFor="org-project-name">Nombre Oficial del Proyecto</Label>
+                                <Textarea
+                                    id="org-project-name"
+                                    placeholder="Ej: PROYECTO INTEGRAL DE GESTIÓN TÉCNICA Y ADMINISTRATIVA DE LOS CENTROS MUNICIPALES DE CUIDADO INFANTIL GUASMO, ORQUÍDEAS Y BAHÍA"
+                                    value={projectName}
+                                    onChange={(e) => setProjectName(e.target.value)}
+                                    rows={2}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label htmlFor="org-convenio">Convenio / Base Legal</Label>
+                                <Input
+                                    id="org-convenio"
+                                    placeholder="Ej: Convenio de cooperación interinstitucional — Centros Municipales de Cuidado Infantil (CMCI)"
+                                    value={convenioText}
+                                    onChange={(e) => setConvenioText(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label htmlFor="org-finalidad">Finalidad</Label>
+                                    <Input
+                                        id="org-finalidad"
+                                        placeholder="Ej: Atención integral a niñas y niños de 12 a 42 meses..."
+                                        value={finalidadText}
+                                        onChange={(e) => setFinalidadText(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="org-poblacion">Población Objetivo</Label>
+                                    <Input
+                                        id="org-poblacion"
+                                        placeholder="Ej: Niñas y niños de 12 a 42 meses y sus familias..."
+                                        value={poblacionText}
+                                        onChange={(e) => setPoblacionText(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label htmlFor="org-objetivo">Objetivo del Servicio</Label>
+                                <Input
+                                    id="org-objetivo"
+                                    placeholder="Ej: Garantizar cuidado, nutrición, salud y desarrollo infantil integral..."
+                                    value={objetivoText}
+                                    onChange={(e) => setObjetivoText(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label htmlFor="org-servicios">Servicios Brindados</Label>
+                                <Input
+                                    id="org-servicios"
+                                    placeholder="Ej: Cuidado diario · Alimentación (4 tiempos) · Salud y crecimiento..."
+                                    value={serviciosText}
+                                    onChange={(e) => setServiciosText(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label htmlFor="org-footer-note">Nota de Pie de Página en Expediente</Label>
+                                <Input
+                                    id="org-footer-note"
+                                    placeholder="Ej: Se extiende la presente constancia para ser incorporada al expediente del niño/a..."
+                                    value={printFooterNote}
+                                    onChange={(e) => setPrintFooterNote(e.target.value)}
+                                />
+                            </div>
                         </div>
 
                         {/* ── SMTP Email Configuration ── */}

@@ -197,7 +197,10 @@ class Child(db.Model, BaseModel):
             'status': self.status,
             'assigned_group': self.assigned_group,
             'assigned_educator_id': self.assigned_educator_id,
+            'birth_weight': float(self.birth_weight) if self.birth_weight else None,
+            'birth_height': float(self.birth_height) if self.birth_height else None,
             'allergies': self.allergies,
             'medical_conditions': self.medical_conditions,
-            'special_needs': self.special_needs
+            'special_needs': self.special_needs,
+            'notes': self.notes
         }

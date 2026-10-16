@@ -219,9 +219,19 @@ export const licenseAdminService = {
 
     getPublicConfig: async () => {
         const response = await api.get<{
+            license_name: string;
+            legal_name: string;
             agent_name: string;
             agent_icon: string | null;
             sponsor_logos: SponsorLogo[];
+            institutions_header?: string | null;
+            project_name?: string | null;
+            convenio_text?: string | null;
+            finalidad_text?: string | null;
+            poblacion_text?: string | null;
+            objetivo_text?: string | null;
+            servicios_text?: string | null;
+            print_footer_note?: string | null;
         }>('/api/license-admin/public-config');
         return response.data;
     },
@@ -237,12 +247,52 @@ export const licenseAdminService = {
 
     // --- Datos de Organización ---
     getOrganization: async () => {
-        const response = await api.get<{ legal_name: string | null; ruc: string | null; description: string | null; license_name: string }>('/api/license-admin/organization');
+        const response = await api.get<{
+            legal_name: string | null;
+            ruc: string | null;
+            description: string | null;
+            license_name: string;
+            smtp_host?: string | null;
+            smtp_port?: number | null;
+            smtp_user?: string | null;
+            smtp_configured?: boolean;
+            institutions_header?: string | null;
+            project_name?: string | null;
+            convenio_text?: string | null;
+            finalidad_text?: string | null;
+            poblacion_text?: string | null;
+            objetivo_text?: string | null;
+            servicios_text?: string | null;
+            print_footer_note?: string | null;
+        }>('/api/license-admin/organization');
         return response.data;
     },
 
-    updateOrganization: async (data: { legal_name?: string; ruc?: string; description?: string }) => {
-        const response = await api.put<{ message: string; legal_name: string; ruc: string; description: string }>('/api/license-admin/organization', data);
+    updateOrganization: async (data: {
+        legal_name?: string;
+        ruc?: string;
+        description?: string;
+        smtp_host?: string;
+        smtp_port?: number;
+        smtp_user?: string;
+        smtp_password?: string;
+        institutions_header?: string;
+        project_name?: string;
+        convenio_text?: string;
+        finalidad_text?: string;
+        poblacion_text?: string;
+        objetivo_text?: string;
+        servicios_text?: string;
+        print_footer_note?: string;
+    }) => {
+        const response = await api.put<{
+            message: string;
+            legal_name: string;
+            ruc: string;
+            description: string;
+            institutions_header?: string;
+            project_name?: string;
+        }>('/api/license-admin/organization', data);
         return response.data;
     },
 

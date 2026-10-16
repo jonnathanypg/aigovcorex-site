@@ -62,6 +62,8 @@ interface PrintHeaderProps extends ConvenioInfo {
   title: string;
   codigo: string;
   fecha: string;
+  institutionsHeader?: string;
+  projectName?: string;
   periodo?: Periodo;
   showConvenio?: boolean;
   showSemaforo?: boolean;
@@ -71,6 +73,8 @@ export function PrintHeader({
   title,
   codigo,
   fecha,
+  institutionsHeader,
+  projectName,
   periodo,
   convenio = CMCI_CONVENIO_DEFAULTS.convenio,
   finalidad = CMCI_CONVENIO_DEFAULTS.finalidad,
@@ -82,10 +86,20 @@ export function PrintHeader({
 }: PrintHeaderProps) {
   return (
     <div className="print-header">
+      {institutionsHeader && (
+        <div className="text-center font-bold text-xs uppercase tracking-wider border-b pb-1 mb-2">
+          {institutionsHeader}
+        </div>
+      )}
       <div className="flex items-center justify-between gap-4 border-b-2 border-black pb-2">
         <img src="/logos/cmci-logo-1.png" alt="Logo 1" className="h-14 object-contain" />
-        <div className="text-center">
-          <h1 className="text-lg font-bold uppercase">{title}</h1>
+        <div className="text-center flex-1">
+          {projectName && (
+            <p className="text-[10px] font-bold uppercase tracking-tight text-gray-700 leading-tight mb-1">
+              {projectName}
+            </p>
+          )}
+          <h1 className="text-base font-bold uppercase">{title}</h1>
           <p className="text-xs">
             Código: {codigo} · Fecha: {fecha}
             {periodo ? ` · Período: ${periodo.inicio} al ${periodo.fin}` : ""}

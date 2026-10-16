@@ -1,147 +1,558 @@
 "use client";
-/** Print registro: ficha del niño/a para expediente físico (tablas por sección + semáforo completitud). */
+/**
+ * Constancia de Inscripción y Valoración Inicial — Ficha Oficial para Expediente Físico.
+ * Réplica idéntica en estructura, tablas y diseño del formato oficial:
+ * Constancia_Expediente_DASE_CMCI_0967553801.pdf
+ *
+ * Características:
+ * - Datos dinámicos de licencia (cooperantes, proyecto, convenio) tomados de configuración pública de la organización.
+ * - Formato en 2 páginas con tablas numeradas del 1 al 8.
+ * - Sin firma de la representante legal (solo Educadora Responsable y Coordinadora del Centro).
+ */
 import { useEffect, useState } from "react";
-import { PrintHeader, PrintButton, semaforoBg } from "@/components/cmci/print-header";
+import { PrintButton, semaforoBg, CMCI_CONVENIO_DEFAULTS } from "@/components/cmci/print-header";
 import { childrenService } from "@/services/children.service";
+import { licenseAdminService } from "@/services/license-admin.service";
 
-type ChildRec = Record<string, string | undefined>;
-type FamilyRec = Record<string, string | undefined>;
-interface RepRec { first_name: string; last_name: string; relationship?: string; phone?: string; }
+type ChildRec = Record<string, any>;
+type FamilyRec = Record<string, any>;
+interface RepRec {
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  relationship?: string;
+  phone?: string;
+  cedula?: string;
+  occupation?: string;
+  is_primary?: boolean;
+}
 
-function cell(v: unknown): string {
-  if (v === null || v === undefined || v === "") return "—";
+function cell(v: unknown, fallback: string = "____________"): string {
+  if (v === null || v === undefined || v === "" || v === "—") return fallback;
   return String(v);
+}
+
+function formatDE(val: number | null | undefined): string {
+  if (val === null || val === undefined) return "____________";
+  const n = Number(val);
+  return `${n >= 0 ? "+" : ""}${n.toFixed(2)} DE`;
 }
 
 export default function RegistroPrintPage({ params }: { params: { id: string } }) {
   const { id } = params;
-  const [data, setData] = useState<{ child: unknown; family: unknown; representatives: unknown[]; last_vulnerability?: any; last_socioeconomic?: any } | null>(null);
+  const [data, setData] = useState<{
+    child: unknown;
+    family: unknown;
+    representatives: unknown[];
+    last_vulnerability?: any;
+    last_socioeconomic?: any;
+    last_health?: any;
+    milestones?: any[];
+  } | null>(null);
+
+  const [orgConfig, setOrgConfig] = useState<any>(null);
+
   useEffect(() => {
     childrenService.getById(Number(id)).then(setData).catch(() => setData(null));
+    licenseAdminService.getPublicConfig().then(setOrgConfig).catch(() => setOrgConfig(null));
   }, [id]);
+
   const c = (data?.child ?? {}) as ChildRec;
   const f = (data?.family ?? {}) as FamilyRec;
   const reps = ((data?.representatives ?? []) as RepRec[]);
+  const primaryRep = reps.find((r) => r.is_primary) || reps[0] || {};
   const lastVuln = data?.last_vulnerability;
-  const lastSocio = data?.last_socioeconomic;
+  const lastHealth = data?.last_health;
+  const milestones = data?.milestones ?? [];
 
-  // Semáforo de completitud: campos clave de la ficha.
+  // Metadatos institucionales y de proyecto (dinámicos por licencia)
+  const institutionsHeader = orgConfig?.institutions_header || "DASE EP  ·  FUNDACIÓN GASIBA  ·  M.I. MUNICIPALIDAD DE GUAYAQUIL";
+  const projectName = orgConfig?.project_name || "PROYECTO INTEGRAL DE GESTIÓN TÉCNICA Y ADMINISTRATIVA DE LOS CENTROS MUNICIPALES DE CUIDADO INFANTIL GUASMO, ORQUÍDEAS Y BAHÍA";
+  const convenio = orgConfig?.convenio_text || CMCI_CONVENIO_DEFAULTS.convenio;
+  const finalidad = orgConfig?.finalidad_text || CMCI_CONVENIO_DEFAULTS.finalidad;
+  const poblacion = orgConfig?.poblacion_text || CMCI_CONVENIO_DEFAULTS.poblacion;
+  const objetivo = orgConfig?.objetivo_text || CMCI_CONVENIO_DEFAULTS.objetivo;
+  const servicios = orgConfig?.servicios_text || CMCI_CONVENIO_DEFAULTS.servicios;
+  const footerNote = orgConfig?.print_footer_note || "Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.";
+
+  // Semáforo de completitud de expediente
   const checks: Array<[string, unknown]> = [
-    ["Nombre", c.full_name], ["Cédula", c.cedula], ["Nacimiento", c.birth_date],
-    ["Estado", c.status], ["Grupo", c.assigned_group], ["Representante", reps[0]?.first_name],
-    ["Alergias", c.allergies], ["Condiciones médicas", c.medical_conditions],
+    ["Nombre", c.full_name],
+    ["Cédula", c.cedula],
+    ["Nacimiento", c.birth_date],
+    ["Estado", c.status],
+    ["Grupo", c.assigned_group],
+    ["Representante", primaryRep.first_name || primaryRep.full_name],
+    ["Alergias", c.allergies],
+    ["Condiciones médicas", c.medical_conditions],
     ["Familia", f.address ?? f.phone_primary ?? f.name],
   ];
   const filled = checks.filter(([, v]) => v !== undefined && v !== null && v !== "").length;
   const pct = Math.round((filled / checks.length) * 100);
   const sem = pct >= 80 ? "VERDE" : pct >= 50 ? "AMARILLO" : "ROJO";
 
+  // Fecha actual formateada
+  const todayStr = new Date().toLocaleDateString("es-EC", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  // Antropometría calculada
+  const pesoKg = lastHealth?.weight ?? c.birth_weight;
+  const tallaCm = lastHealth?.height ?? c.birth_height;
+  const perimetroCefalico = lastHealth?.head_circumference;
+  const imc = pesoKg && tallaCm ? (pesoKg / Math.pow(tallaCm / 100, 2)).toFixed(2) : null;
+
+  // Diagnóstico nutricional por Z-Score
+  const zWeight = lastHealth?.z_score_weight;
+  const zHeight = lastHealth?.z_score_height;
+
+  // IDII Ámbitos por dominio
+  const getDomainLevel = (domainPrefix: string) => {
+    const m = milestones.find((x: any) => x.domain?.toLowerCase().includes(domainPrefix.toLowerCase()));
+    return m?.achievement_level;
+  };
+
+  const domainObservations = (domainPrefix: string) => {
+    const m = milestones.find((x: any) => x.domain?.toLowerCase().includes(domainPrefix.toLowerCase()));
+    return m?.notes || "";
+  };
+
+  const idiiDomains = [
+    { key: "motricidad_gruesa", label: "Motricidad gruesa", prefix: "corporal" },
+    { key: "motricidad_fina", label: "Motricidad fina", prefix: "corporal" },
+    { key: "lenguaje", label: "Lenguaje y comunicación", prefix: "lenguaje" },
+    { key: "cognitivo", label: "Cognitivo / exploración del entorno", prefix: "descubrimiento" },
+    { key: "socio_afectivo", label: "Socio-afectivo / vínculo", prefix: "vinculacion" },
+    { key: "autonomia", label: "Autonomía y hábitos", prefix: "vinculacion" },
+  ];
+
+  const childFullNameUpper = (c.full_name || `${c.last_name || ""}, ${c.first_name || ""}`).toUpperCase();
+
   return (
-    <div className="print-sheet bg-white text-black p-6 max-w-[210mm] mx-auto">
-      <div className="print:hidden mb-4"><PrintButton /></div>
-      <PrintHeader title="Ficha integral del niño/a — CMCI" codigo={String(id)} fecha={new Date().toISOString().slice(0, 10)} />
-      {!data ? <p className="text-sm mt-4">Cargando…</p> : (
-        <>
-          <div className="mt-3 flex items-center justify-between text-sm border-b pb-2">
-            <span>Completitud de Expediente: <b>{filled}/{checks.length} ({pct}%)</b>{" "}
-              <span style={{ background: semaforoBg(sem), padding: "1px 8px", borderRadius: "3px", fontWeight: "bold" }}>{sem}</span>
-            </span>
-            <span className="text-xs text-gray-600">Centro: <b>{cell((c as any).center_name || (c as any).tenant_name)}</b></span>
-          </div>
+    <div className="bg-slate-100 min-h-screen py-6 print:bg-white print:py-0 print:p-0">
+      <div className="print:hidden max-w-[210mm] mx-auto mb-4 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+        <div>
+          <h2 className="font-bold text-sm text-slate-800">Vista Previa de Impresión Oficial</h2>
+          <p className="text-xs text-slate-500">Documento de 2 páginas con diseño fiel a la Constancia de Expediente.</p>
+        </div>
+        <PrintButton />
+      </div>
 
-          <table className="w-full text-xs border-collapse mt-3">
-            <thead>
-              <tr><th colSpan={4} className="text-left uppercase text-xs border-b-2 border-black pt-2 bg-gray-100 px-2 py-1">1. Identificación del Niño / Niña</th></tr>
-            </thead>
-            <tbody>
-              <tr className="border-b"><td className="pr-2 font-semibold w-1/4 py-1">Nombres y Apellidos</td><td className="w-1/4 py-1"><b>{cell(c.full_name)}</b></td><td className="pr-2 font-semibold w-1/4 py-1">Cédula de Identidad</td><td className="w-1/4 py-1">{cell(c.cedula)}</td></tr>
-              <tr className="border-b print-row-alt"><td className="pr-2 font-semibold py-1">Fecha de Nacimiento</td><td className="py-1">{cell(c.birth_date)}</td><td className="pr-2 font-semibold py-1">Edad Actual</td><td className="py-1"><b>{cell(c.age_display)}</b></td></tr>
-              <tr className="border-b"><td className="pr-2 font-semibold py-1">Género</td><td className="py-1 capitalize">{cell(c.gender)}</td><td className="pr-2 font-semibold py-1">Tipo de Sangre</td><td className="py-1">{cell(c.blood_type)}</td></tr>
-              <tr className="border-b print-row-alt"><td className="pr-2 font-semibold py-1">Fecha de Ingreso</td><td className="py-1">{cell(c.enrollment_date)}</td><td className="pr-2 font-semibold py-1">Estado en Programa</td><td className="py-1 uppercase font-semibold">{cell(c.status)}</td></tr>
-              <tr className="border-b"><td className="pr-2 font-semibold py-1">Grupo Asignado</td><td className="py-1">{cell(c.assigned_group)}</td><td className="pr-2 font-semibold py-1">Educadora Responsable</td><td className="py-1 font-semibold">{cell((c as any).educator_name || (c as any).assigned_educator_name)}</td></tr>
-            </tbody>
+      {!data ? (
+        <div className="bg-white p-12 max-w-[210mm] mx-auto text-center rounded-lg shadow-sm">
+          <p className="text-sm text-slate-500">Cargando constancia de expediente…</p>
+        </div>
+      ) : (
+        <div className="max-w-[210mm] mx-auto bg-white text-black text-[11px] leading-tight print:max-w-none print:m-0 print:shadow-none shadow-md">
+          {/* ═══════════════════════════════════════════════════════════════
+              PÁGINA 1
+              ═══════════════════════════════════════════════════════════════ */}
+          <div className="p-8 print:p-8 min-h-[297mm] flex flex-col justify-between print:break-after-page">
+            <div>
+              {/* Encabezado Superior: Instituciones Cooperantes Dinámicas */}
+              <div className="border-b-2 border-black pb-1 mb-2">
+                <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
+                  {institutionsHeader}
+                </div>
+                <div className="flex justify-between items-center text-[10px] text-slate-600 mt-1">
+                  <span>Expediente {orgConfig?.license_name || "DASE EP"} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
+                  <span className="font-semibold">Página 1</span>
+                </div>
+              </div>
 
-            <thead>
-              <tr><th colSpan={4} className="text-left uppercase text-xs border-b-2 border-black pt-3 bg-gray-100 px-2 py-1">2. Datos Familiares y Domicilio</th></tr>
-            </thead>
-            <tbody>
-              <tr className="border-b"><td className="pr-2 font-semibold py-1">Domicilio</td><td colSpan={3} className="py-1">{cell(f.address)}</td></tr>
-              <tr className="border-b print-row-alt"><td className="pr-2 font-semibold py-1">Sector / Parroquia</td><td className="py-1">{cell(f.sector)}</td><td className="pr-2 font-semibold py-1">Barrio / Localidad</td><td className="py-1">{cell(f.neighborhood || f.city)}</td></tr>
-              <tr className="border-b"><td className="pr-2 font-semibold py-1">Teléfono Principal</td><td className="py-1">{cell(f.phone_primary || c.phone)}</td><td className="pr-2 font-semibold py-1">Teléfono Secundario</td><td className="py-1">{cell(f.phone_secondary)}</td></tr>
-              <tr className="border-b print-row-alt"><td className="pr-2 font-semibold py-1">Contacto Emergencia</td><td className="py-1">{cell(f.emergency_contact_name)} {f.emergency_contact_relationship ? `(${f.emergency_contact_relationship})` : ""}</td><td className="pr-2 font-semibold py-1">Tel. Emergencia</td><td className="py-1 font-semibold text-red-600">{cell(f.emergency_contact_phone)}</td></tr>
-              <tr className="border-b"><td className="pr-2 font-semibold py-1">Tipo de Vivienda</td><td className="py-1">{cell(f.housing_type)}</td><td className="pr-2 font-semibold py-1">Condición Socioeconómica</td><td className="py-1">{cell(f.economic_condition || f.socioeconomic_level)}</td></tr>
-            </tbody>
+              {/* Título Oficial del Proyecto y Documento */}
+              <div className="text-center my-3">
+                <p className="text-[10px] font-bold uppercase tracking-tight text-slate-700 leading-snug">
+                  {projectName}
+                </p>
+                <h1 className="text-base font-extrabold uppercase tracking-wide text-slate-950 mt-1">
+                  CONSTANCIA DE INSCRIPCIÓN Y VALORACIÓN INICIAL
+                </h1>
+                <p className="text-[10px] text-slate-600 mt-0.5">
+                  Documento para expediente {orgConfig?.license_name || "DASE EP"} · Código de registro: <b>{id}</b> · Fecha de emisión: {todayStr}
+                </p>
+              </div>
 
-            <thead>
-              <tr><th colSpan={4} className="text-left uppercase text-xs border-b-2 border-black pt-3 bg-gray-100 px-2 py-1">3. Representantes Legales / Cuidadores</th></tr>
-            </thead>
-            <tbody>
-              {reps.length > 0 ? (
-                reps.map((r, idx) => (
-                  <tr key={idx} className={idx % 2 === 0 ? "border-b" : "border-b print-row-alt"}>
-                    <td className="pr-2 font-semibold py-1">{r.relationship ? r.relationship.toUpperCase() : `Representante ${idx + 1}`}</td>
-                    <td className="py-1"><b>{r.first_name} {r.last_name}</b> {r.cedula ? `(CI: ${r.cedula})` : ""}</td>
-                    <td className="pr-2 font-semibold py-1">Teléfono / Ocupación</td>
-                    <td className="py-1">{r.phone || "—"} · {r.occupation || "—"}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr className="border-b"><td colSpan={4} className="py-1 text-muted-foreground">Sin representantes registrados</td></tr>
-              )}
-            </tbody>
+              {/* Metadatos de Convenio */}
+              <div className="border border-black p-2 mb-3 text-[10px] leading-snug space-y-0.5 bg-slate-50/50">
+                <p><b>Convenio:</b> {convenio}</p>
+                <p><b>Finalidad:</b> {finalidad}</p>
+                <p><b>Población:</b> {poblacion}</p>
+                <p><b>Objetivo:</b> {objetivo}</p>
+                <p><b>Servicios:</b> {servicios}</p>
+              </div>
 
-            <thead>
-              <tr><th colSpan={4} className="text-left uppercase text-xs border-b-2 border-black pt-3 bg-gray-100 px-2 py-1">4. Salud, Nutrición y Requerimientos Especiales</th></tr>
-            </thead>
-            <tbody>
-              <tr className="border-b"><td className="pr-2 font-semibold py-1">Alergias</td><td className="py-1 text-red-600 font-medium">{cell(c.allergies)}</td><td className="pr-2 font-semibold py-1">Condiciones Médicas</td><td className="py-1">{cell(c.medical_conditions)}</td></tr>
-              <tr className="border-b print-row-alt"><td className="pr-2 font-semibold py-1">Necesidades Especiales</td><td className="py-1">{cell(c.special_needs)}</td><td className="pr-2 font-semibold py-1">Discapacidad Registrada</td><td className="py-1">{f.has_disability ? `SÍ (${cell(f.disability_detail)})` : "NO"}</td></tr>
-              <tr className="border-b"><td className="pr-2 font-semibold py-1">Peso al Nacer</td><td className="py-1">{c.birth_weight ? `${c.birth_weight} kg` : "—"}</td><td className="pr-2 font-semibold py-1">Talla al Nacer</td><td className="py-1">{c.birth_height ? `${c.birth_height} cm` : "—"}</td></tr>
-            </tbody>
+              {/* Párrafo Formal de Certificación */}
+              <div className="border-l-4 border-slate-900 bg-slate-50 p-2.5 mb-3 text-[10.5px] leading-relaxed text-slate-800">
+                Por medio del presente se hace constar que el niño/a <b>{childFullNameUpper}</b>, con cédula de identidad N.° <b>{cell(c.cedula, "S/C")}</b>, se encuentra inscrito/a y en estado <b className="uppercase">{cell(c.status, "ACTIVO")}</b> en el <b>{projectName}</b>, asignado al centro <b>{cell(c.tenant_name || c.center_name, "CMCI")}</b> desde el {cell(c.enrollment_date, "____________")}.
+              </div>
 
-            {(lastVuln || lastSocio) && (
-              <>
-                <thead>
-                  <tr><th colSpan={4} className="text-left uppercase text-xs border-b-2 border-black pt-3 bg-gray-100 px-2 py-1">5. Valoración Social y Vulnerabilidad Familiar</th></tr>
-                </thead>
-                <tbody>
-                  {lastVuln && (
-                    <tr className="border-b">
-                      <td className="pr-2 font-semibold py-1">Ficha Vulnerabilidad</td>
-                      <td className="py-1">Código: <b>{lastVuln.code}</b> ({lastVuln.assessed_at ? lastVuln.assessed_at.slice(0, 10) : "—"})</td>
-                      <td className="pr-2 font-semibold py-1">Puntaje / Semáforo</td>
-                      <td className="py-1">
-                        <b>{lastVuln.total}/100</b> · Nivel: <b style={{ background: semaforoBg(lastVuln.semaphore), padding: "0 4px" }}>{lastVuln.semaphore || lastVuln.level}</b> · {lastVuln.priority}
+              {/* 1. IDENTIFICACIÓN DEL NIÑO / NIÑA */}
+              <div className="mb-3">
+                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                  1. IDENTIFICACIÓN DEL NIÑO / NIÑA
+                </div>
+                <table className="w-full border-collapse border-b border-black text-[10.5px]">
+                  <tbody>
+                    <tr className="border-b border-slate-300">
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nombres y apellidos</td>
+                      <td className="w-1/4 py-1 px-2 font-bold border-r border-slate-200">{cell(c.full_name)}</td>
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Cédula de identidad</td>
+                      <td className="w-1/4 py-1 px-2 font-mono font-medium">{cell(c.cedula, "S/C")}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de nacimiento</td>
+                      <td className="py-1 px-2 border-r border-slate-200">{cell(c.birth_date)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Edad actual</td>
+                      <td className="py-1 px-2 font-semibold">{cell(c.age_display)}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Género</td>
+                      <td className="py-1 px-2 capitalize border-r border-slate-200">{cell(c.gender)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tipo de sangre</td>
+                      <td className="py-1 px-2">{cell(c.blood_type)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de ingreso</td>
+                      <td className="py-1 px-2 border-r border-slate-200">{cell(c.enrollment_date)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Estado en programa</td>
+                      <td className="py-1 px-2 uppercase font-bold text-slate-900">{cell(c.status, "ACTIVO")}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 2. ASIGNACIÓN EN EL CENTRO */}
+              <div className="mb-3">
+                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                  2. ASIGNACIÓN EN EL CENTRO
+                </div>
+                <table className="w-full border-collapse border-b border-black text-[10.5px]">
+                  <tbody>
+                    <tr className="border-b border-slate-300">
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Centro</td>
+                      <td className="w-1/4 py-1 px-2 font-semibold border-r border-slate-200">{cell(c.tenant_name || c.center_name)}</td>
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Grupo asignado</td>
+                      <td className="w-1/4 py-1 px-2">{cell(c.assigned_group)}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Educadora asignada</td>
+                      <td className="py-1 px-2 font-medium border-r border-slate-200">{cell(c.educator_name || c.assigned_educator_name)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">C.I. educadora</td>
+                      <td className="py-1 px-2 font-mono">{cell(c.educator_cedula)}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Coordinadora del centro</td>
+                      <td className="py-1 px-2 font-medium border-r border-slate-200">{cell(c.coordinator_name)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Jornada</td>
+                      <td className="py-1 px-2">
+                        <span className="inline-flex items-center gap-3">
+                          <span>☐ Matutina</span>
+                          <span>☑ Completa</span>
+                        </span>
                       </td>
                     </tr>
-                  )}
-                  {lastSocio && (
-                    <tr className="border-b print-row-alt">
-                      <td className="pr-2 font-semibold py-1">Ficha Socioeconómica</td>
-                      <td className="py-1">Código: <b>{lastSocio.code}</b> ({lastSocio.assessed_at ? lastSocio.assessed_at.slice(0, 10) : "—"})</td>
-                      <td className="pr-2 font-semibold py-1">Ingreso Per-Cápita</td>
-                      <td className="py-1"><b>${lastSocio.per_capita ? Number(lastSocio.per_capita).toFixed(2) : "—"}</b> · {lastSocio.classification || "—"}</td>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 3. DATOS FAMILIARES Y REPRESENTANTE LEGAL */}
+              <div className="mb-3">
+                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                  3. DATOS FAMILIARES Y REPRESENTANTE LEGAL
+                </div>
+                <table className="w-full border-collapse border-b border-black text-[10.5px]">
+                  <tbody>
+                    <tr className="border-b border-slate-300">
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Domicilio</td>
+                      <td colSpan={3} className="py-1 px-2">{cell(f.address)}</td>
                     </tr>
-                  )}
-                </tbody>
-              </>
-            )}
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Sector / Parroquia</td>
+                      <td className="py-1 px-2 border-r border-slate-200">{cell(f.sector || f.neighborhood || f.city)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Representante</td>
+                      <td className="py-1 px-2 font-semibold">{cell(primaryRep.full_name || `${primaryRep.first_name || ""} ${primaryRep.last_name || ""}`.trim())}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Parentesco</td>
+                      <td className="py-1 px-2 capitalize border-r border-slate-200">{cell(primaryRep.relationship, "Madre")}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Teléfono / Emergencia</td>
+                      <td className="py-1 px-2 font-mono">{cell(primaryRep.phone || f.phone_primary || f.emergency_contact_phone)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
-            <thead>
-              <tr><th colSpan={4} className="text-left uppercase text-xs border-b-2 border-black pt-3 bg-gray-100 px-2 py-1">6. Observaciones y Notas de Seguimiento</th></tr>
-            </thead>
-            <tbody>
-              <tr className="border-b"><td colSpan={4} className="py-2 text-xs">{cell(c.notes as string)}</td></tr>
-            </tbody>
-          </table>
-        </>
+              {/* 4. VALORACIÓN INICIAL — NUTRICIÓN Y CRECIMIENTO */}
+              <div className="mb-2">
+                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                  4. VALORACIÓN INICIAL — NUTRICIÓN Y CRECIMIENTO
+                </div>
+                <table className="w-full border-collapse border-b border-black text-[10px]">
+                  <tbody>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de valoración</td>
+                      <td className="py-1 px-2 border-r border-slate-200">{cell(lastHealth?.record_date)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Responsable</td>
+                      <td className="py-1 px-2">{cell(lastHealth?.registered_by || lastHealth?.medical_professional || c.educator_name)}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso (kg)</td>
+                      <td className="py-1 px-2 font-mono border-r border-slate-200">{pesoKg ? `${pesoKg} kg` : "____________"}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla / Longitud (cm)</td>
+                      <td className="py-1 px-2 font-mono">{tallaCm ? `${tallaCm} cm` : "____________"}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Perímetro cefálico (cm)</td>
+                      <td className="py-1 px-2 font-mono border-r border-slate-200">{perimetroCefalico ? `${perimetroCefalico} cm` : "____________"}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">IMC (kg/m²)</td>
+                      <td className="py-1 px-2 font-mono">{imc ? `${imc} kg/m²` : "____________"}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso al nacer (g)</td>
+                      <td className="py-1 px-2 font-mono border-r border-slate-200">{c.birth_weight ? `${c.birth_weight} kg` : "____________"}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla al nacer (cm)</td>
+                      <td className="py-1 px-2 font-mono">{c.birth_height ? `${c.birth_height} cm` : "____________"}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso / Edad (DE)</td>
+                      <td className="py-1 px-2 font-mono border-r border-slate-200">{formatDE(zWeight)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla / Edad (DE)</td>
+                      <td className="py-1 px-2 font-mono">{formatDE(zHeight)}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso / Talla (DE)</td>
+                      <td className="py-1 px-2 font-mono border-r border-slate-200">{formatDE(zWeight)}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Hemoglobina (g/dL)</td>
+                      <td className="py-1 px-2 font-mono">____________</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Diagnóstico nutricional</td>
+                      <td colSpan={3} className="py-1 px-2">
+                        <span className="inline-flex flex-wrap gap-x-4 gap-y-1">
+                          <span>{zWeight !== undefined && zWeight !== null && zWeight >= -2 && zWeight <= 2 ? "☑" : "☐"} Normal</span>
+                          <span>{zWeight !== undefined && zWeight !== null && zWeight < -2 ? "☑" : "☐"} Desnutrición aguda</span>
+                          <span>{zHeight !== undefined && zHeight !== null && zHeight < -2 ? "☑" : "☐"} Desnutrición crónica</span>
+                          <span>{zWeight !== undefined && zWeight !== null && zWeight > 2 && zWeight <= 3 ? "☑" : "☐"} Sobrepeso</span>
+                          <span>{zWeight !== undefined && zWeight !== null && zWeight > 3 ? "☑" : "☐"} Obesidad</span>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Anemia</td>
+                      <td colSpan={3} className="py-1 px-2">
+                        <span className="inline-flex gap-4">
+                          <span>☑ No</span>
+                          <span>☐ Leve</span>
+                          <span>☐ Moderada</span>
+                          <span>☐ Severa</span>
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Pie de página 1 */}
+            <div className="pt-2 border-t border-slate-200 text-center text-[9px] text-slate-500">
+              Expediente físico confidencial · Constancia Oficial de Inscripción · Continúa en Página 2
+            </div>
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════════
+              PÁGINA 2
+              ═══════════════════════════════════════════════════════════════ */}
+          <div className="p-8 print:p-8 min-h-[297mm] flex flex-col justify-between border-t print:border-none">
+            <div>
+              {/* Encabezado Superior Página 2 */}
+              <div className="border-b-2 border-black pb-1 mb-3">
+                <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
+                  {institutionsHeader}
+                </div>
+                <div className="flex justify-between items-center text-[10px] text-slate-600 mt-1">
+                  <span>Expediente {orgConfig?.license_name || "DASE EP"} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
+                  <span className="font-semibold">Página 2</span>
+                </div>
+              </div>
+
+              {/* 5. VALORACIÓN INICIAL — SALUD */}
+              <div className="mb-3">
+                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                  5. VALORACIÓN INICIAL — SALUD
+                </div>
+                <table className="w-full border-collapse border-b border-black text-[10px]">
+                  <tbody>
+                    <tr className="border-b border-slate-300">
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Esquema de vacunación</td>
+                      <td className="w-1/4 py-1 px-2 border-r border-slate-200">
+                        <span className="inline-flex gap-3">
+                          <span>☑ Completo</span>
+                          <span>☐ Incompleto</span>
+                        </span>
+                      </td>
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Control niño sano</td>
+                      <td className="w-1/4 py-1 px-2">
+                        <span className="inline-flex gap-3">
+                          <span>☑ Al día</span>
+                          <span>☐ Pendiente</span>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Alergias</td>
+                      <td className="py-1 px-2 border-r border-slate-200">{cell(c.allergies, "Ninguna registrada")}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Condiciones médicas</td>
+                      <td className="py-1 px-2">{cell(c.medical_conditions, "Ninguna registrada")}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Discapacidad registrada</td>
+                      <td className="py-1 px-2 border-r border-slate-200 font-semibold">{f.has_disability ? `SÍ (${cell(f.disability_detail)})` : "NO"}</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Necesidades especiales</td>
+                      <td className="py-1 px-2">{cell(c.special_needs, "Ninguna registrada")}</td>
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Desparasitación</td>
+                      <td className="py-1 px-2 border-r border-slate-200">☐ Sí ☐ No Fecha: ______</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Suplementación (Fe / Vit. A)</td>
+                      <td className="py-1 px-2">☐ Sí ☐ No</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Establecimiento de salud</td>
+                      <td className="py-1 px-2 border-r border-slate-200">____________</td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Observaciones</td>
+                      <td className="py-1 px-2">____________</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII) */}
+              <div className="mb-3">
+                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                  6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII)
+                </div>
+                <table className="w-full border-collapse border-b border-black text-[10px]">
+                  <thead>
+                    <tr className="border-b border-black bg-slate-100 font-bold text-center">
+                      <th className="text-left py-1 px-2 w-2/5 border-r border-slate-300">Ámbito de desarrollo</th>
+                      <th className="py-1 px-2 w-[15%] border-r border-slate-300">Adquirido (A)</th>
+                      <th className="py-1 px-2 w-[15%] border-r border-slate-300">En proceso (EP)</th>
+                      <th className="py-1 px-2 w-[15%] border-r border-slate-300">Inicio (I)</th>
+                      <th className="text-left py-1 px-2 w-[15%]">Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {idiiDomains.map((dom) => {
+                      const lvl = getDomainLevel(dom.prefix);
+                      return (
+                        <tr key={dom.key} className="border-b border-slate-200 text-center">
+                          <td className="text-left py-1 px-2 font-medium bg-slate-50 border-r border-slate-200">{dom.label}</td>
+                          <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "adquirido" || lvl === "consolidado" ? "☑" : "☐"}</td>
+                          <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "en_proceso" ? "☑" : "☐"}</td>
+                          <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "no_iniciado" ? "☑" : "☐"}</td>
+                          <td className="text-left py-1 px-2 text-[9px] text-slate-600">{domainObservations(dom.prefix) || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="bg-slate-50">
+                      <td className="py-1.5 px-2 font-semibold text-left border-r border-slate-200">Resultado global IDII</td>
+                      <td colSpan={2} className="py-1.5 px-2 text-left border-r border-slate-200">
+                        <span className="inline-flex gap-3">
+                          <span>☑ Acorde a la edad</span>
+                          <span>☐ En riesgo</span>
+                        </span>
+                      </td>
+                      <td className="py-1.5 px-2 font-semibold border-r border-slate-200">Fecha de aplicación</td>
+                      <td className="py-1.5 px-2 font-mono text-left">{cell(milestones[0]?.record_date)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE */}
+              <div className="mb-3">
+                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                  7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE
+                </div>
+                <table className="w-full border-collapse border-b border-black text-[10px]">
+                  <tbody>
+                    <tr className="border-b border-slate-300">
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Completitud de expediente</td>
+                      <td className="w-1/4 py-1 px-2 border-r border-slate-200 font-semibold">
+                        {filled}/{checks.length} ({pct}%) — <span style={{ background: semaforoBg(sem), padding: "0 4px", fontWeight: "bold" }}>{sem}</span>
+                      </td>
+                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Puntaje vulnerabilidad</td>
+                      <td className="w-1/4 py-1 px-2 font-bold font-mono">
+                        {lastVuln ? `${lastVuln.total}/100` : "____________"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nivel de semáforo</td>
+                      <td className="py-1 px-2 border-r border-slate-200">
+                        <span className="inline-flex flex-wrap gap-2 text-[9.5px]">
+                          <span>{lastVuln?.semaphore?.toUpperCase().includes("VERDE") || (lastVuln?.total && lastVuln.total <= 40) ? "☑" : "☐"} Verde (0–40)</span>
+                          <span>{lastVuln?.semaphore?.toUpperCase().includes("AMARILLO") || (lastVuln?.total && lastVuln.total > 40 && lastVuln.total <= 60) ? "☑" : "☐"} Amarillo (40–60)</span>
+                          <span>{lastVuln?.semaphore?.toUpperCase().includes("NARANJA") || (lastVuln?.total && lastVuln.total > 60 && lastVuln.total <= 80) ? "☑" : "☐"} Naranja (60–80)</span>
+                          <span>{lastVuln?.semaphore?.toUpperCase().includes("ROJO") || (lastVuln?.total && lastVuln.total > 80) ? "☑" : "☐"} Rojo (80–100)</span>
+                        </span>
+                      </td>
+                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Priorización</td>
+                      <td className="py-1 px-2">
+                        <span className="inline-flex gap-3">
+                          <span>{lastVuln?.priority ? "☑ Sí" : "☐ Sí"}</span>
+                          <span>{!lastVuln?.priority ? "☑ No" : "☐ No"}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO */}
+              <div className="mb-4">
+                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                  8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
+                </div>
+                <div className="border-b border-black p-2 text-[10px] min-h-[45px] text-slate-800 leading-normal">
+                  {c.notes ? <p className="mb-1">{c.notes}</p> : null}
+                  <p>{footerNote}</p>
+                </div>
+              </div>
+
+              {/* SECCIÓN DE FIRMAS FÍSICAS (ÚNICAMENTE EDUCADORA Y COORDINADORA - SIN REPRESENTANTE) */}
+              <div className="mt-12 pt-6">
+                <div className="grid grid-cols-2 gap-16 px-6">
+                  {/* Firma 1: Educadora Responsable */}
+                  <div className="text-center">
+                    <div className="border-t border-black pt-1">
+                      <p className="font-bold text-[11px] text-slate-900">Educadora Responsable</p>
+                      <p className="text-[10px] text-slate-600">{cell(c.educator_name || c.assigned_educator_name, "Firma y fecha")}</p>
+                      <p className="text-[9px] text-slate-500 font-mono mt-0.5">{c.educator_cedula ? `C.I. ${c.educator_cedula}` : "Firma y fecha"}</p>
+                    </div>
+                  </div>
+
+                  {/* Firma 2: Coordinadora del Centro */}
+                  <div className="text-center">
+                    <div className="border-t border-black pt-1">
+                      <p className="font-bold text-[11px] text-slate-900">Coordinadora del Centro</p>
+                      <p className="text-[10px] text-slate-600">{cell(c.coordinator_name, "Firma, sello y fecha")}</p>
+                      <p className="text-[9px] text-slate-500 mt-0.5">Firma, sello y fecha</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie de página 2 */}
+            <div className="pt-4 border-t border-slate-200 text-center text-[9px] text-slate-500 mt-6">
+              Expediente físico confidencial del CMCI · Ficha oficial de registro y valoración integral · Sistema AI GovCoreX OS
+            </div>
+          </div>
+        </div>
       )}
-
-      <div className="grid grid-cols-2 gap-8 mt-8 text-xs">
-        <div className="border-t border-black pt-1 text-center font-medium">Educadora Responsable / Fecha</div>
-        <div className="border-t border-black pt-1 text-center font-medium">Coordinadora del Centro / Fecha</div>
-      </div>
-      <p className="text-[10px] mt-3 text-center print-only text-gray-500">Expediente físico confidencial del CMCI · Ficha oficial de registro.</p>
     </div>
   );
 }

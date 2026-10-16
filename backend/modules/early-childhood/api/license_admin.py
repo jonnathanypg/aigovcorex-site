@@ -47,7 +47,15 @@ def get_public_config():
             'legal_name': license_obj.legal_name if license_obj else 'AI GovCoreX OS Platform',
             'agent_name': (license_obj.agent_name if license_obj and license_obj.agent_name else 'KindiCore AI'),
             'agent_icon': license_obj.agent_icon_path if license_obj else None,
-            'sponsor_logos': [l.to_dict() for l in logos] if logos else []
+            'sponsor_logos': [l.to_dict() for l in logos] if logos else [],
+            'institutions_header': license_obj.institutions_header if license_obj else None,
+            'project_name': license_obj.project_name if license_obj else None,
+            'convenio_text': license_obj.convenio_text if license_obj else None,
+            'finalidad_text': license_obj.finalidad_text if license_obj else None,
+            'poblacion_text': license_obj.poblacion_text if license_obj else None,
+            'objetivo_text': license_obj.objetivo_text if license_obj else None,
+            'servicios_text': license_obj.servicios_text if license_obj else None,
+            'print_footer_note': license_obj.print_footer_note if license_obj else None,
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -198,7 +206,7 @@ def create_center(license_admin):
 @license_admin_bp.route('/organization', methods=['GET'])
 @require_license_admin
 def get_organization(license_admin):
-    """Obtener datos de la organización (RUC, Razón Social y SMTP)"""
+    """Obtener datos de la organización (RUC, Razón Social, SMTP y Convenio/Institución)"""
     try:
         license = license_admin.license
         return jsonify({
@@ -210,6 +218,14 @@ def get_organization(license_admin):
             'smtp_port': license.smtp_port,
             'smtp_user': license.smtp_user,
             'smtp_configured': bool(license.smtp_host and license.smtp_user and license.smtp_password),
+            'institutions_header': license.institutions_header,
+            'project_name': license.project_name,
+            'convenio_text': license.convenio_text,
+            'finalidad_text': license.finalidad_text,
+            'poblacion_text': license.poblacion_text,
+            'objetivo_text': license.objetivo_text,
+            'servicios_text': license.servicios_text,
+            'print_footer_note': license.print_footer_note,
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -218,7 +234,7 @@ def get_organization(license_admin):
 @license_admin_bp.route('/organization', methods=['PUT'])
 @require_license_admin
 def update_organization(license_admin):
-    """Actualizar datos de la organización (RUC, Razón Social y SMTP)"""
+    """Actualizar datos de la organización (RUC, Razón Social, SMTP y Convenio/Institución)"""
     try:
         license = license_admin.license
         data = request.get_json()
@@ -229,6 +245,24 @@ def update_organization(license_admin):
             license.ruc = data['ruc']
         if 'description' in data:
             license.description = data['description']
+        
+        # Institutional and Convenio metadata for printing
+        if 'institutions_header' in data:
+            license.institutions_header = data['institutions_header']
+        if 'project_name' in data:
+            license.project_name = data['project_name']
+        if 'convenio_text' in data:
+            license.convenio_text = data['convenio_text']
+        if 'finalidad_text' in data:
+            license.finalidad_text = data['finalidad_text']
+        if 'poblacion_text' in data:
+            license.poblacion_text = data['poblacion_text']
+        if 'objetivo_text' in data:
+            license.objetivo_text = data['objetivo_text']
+        if 'servicios_text' in data:
+            license.servicios_text = data['servicios_text']
+        if 'print_footer_note' in data:
+            license.print_footer_note = data['print_footer_note']
         
         # SMTP Configuration
         if 'smtp_host' in data:
@@ -247,6 +281,14 @@ def update_organization(license_admin):
             'legal_name': license.legal_name,
             'ruc': license.ruc,
             'description': license.description,
+            'institutions_header': license.institutions_header,
+            'project_name': license.project_name,
+            'convenio_text': license.convenio_text,
+            'finalidad_text': license.finalidad_text,
+            'poblacion_text': license.poblacion_text,
+            'objetivo_text': license.objetivo_text,
+            'servicios_text': license.servicios_text,
+            'print_footer_note': license.print_footer_note,
             'smtp_host': license.smtp_host,
             'smtp_port': license.smtp_port,
             'smtp_user': license.smtp_user,

@@ -100,6 +100,18 @@ class License(db.Model):
     # Acceso: /api/public/org/{public_org_slug}
     public_org_slug = db.Column(db.String(100), nullable=True)
 
+    # ── Metadatos Institucionales y Convenio para Fichas e Impresión ──
+    # Permite a cada licencia/organización configurar sus encabezados, nombres de proyecto y convenios dinámicamente
+    institutions_header = db.Column(db.String(500), nullable=True)  # Ej: "DASE EP · FUNDACIÓN GASIBA · M.I. MUNICIPALIDAD DE GUAYAQUIL"
+    project_name = db.Column(db.Text, nullable=True)                 # Ej: "PROYECTO INTEGRAL DE GESTIÓN TÉCNICA Y ADMINISTRATIVA..."
+    convenio_text = db.Column(db.Text, nullable=True)                # Ej: "Convenio de cooperación interinstitucional — Centros Municipales..."
+    finalidad_text = db.Column(db.Text, nullable=True)               # Finalidad del proyecto/servicio
+    poblacion_text = db.Column(db.Text, nullable=True)               # Población atendida
+    objetivo_text = db.Column(db.Text, nullable=True)                # Objetivo del programa
+    servicios_text = db.Column(db.Text, nullable=True)               # Servicios brindados
+    print_footer_note = db.Column(db.String(500), nullable=True)     # Nota legal al pie de expedientes
+
+
     # ── Métodos de módulos ───────────────────────────────────────────
 
     def get_enabled_modules(self) -> list:
@@ -171,6 +183,15 @@ class License(db.Model):
             'lem_credits_balance': int(self.lem_credits_balance or 0),
             'lem_enabled': bool(self.lem_enabled),
             'allow_custom_llm': bool(self.allow_custom_llm),
+            # Instituciones y Convenio
+            'institutions_header': self.institutions_header,
+            'project_name': self.project_name,
+            'convenio_text': self.convenio_text,
+            'finalidad_text': self.finalidad_text,
+            'poblacion_text': self.poblacion_text,
+            'objetivo_text': self.objetivo_text,
+            'servicios_text': self.servicios_text,
+            'print_footer_note': self.print_footer_note,
         }
 
     # ── Métodos de estado ─────────────────────────────────────────────

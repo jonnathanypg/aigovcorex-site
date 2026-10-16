@@ -355,6 +355,29 @@ def get_child(child_id):
                 'nationality': r.nationality
             } for r in representatives]
 
+        # Datos del centro, educadora y coordinadora
+        try:
+            from models.user import User
+            if child.assigned_educator_id:
+                educator = User.query.get(child.assigned_educator_id)
+                if educator:
+                    response['child']['educator_name'] = educator.full_name
+                    response['child']['educator_cedula'] = educator.cedula if hasattr(educator, 'cedula') else None
+            
+            # Buscar coordinador del centro
+            if child.tenant_id:
+                from models.user import Role
+                coord_role_ids = [r.id for r in Role.query.filter(Role.name.in_(['coordinator', 'center_coordinator', 'coordinador'])).all()]
+                coord_user = User.query.filter(
+                    User.tenant_id == child.tenant_id,
+                    User.role_id.in_(coord_role_ids),
+                    User.is_active == True
+                ).first()
+                if coord_user:
+                    response['child']['coordinator_name'] = coord_user.full_name
+        except Exception:
+            pass
+
         # Últimas fichas para precargar (vulnerabilidad + socioeconómica).
         # ?include=assessments o siempre liviano: no rompe clientes viejos.
         try:
@@ -395,6 +418,41 @@ def get_child(child_id):
         except Exception:
             response['last_vulnerability'] = None
             response['last_socioeconomic'] = None
+
+        # Último registro de salud / crecimiento antropométrico
+        try:
+            from models.health import HealthRecord
+            last_health = (HealthRecord.query
+                           .filter_by(child_id=child.id)
+                           .order_by(HealthRecord.record_date.desc(), HealthRecord.id.desc()).first())
+            if last_health:
+                response['last_health'] = last_health.to_dict()
+            else:
+                response['last_health'] = None
+        except Exception:
+            response['last_health'] = None
+
+        # Últimos hitos / evaluación IDII
+        try:
+            from models.milestone import Milestone
+            milestones = (Milestone.query
+                          .filter_by(child_id=child.id)
+                          .order_by(Milestone.record_date.desc(), Milestone.id.desc())
+                          .limit(20).all())
+            response['milestones'] = [m.to_dict() for m in milestones] if hasattr(Milestone, 'to_dict') else [
+                {
+                    'id': m.id,
+                    'record_date': m.record_date.isoformat() if m.record_date else None,
+                    'domain': m.domain,
+                    'milestone_description': m.milestone_description,
+                    'achievement_level': m.achievement_level,
+                    'achievement_percentage': m.achievement_percentage,
+                    'period': getattr(m, 'period', None),
+                    'notes': getattr(m, 'notes', None)
+                } for m in milestones
+            ]
+        except Exception:
+            response['milestones'] = []
 
         return jsonify(response), 200
         

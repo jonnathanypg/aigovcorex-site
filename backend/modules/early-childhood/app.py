@@ -200,6 +200,14 @@ def create_app(config_name=None):
                 "ALTER TABLE licenses ADD COLUMN public_org_slug VARCHAR(100) NULL",
                 "ALTER TABLE licenses ADD COLUMN lem_credits_balance INT NOT NULL DEFAULT 1000",
                 "ALTER TABLE licenses ADD COLUMN lem_enabled BOOLEAN DEFAULT 1",
+                "ALTER TABLE licenses ADD COLUMN institutions_header VARCHAR(500) NULL",
+                "ALTER TABLE licenses ADD COLUMN project_name TEXT NULL",
+                "ALTER TABLE licenses ADD COLUMN convenio_text TEXT NULL",
+                "ALTER TABLE licenses ADD COLUMN finalidad_text TEXT NULL",
+                "ALTER TABLE licenses ADD COLUMN poblacion_text TEXT NULL",
+                "ALTER TABLE licenses ADD COLUMN objetivo_text TEXT NULL",
+                "ALTER TABLE licenses ADD COLUMN servicios_text TEXT NULL",
+                "ALTER TABLE licenses ADD COLUMN print_footer_note VARCHAR(500) NULL",
             ]:
                 try:
                     db.session.execute(text(col_sql))

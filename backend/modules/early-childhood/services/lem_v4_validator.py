@@ -88,12 +88,13 @@ def sanitize_for_llm(payload: dict, rol: str = "analyst") -> dict:
 
 
 def pre_validate(message: str, license_id: int | None, role: str | None = None) -> dict:
-    """Bloquea inyeccion/ataques antes del LLM. Consume 0 (solo post consume)."""
+    """Bloquea inyección/ataques antes del LLM usando heurística + evaluación C99 LEM en disco."""
     text = (message or "").strip()
     if not text:
-        return {"ok": False, "blocked": True, "reason": "mensaje_vacio"}
+        return {"ok": False, "blocked": True, "reason": "mensaje_vacio", "text": "Por favor ingrese un mensaje."}
     if len(text) > 12000:
-        return {"ok": False, "blocked": True, "reason": "mensaje_muy_largo"}
+        return {"ok": False, "blocked": True, "reason": "mensaje_muy_largo", "text": "El mensaje excede el límite permitido."}
+
     low = text.lower()
     for pat in _INJECTION_PATTERNS:
         if re.search(pat, text, re.IGNORECASE):
@@ -103,28 +104,93 @@ def pre_validate(message: str, license_id: int | None, role: str | None = None) 
                     audit_mod.append(actor=f"license:{license_id}", accion="lem_block:injection", subject_ref="", finalidad="seguridad")
             except Exception:
                 pass
-            return {"ok": False, "blocked": True, "reason": "inyeccion_bloqueada"}
-    # Fuera de contexto: la plataforma es CDI/programas sociales/operacion
-    # Heuristica suave: no bloquear, solo advertir si no hay keywords ni pregunta operativa
+            return {
+                "ok": False, 
+                "blocked": True, 
+                "is_attack": True,
+                "reason": "inyeccion_bloqueada",
+                "text": "⛔ Acción no permitida: Su solicitud contiene patrones contrarios a las políticas de seguridad y gobernanza de la plataforma."
+            }
+
+    # Evaluación matemática C99 LEM-Ops del vector de estado del input
+    try:
+        from services.lem_native_engine import LEMNativeEngine
+        # z0: longitud normalizada, z1: ratio caracteres especiales, z2: palabras clave sospechosas
+        spec_chars = sum(1 for c in text if not c.isalnum() and not c.isspace())
+        z = [
+            min(1.0, len(text) / 2000.0),
+            min(1.0, (spec_chars / max(1, len(text))) * 3.0),
+            1.0 if any(k in low for k in ['prompt', 'bypass', 'eval', 'select', 'where', 'delete']) else 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        ]
+        accepted, energy = LEMNativeEngine.evaluate_state(z, schema_name="gov_action_guard_v1")
+        if not accepted:
+            return {
+                "ok": False,
+                "blocked": True,
+                "is_attack": True,
+                "reason": "lem_energy_threshold_exceeded",
+                "text": "⛔ Solicitud rechazada por el motor determinista de seguridad (anomalía estructural detectada)."
+            }
+    except Exception as e:
+        logger.debug(f"[LEM Pre] C99 check skipped: {e}")
+
     return {"ok": True, "blocked": False, "sanitized": text, "warnings": []}
 
 
-def post_validate(llm_text: str, license_id: int | None, rag_context: str = "", has_sql_data: bool = False) -> dict:
-    """Valida salida LLM, consume 1 credito si licencia valida. Retorna {ok, text, blocked_reason?, balance}."""
+def post_validate(llm_text: str, license_id: int | None, rag_context: str = "", has_sql_data: bool = False, allow_pii_role: bool = False) -> dict:
+    """
+    Valida salida del agente.
+    - Ataques/Vulnerabilidades detectadas -> Bloqueo estricto.
+    - Cédulas o datos sensibles en rol no privilegiado -> Enmascaramiento fluido determinista (sin romper el chat).
+    - Cifras numéricas sin respaldo SQL/RAG -> Marca contingencia para auto-recuperación.
+    - Ejecuta evaluación C99 en disco y deduce crédito en MariaDB.
+    """
     text = llm_text or ""
-    # 1. Fuga PII en salida hacia rol no privilegiado -> bloquear/mascarar
-    if _CEDULA_RE.search(text) or _PHONE_RE.search(text):
-        return {"ok": False, "blocked": True, "reason": "pii_en_salida", "text": "Respuesta bloqueada por LEM-V4: contenia datos sensibles. Reformule sin cedula/telefono."}
-    low = text.lower()
+    
+    # 1. Ataques o patrones inseguros en la salida (XSS, SQL, Path Traversal) -> Bloqueo Perimetral
     for pat in [r"<\s*script", r"javascript\s*:", r"\bunion\b.+\bselect\b", r"\bdrop\b.+\btable\b", r"\.\./"]:
         if re.search(pat, text, re.IGNORECASE):
-            return {"ok": False, "blocked": True, "reason": "vulnerabilidad_en_salida", "text": "Respuesta bloqueada por LEM-V4: patron inseguro detectado."}
-    # 2. Alucinacion numerica: si afirma cifras sin fuente RAG/SQL -> advertir (no bloquear duro, el SQL manda)
+            return {
+                "ok": False, 
+                "blocked": True, 
+                "is_attack": True,
+                "reason": "vulnerabilidad_en_salida", 
+                "text": "⛔ Respuesta bloqueada por políticas de seguridad: se detectó un patrón potencialmente inseguro en los datos generados."
+            }
+
+    # 2. Protección de Datos Sensibles (PII): Enmascarar con elegancia en lugar de bloqueo brusco
+    has_pii = bool(_CEDULA_RE.search(text) or _PHONE_RE.search(text))
+    if has_pii and not allow_pii_role:
+        # Enmascarar cédula conservando solo los últimos 3 dígitos
+        text = _CEDULA_RE.sub(lambda m: f"***-***-{m.group(0)[-3:]}", text)
+        # Enmascarar teléfono
+        text = _PHONE_RE.sub(lambda m: f"09****{m.group(0)[-4:]}", text)
+
+    # 3. Determinismo y Contingencia de Alucinación Numérica
     numbers = re.findall(r"\b\d+(?:[.,]\d+)?\b", text)
+    needs_contingency = False
     warnings: list[str] = []
+    
+    # Si emite cifras específicas y no hubo ni SQL ni RAG activo
     if numbers and not rag_context and not has_sql_data:
-        warnings.append("cifras_sin_fuente: verifique con reporte/SQL antes de usar")
-    # 3. Consumo creditos
+        needs_contingency = True
+        warnings.append("alucinacion_numerica_posible: cifras generadas sin contexto determinista de base de datos")
+
+    # 4. Evaluación de Estado en Silicio C99
+    try:
+        from services.lem_native_engine import LEMNativeEngine
+        z = [
+            1.0 if has_pii else 0.0,
+            1.0 if needs_contingency else 0.0,
+            min(1.0, len(text) / 4000.0),
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        ]
+        accepted, energy = LEMNativeEngine.evaluate_state(z, schema_name="gov_action_guard_v1")
+    except Exception as e:
+        accepted, energy = True, 0.0
+
+    # 5. Consumo de Créditos y Auditoría en MariaDB
     balance = None
     if license_id:
         try:
@@ -133,4 +199,13 @@ def post_validate(llm_text: str, license_id: int | None, rag_context: str = "", 
             return {"ok": False, "blocked": True, "reason": "sin_creditos", "text": str(e)}
         except Exception as e:
             logger.warning(f"LEM consume fallo: {e}")
-    return {"ok": True, "blocked": False, "text": text, "warnings": warnings, "balance": balance}
+
+    return {
+        "ok": True, 
+        "blocked": False, 
+        "text": text, 
+        "needs_contingency": needs_contingency,
+        "warnings": warnings, 
+        "balance": balance,
+        "energy": energy
+    }

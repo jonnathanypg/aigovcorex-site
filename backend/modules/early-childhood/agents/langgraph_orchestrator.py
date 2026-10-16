@@ -550,16 +550,56 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
             final_response = final_state['messages'][-1].content
             self.logger.info(f"✅ Final Response Generated:\n{final_response}")
 
-            # LEM-V4 post: bloquea PII/vulns, advierte cifras sin fuente, consume 1 credito
+            # LEM-V4 / LEM-Ops Post-Validate con evaluación nativa C99 en disco
             _lem_info: dict = {}
             try:
                 from services.lem_v4_validator import post_validate as _lem_post
-                _pv2 = _lem_post(final_response, self.license_id, rag_context="", has_sql_data=True)
-                _lem_info = {"warnings": _pv2.get("warnings", []), "balance": _pv2.get("balance"), "blocked": _pv2.get("blocked", False)}
+                # Determinar si el usuario tiene rol que permite PII sin ofuscar
+                is_privileged = self.role in ['admin', 'super_admin', 'license_admin', 'director']
+                _pv2 = _lem_post(
+                    final_response, 
+                    self.license_id, 
+                    rag_context="", 
+                    has_sql_data=True,
+                    allow_pii_role=is_privileged
+                )
+                _lem_info = {
+                    "warnings": _pv2.get("warnings", []), 
+                    "balance": _pv2.get("balance"), 
+                    "blocked": _pv2.get("blocked", False),
+                    "energy": _pv2.get("energy", 0.0)
+                }
+
+                # Caso 1: Ataque real o patrón vulnerable detectado -> Bloqueo estricto
                 if not _pv2.get("ok"):
                     final_response = _pv2.get("text", final_response)
                     self._save_conversation(message, final_response, channel)
-                    return {"response": final_response, "success": False, "agent_used": self.agent_name, "blocked": True, "reason": _pv2.get("reason"), "lem": _lem_info}
+                    return {
+                        "response": final_response, 
+                        "success": False, 
+                        "agent_used": self.agent_name, 
+                        "blocked": True, 
+                        "reason": _pv2.get("reason"), 
+                        "lem": _lem_info
+                    }
+
+                # Caso 2: PII enmascarada limpiamente por LEM -> Tomar el texto sanitizado
+                if _pv2.get("text"):
+                    final_response = _pv2.get("text")
+
+                # Caso 3: Bucle de contingencia ante posible alucinación numérica
+                if _pv2.get("needs_contingency"):
+                    self.logger.info("🔄 [LEM-Contingency] Activando verificación determinista de respaldo...")
+                    try:
+                        from models.child import Child
+                        from agents.tools.analytics_tools import resolve_tenant_ids
+                        t_ids = resolve_tenant_ids(self.tenant_id, self.user_id)
+                        if t_ids and ("cuántos" in message.lower() or "total" in message.lower() or "niños" in message.lower()):
+                            real_count = Child.query.filter(Child.tenant_id.in_(t_ids), Child.status == 'activo').count()
+                            final_response += f"\n\n*(Verificación determinista oficial LEM: {real_count} niños activos registrados en el centro).* "
+                    except Exception as _c_err:
+                        self.logger.debug(f"[LEM-Contingency] check skipped: {_c_err}")
+
             except Exception as _e:
                 self.logger.warning(f"LEM post fallo: {_e}")
 

@@ -65,15 +65,28 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   const lastHealth = data?.last_health;
   const milestones = data?.milestones ?? [];
 
-  // Metadatos institucionales y de proyecto (dinámicos por licencia)
-  const institutionsHeader = orgConfig?.institutions_header || "DASE EP  ·  FUNDACIÓN GASIBA  ·  M.I. MUNICIPALIDAD DE GUAYAQUIL";
-  const projectName = orgConfig?.project_name || "PROYECTO INTEGRAL DE GESTIÓN TÉCNICA Y ADMINISTRATIVA DE LOS CENTROS MUNICIPALES DE CUIDADO INFANTIL GUASMO, ORQUÍDEAS Y BAHÍA";
-  const convenio = orgConfig?.convenio_text || CMCI_CONVENIO_DEFAULTS.convenio;
-  const finalidad = orgConfig?.finalidad_text || CMCI_CONVENIO_DEFAULTS.finalidad;
-  const poblacion = orgConfig?.poblacion_text || CMCI_CONVENIO_DEFAULTS.poblacion;
-  const objetivo = orgConfig?.objetivo_text || CMCI_CONVENIO_DEFAULTS.objetivo;
-  const servicios = orgConfig?.servicios_text || CMCI_CONVENIO_DEFAULTS.servicios;
-  const footerNote = orgConfig?.print_footer_note || "Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.";
+  // Metadatos institucionales y de proyecto (dinámicos por la licencia específica del centro del niño)
+  const childLicense = (data as any)?.license || {};
+  const activeConfig = {
+    institutions_header: childLicense.institutions_header || orgConfig?.institutions_header,
+    project_name: childLicense.project_name || orgConfig?.project_name,
+    convenio_text: childLicense.convenio_text || orgConfig?.convenio_text,
+    finalidad_text: childLicense.finalidad_text || orgConfig?.finalidad_text,
+    poblacion_text: childLicense.poblacion_text || orgConfig?.poblacion_text,
+    objetivo_text: childLicense.objetivo_text || orgConfig?.objetivo_text,
+    servicios_text: childLicense.servicios_text || orgConfig?.servicios_text,
+    print_footer_note: childLicense.print_footer_note || orgConfig?.print_footer_note,
+    license_name: childLicense.name || orgConfig?.license_name,
+  };
+
+  const institutionsHeader = activeConfig.institutions_header || "DASE EP  ·  FUNDACIÓN GASIBA  ·  M.I. MUNICIPALIDAD DE GUAYAQUIL";
+  const projectName = activeConfig.project_name || "PROYECTO INTEGRAL DE GESTIÓN TÉCNICA Y ADMINISTRATIVA DE LOS CENTROS MUNICIPALES DE CUIDADO INFANTIL GUASMO, ORQUÍDEAS Y BAHÍA";
+  const convenio = activeConfig.convenio_text || CMCI_CONVENIO_DEFAULTS.convenio;
+  const finalidad = activeConfig.finalidad_text || CMCI_CONVENIO_DEFAULTS.finalidad;
+  const poblacion = activeConfig.poblacion_text || CMCI_CONVENIO_DEFAULTS.poblacion;
+  const objetivo = activeConfig.objetivo_text || CMCI_CONVENIO_DEFAULTS.objetivo;
+  const servicios = activeConfig.servicios_text || CMCI_CONVENIO_DEFAULTS.servicios;
+  const footerNote = activeConfig.print_footer_note || "Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.";
 
   // Semáforo de completitud de expediente
   const checks: Array<[string, unknown]> = [
@@ -191,10 +204,10 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 1. IDENTIFICACIÓN DEL NIÑO / NIÑA */}
               <div className="mb-3">
-                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
                   1. IDENTIFICACIÓN DEL NIÑO / NIÑA
                 </div>
-                <table className="w-full border-collapse border-b border-black text-[10.5px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10.5px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nombres y apellidos</td>
@@ -226,10 +239,10 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 2. ASIGNACIÓN EN EL CENTRO */}
               <div className="mb-3">
-                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
                   2. ASIGNACIÓN EN EL CENTRO
                 </div>
-                <table className="w-full border-collapse border-b border-black text-[10.5px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10.5px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Centro</td>
@@ -260,10 +273,10 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 3. DATOS FAMILIARES Y REPRESENTANTE LEGAL */}
               <div className="mb-3">
-                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
                   3. DATOS FAMILIARES Y REPRESENTANTE LEGAL
                 </div>
-                <table className="w-full border-collapse border-b border-black text-[10.5px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10.5px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Domicilio</td>
@@ -287,10 +300,10 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 4. VALORACIÓN INICIAL — NUTRICIÓN Y CRECIMIENTO */}
               <div className="mb-2">
-                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
                   4. VALORACIÓN INICIAL — NUTRICIÓN Y CRECIMIENTO
                 </div>
-                <table className="w-full border-collapse border-b border-black text-[10px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de valoración</td>
@@ -380,10 +393,10 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 5. VALORACIÓN INICIAL — SALUD */}
               <div className="mb-3">
-                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
                   5. VALORACIÓN INICIAL — SALUD
                 </div>
-                <table className="w-full border-collapse border-b border-black text-[10px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Esquema de vacunación</td>
@@ -431,12 +444,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII) */}
               <div className="mb-3">
-                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
                   6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII)
                 </div>
-                <table className="w-full border-collapse border-b border-black text-[10px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
                   <thead>
-                    <tr className="border-b border-black bg-slate-100 font-bold text-center">
+                    <tr className="border-b border-slate-300 bg-slate-100 font-bold text-center">
                       <th className="text-left py-1 px-2 w-2/5 border-r border-slate-300">Ámbito de desarrollo</th>
                       <th className="py-1 px-2 w-[15%] border-r border-slate-300">Adquirido (A)</th>
                       <th className="py-1 px-2 w-[15%] border-r border-slate-300">En proceso (EP)</th>
@@ -463,6 +476,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                         <span className="inline-flex gap-3">
                           <span>☑ Acorde a la edad</span>
                           <span>☐ En riesgo</span>
+                          <span>☐ Requiere derivación</span>
                         </span>
                       </td>
                       <td className="py-1.5 px-2 font-semibold border-r border-slate-200">Fecha de aplicación</td>
@@ -474,10 +488,10 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE */}
               <div className="mb-3">
-                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
                   7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE
                 </div>
-                <table className="w-full border-collapse border-b border-black text-[10px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Completitud de expediente</td>
@@ -513,33 +527,39 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO */}
               <div className="mb-4">
-                <div className="bg-slate-200 border-t border-b border-black px-2 py-0.5 font-bold uppercase text-[10.5px]">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2.5 py-1 font-bold uppercase text-[10px] tracking-wide">
                   8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
                 </div>
-                <div className="border-b border-black p-2 text-[10px] min-h-[45px] text-slate-800 leading-normal">
+                <div className="border border-t-0 border-slate-300 p-2.5 text-[10px] min-h-[50px] text-slate-800 leading-normal">
                   {c.notes ? <p className="mb-1">{c.notes}</p> : null}
                   <p>{footerNote}</p>
                 </div>
               </div>
 
-              {/* SECCIÓN DE FIRMAS FÍSICAS (ÚNICAMENTE EDUCADORA Y COORDINADORA - SIN REPRESENTANTE) */}
-              <div className="mt-12 pt-6">
-                <div className="grid grid-cols-2 gap-16 px-6">
+              {/* SECCIÓN DE FIRMAS FÍSICAS (EDUCADORA, COORDINADORA Y REPRESENTANTE LEGAL SEGÚN FORMATO DASE/GASIBA) */}
+              <div className="mt-14 pt-4">
+                <div className="grid grid-cols-3 gap-8 px-2">
                   {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">
-                    <div className="border-t border-black pt-1">
-                      <p className="font-bold text-[11px] text-slate-900">Educadora Responsable</p>
-                      <p className="text-[10px] text-slate-600">{cell(c.educator_name || c.assigned_educator_name, "Firma y fecha")}</p>
-                      <p className="text-[9px] text-slate-500 font-mono mt-0.5">{c.educator_cedula ? `C.I. ${c.educator_cedula}` : "Firma y fecha"}</p>
+                    <div className="border-t border-slate-400 pt-1.5">
+                      <p className="font-semibold text-[10.5px] text-slate-600">Educadora Responsable</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{cell(c.educator_name || c.assigned_educator_name, "Firma y fecha")}</p>
                     </div>
                   </div>
 
                   {/* Firma 2: Coordinadora del Centro */}
                   <div className="text-center">
-                    <div className="border-t border-black pt-1">
-                      <p className="font-bold text-[11px] text-slate-900">Coordinadora del Centro</p>
-                      <p className="text-[10px] text-slate-600">{cell(c.coordinator_name, "Firma, sello y fecha")}</p>
-                      <p className="text-[9px] text-slate-500 mt-0.5">Firma, sello y fecha</p>
+                    <div className="border-t border-slate-400 pt-1.5">
+                      <p className="font-semibold text-[10.5px] text-slate-600">Coordinadora del Centro</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Firma, sello y fecha</p>
+                    </div>
+                  </div>
+
+                  {/* Firma 3: Representante Legal */}
+                  <div className="text-center">
+                    <div className="border-t border-slate-400 pt-1.5">
+                      <p className="font-semibold text-[10.5px] text-slate-600">Representante legal</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{cell(primaryRep.full_name || `${primaryRep.first_name || ""} ${primaryRep.last_name || ""}`.trim(), "Firma")}</p>
                     </div>
                   </div>
                 </div>
@@ -547,8 +567,9 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
             </div>
 
             {/* Pie de página 2 */}
-            <div className="pt-4 border-t border-slate-200 text-center text-[9px] text-slate-500 mt-6">
-              Expediente físico confidencial del CMCI · Ficha oficial de registro y valoración integral · Sistema AI GovCoreX OS
+            <div className="pt-2 text-slate-400 flex justify-between items-center text-[9px]">
+              <span>Expediente {orgConfig?.license_name || "DASE EP"} · Código {id} · C.I. {cell(c.cedula, "S/C")}</span>
+              <span>Página 2</span>
             </div>
           </div>
         </div>

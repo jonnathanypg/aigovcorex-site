@@ -454,6 +454,28 @@ def get_child(child_id):
         except Exception:
             response['milestones'] = []
 
+        # Configuración institucional de la licencia asociada al centro del niño
+        try:
+            license_obj = child.tenant.license if child.tenant and child.tenant.license else None
+            if license_obj:
+                response['license'] = {
+                    'id': license_obj.id,
+                    'name': license_obj.name,
+                    'legal_name': license_obj.legal_name,
+                    'institutions_header': license_obj.institutions_header,
+                    'project_name': license_obj.project_name,
+                    'convenio_text': license_obj.convenio_text,
+                    'finalidad_text': license_obj.finalidad_text,
+                    'poblacion_text': license_obj.poblacion_text,
+                    'objetivo_text': license_obj.objetivo_text,
+                    'servicios_text': license_obj.servicios_text,
+                    'print_footer_note': license_obj.print_footer_note,
+                }
+            else:
+                response['license'] = None
+        except Exception:
+            response['license'] = None
+
         return jsonify(response), 200
         
     except Exception as e:

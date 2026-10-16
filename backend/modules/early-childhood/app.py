@@ -222,6 +222,28 @@ def create_app(config_name=None):
             except Exception:
                 db.session.rollback()
 
+            # Seed / Migración de datos institucionales para la licencia de prueba (GASIBA / DASE EP / MIES)
+            try:
+                seed_sql = """
+                UPDATE licenses l
+                LEFT JOIN license_admins la ON la.license_id = l.id
+                LEFT JOIN users u ON u.id = la.user_id
+                SET 
+                    l.institutions_header = IF(l.institutions_header IS NULL OR l.institutions_header = '', 'DASE EP  ·  FUNDACIÓN GASIBA  ·  M.I. MUNICIPALIDAD DE GUAYAQUIL', l.institutions_header),
+                    l.project_name = IF(l.project_name IS NULL OR l.project_name = '', 'PROYECTO INTEGRAL DE GESTIÓN TÉCNICA Y ADMINISTRATIVA DE LOS CENTROS MUNICIPALES DE CUIDADO INFANTIL GUASMO, ORQUÍDEAS Y BAHÍA', l.project_name),
+                    l.convenio_text = IF(l.convenio_text IS NULL OR l.convenio_text = '', 'Convenio de cooperación interinstitucional — Centros Municipales de Cuidado Infantil (CMCI)', l.convenio_text),
+                    l.finalidad_text = IF(l.finalidad_text IS NULL OR l.finalidad_text = '', 'Atención integral a niñas y niños de 12 a 42 meses en situación de vulnerabilidad', l.finalidad_text),
+                    l.poblacion_text = IF(l.poblacion_text IS NULL OR l.poblacion_text = '', 'Niñas y niños de 12 a 42 meses y sus familias (centros BH / GU / OR)', l.poblacion_text),
+                    l.objetivo_text = IF(l.objetivo_text IS NULL OR l.objetivo_text = '', 'Garantizar cuidado, nutrición, salud y desarrollo infantil integral con priorización por vulnerabilidad', l.objetivo_text),
+                    l.servicios_text = IF(l.servicios_text IS NULL OR l.servicios_text = '', 'Cuidado diario · Alimentación (4 tiempos) · Salud y crecimiento · Desarrollo infantil · Acompañamiento familiar', l.servicios_text),
+                    l.print_footer_note = IF(l.print_footer_note IS NULL OR l.print_footer_note = '', 'Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.', l.print_footer_note)
+                WHERE u.email = 'jgastiaburo@gasiba.org' OR l.id = 1
+                """
+                db.session.execute(text(seed_sql))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
             # CMCI Fase 0: Tenant.cmci_code + country_iso (idempotente: try/except por columna)
             for col_sql in [
                 "ALTER TABLE tenants ADD COLUMN cmci_code VARCHAR(10) NULL",

@@ -51,8 +51,17 @@ export function MenuClient() {
     useEffect(() => {
         const user = authService.getStoredUser();
         if (user) {
-            const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-            setCanEdit(['license_admin', 'coordinator', 'center_coordinator', 'super_admin'].includes(roleName));
+            const roleName = String(typeof user.role === 'string' ? user.role : (user.role as any)?.name || '').toLowerCase().trim();
+            setCanEdit([
+                'license_admin', 
+                'coordinator', 
+                'center_coordinator', 
+                'super_admin',
+                'nutritionist',
+                'nutricionista',
+                'doctor',
+                'medico'
+            ].includes(roleName));
         }
     }, []);
 

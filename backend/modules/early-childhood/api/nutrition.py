@@ -123,21 +123,23 @@ def create_or_update_menu():
         target_tenant_id = None
         target_license_id = None
         
-        from models.tenant import Tenant
-        from models.license import LicenseAdmin
+        from utils.role_helpers import is_multi_center_role, get_license_id_for_user
         
         if is_multi_center_role(user):
-            lic_admin = LicenseAdmin.query.filter_by(user_id=user.id).first()
-            if lic_admin:
-                target_license_id = lic_admin.license_id
-                
+            target_license_id = get_license_id_for_user(user)
             if 'tenant_id' in data and data['tenant_id']:
                 target_tenant_id = data['tenant_id']
+            elif user.tenant_id:
+                target_tenant_id = user.tenant_id
         elif user.tenant_id:
             target_tenant_id = user.tenant_id
             tenant = Tenant.query.get(user.tenant_id)
             if tenant:
                 target_license_id = tenant.license_id
+            else:
+                target_license_id = get_license_id_for_user(user)
+        else:
+            target_license_id = get_license_id_for_user(user)
         
         if not target_tenant_id and not target_license_id:
              return jsonify({'error': 'Se requiere tenant_id o license_id'}), 400

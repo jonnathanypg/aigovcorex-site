@@ -211,10 +211,91 @@ export default function InformeActividadesPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleGenerate} className="space-y-4">
+              {/* Presets de Período según ciclo administrativo / CMCI */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Período del Informe
+                  </Label>
+                  <span className="text-[10px] text-primary font-medium">Ciclo mensual / corte</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] px-2 py-0 border-border/60 hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/40"
+                    onClick={() => {
+                      const now = new Date();
+                      // Si hoy es antes del 29, el periodo va del 29 del mes anterior al 29 de este mes
+                      const currentMonth = now.getMonth();
+                      const currentYear = now.getFullYear();
+                      let startY = currentYear;
+                      let startM = currentMonth - 1;
+                      if (startM < 0) {
+                        startM = 11;
+                        startY -= 1;
+                      }
+                      const startD = new Date(startY, startM, 29);
+                      const endD = new Date(currentYear, currentMonth, 29);
+                      setStartDate(startD.toISOString().split("T")[0]);
+                      setEndDate(endD.toISOString().split("T")[0]);
+                    }}
+                  >
+                    Corte 29 al 29
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] px-2 py-0 border-border/60 hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/40"
+                    onClick={() => {
+                      const today = new Date();
+                      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                      setStartDate(firstDay.toISOString().split("T")[0]);
+                      setEndDate(lastDay.toISOString().split("T")[0]);
+                    }}
+                  >
+                    Mes Actual (1–30)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] px-2 py-0 border-border/60 hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/40"
+                    onClick={() => {
+                      const today = new Date();
+                      const prevMonthFirst = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                      const prevMonthLast = new Date(today.getFullYear(), today.getMonth(), 0);
+                      setStartDate(prevMonthFirst.toISOString().split("T")[0]);
+                      setEndDate(prevMonthLast.toISOString().split("T")[0]);
+                    }}
+                  >
+                    Mes Anterior
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] px-2 py-0 border-border/60 hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/40"
+                    onClick={() => {
+                      const end = new Date();
+                      const start = new Date();
+                      start.setDate(end.getDate() - 30);
+                      setStartDate(start.toISOString().split("T")[0]);
+                      setEndDate(end.toISOString().split("T")[0]);
+                    }}
+                  >
+                    Últimos 30 días
+                  </Button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="startDate" className="text-xs font-semibold">
-                    Fecha Inicio *
+                    Inicio del Período *
                   </Label>
                   <Input
                     type="date"
@@ -226,7 +307,7 @@ export default function InformeActividadesPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="endDate" className="text-xs font-semibold">
-                    Fecha Fin *
+                    Fin del Período *
                   </Label>
                   <Input
                     type="date"

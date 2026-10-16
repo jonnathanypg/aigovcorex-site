@@ -305,18 +305,30 @@ def get_recent_activity():
         if not target_tenant_ids:
              return jsonify({'records': []}), 200
         
-        query = db.session.query(HealthRecord).join(Child, HealthRecord.child_id == Child.id).filter(
-            HealthRecord.tenant_id.in_(target_tenant_ids)
-        )
+        from models.user import User
+        query = db.session.query(HealthRecord)\
+            .join(Child, HealthRecord.child_id == Child.id)\
+            .outerjoin(User, HealthRecord.registered_by_id == User.id)\
+            .filter(HealthRecord.tenant_id.in_(target_tenant_ids))
         
         if search:
             search_pattern = f"%{search}%"
+            # Normalize pattern to support search by full name
+            full_user_name = User.first_name + " " + User.last_name
+            full_child_name = Child.first_name + " " + Child.last_name
+            full_child_name_inv = Child.last_name + " " + Child.first_name
+            
             query = query.filter(
                 or_(
                     Child.first_name.ilike(search_pattern),
                     Child.last_name.ilike(search_pattern),
+                    full_child_name.ilike(search_pattern),
+                    full_child_name_inv.ilike(search_pattern),
                     Child.cedula.ilike(search_pattern),
                     HealthRecord.medical_professional.ilike(search_pattern),
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern),
+                    full_user_name.ilike(search_pattern),
                     HealthRecord.notes.ilike(search_pattern),
                     HealthRecord.incident_description.ilike(search_pattern),
                     HealthRecord.record_type.ilike(search_pattern)

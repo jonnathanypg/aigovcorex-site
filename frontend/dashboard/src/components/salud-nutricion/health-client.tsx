@@ -5,12 +5,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { healthService, type HealthActivity } from "@/services/health.service";
-import { Loader2, PlusCircle, MoreHorizontal, FileEdit, Trash2, ArrowDownAZ, Calendar as CalendarIcon, Search } from "lucide-react";
+import { Loader2, PlusCircle, MoreHorizontal, FileEdit, Trash2, ArrowDownAZ, Calendar as CalendarIcon, Search, UserCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useRole } from "@/hooks/use-role";
 import { useAgentRefresh } from "@/hooks/use-agent-refresh";
 import { CreateHealthRecordDialog } from "./create-health-record-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +48,7 @@ export function HealthClient({ tenantId, readOnly = false }: HealthClientProps) 
   const [activities, setActivities] = useState<HealthActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [professionalFilter, setProfessionalFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"date" | "name">("date");
 
   const [editingRecordId, setEditingRecordId] = useState<number | null>(null);
@@ -70,6 +78,17 @@ export function HealthClient({ tenantId, readOnly = false }: HealthClientProps) 
 
   useAgentRefresh(() => fetchData(searchQuery));
 
+  // Extract unique professionals for filtering
+  const professionalsList = useMemo(() => {
+    const set = new Set<string>();
+    activities.forEach((a) => {
+      if (a.professional && a.professional.trim() && a.professional !== 'Sistema') {
+        set.add(a.professional.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  }, [activities]);
+
   const handleEdit = (id: number) => {
     setEditingRecordId(id);
     setIsDialogOpen(true);
@@ -95,27 +114,53 @@ export function HealthClient({ tenantId, readOnly = false }: HealthClientProps) 
   };
 
   const sortedActivities = useMemo(() => {
-    const list = [...activities];
+    let list = [...activities];
+
+    // Filter by professional if selected
+    if (professionalFilter !== "all") {
+      list = list.filter((a) => (a.professional || "").toLowerCase().trim() === professionalFilter.toLowerCase().trim());
+    }
+
     if (sortBy === "name") {
       list.sort((a, b) => (a.child_name || "").localeCompare(b.child_name || ""));
     } else {
       list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
     return list;
-  }, [activities, sortBy]);
+  }, [activities, professionalFilter, sortBy]);
 
   return (
     <Card className="border-border/40 bg-card/60 backdrop-blur-sm shadow-sm">
       <CardContent className="p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div className="relative flex-1 w-full md:max-w-sm">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por infante o profesional..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-background/50 border-border/50 text-sm"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:max-w-xl">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por infante o profesional..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-background/50 border-border/50 text-sm"
+              />
+            </div>
+
+            {/* Selector de Profesional / Doctor / Nutricionista (Filtro como en Educadoras) */}
+            <div className="w-full sm:w-[220px]">
+              <Select value={professionalFilter} onValueChange={setProfessionalFilter}>
+                <SelectTrigger className="bg-background/50 border-border/50 text-xs h-9">
+                  <UserCheck className="h-3.5 w-3.5 mr-1.5 text-primary shrink-0" />
+                  <SelectValue placeholder="Todos los profesionales" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los profesionales</SelectItem>
+                  {professionalsList.map((prof) => (
+                    <SelectItem key={prof} value={prof}>
+                      {prof}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto justify-end">

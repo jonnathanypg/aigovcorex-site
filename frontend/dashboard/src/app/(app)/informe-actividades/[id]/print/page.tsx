@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { PrintHeader, PrintButton } from "@/components/cmci/print-header";
+import { PrintHeader, PrintButton, PrintFooterBanner } from "@/components/cmci/print-header";
 import { cmciService, type MonthlyReportDetail } from "@/services/cmci.service";
 import { Loader2, ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -226,6 +226,9 @@ export default function InformeActividadesPrintPage({
           {pv.nota || "Documento oficial CMCI firmable en papel fuera del sistema. Sin firma electrónica."}
         </p>
       </section>
+
+      {/* Pie de membrete institucional no invasivo */}
+      <PrintFooterBanner />
     </div>
   );
 }

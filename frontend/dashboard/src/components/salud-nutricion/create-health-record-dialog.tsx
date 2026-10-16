@@ -27,6 +27,7 @@ import { childrenService } from "@/services/children.service";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { Child } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { authService } from "@/services/auth.service";
 
 interface CreateHealthRecordDialogProps {
     children?: React.ReactNode;
@@ -141,7 +142,11 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
         setIncidentDescription("");
         setSymptoms("");
         setTreatment("");
-        setMedicalProfessional("");
+        
+        const currentUser = authService.getStoredUser();
+        const defaultProfName = currentUser?.full_name || 
+            (currentUser?.first_name ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim() : "");
+        setMedicalProfessional(defaultProfName);
         setNotes("");
     };
 
@@ -154,6 +159,7 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
             const recordData: any = {
                 record_type: recordType,
                 record_date: recordDate || undefined,
+                medical_professional: medicalProfessional.trim() || undefined,
                 notes,
             };
 
@@ -164,12 +170,10 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
             } else if (recordType === 'vacunacion') {
                 recordData.vaccine_name = vaccineName;
                 recordData.vaccine_dose = vaccineDose;
-                recordData.medical_professional = medicalProfessional;
             } else {
                 recordData.incident_description = incidentDescription;
                 recordData.symptoms = symptoms;
                 recordData.treatment = treatment;
-                recordData.medical_professional = medicalProfessional;
             }
 
             if (recordIdToEdit) {
@@ -291,6 +295,15 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
                                             onChange={(e) => setHeadCircumference(e.target.value)}
                                         />
                                     </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="growth-professional">Profesional Evaluador / Médico / Nutricionista</Label>
+                                    <Input
+                                        id="growth-professional"
+                                        placeholder="Nombre del profesional evaluador"
+                                        value={medicalProfessional}
+                                        onChange={(e) => setMedicalProfessional(e.target.value)}
+                                    />
                                 </div>
                             </>
                         )}

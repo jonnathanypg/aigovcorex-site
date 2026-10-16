@@ -80,6 +80,7 @@ interface PrintHeaderProps extends ConvenioInfo {
   periodo?: Periodo;
   showConvenio?: boolean;
   showSemaforo?: boolean;
+  showFooterBanner?: boolean;
 }
 
 export function PrintHeader({
@@ -96,6 +97,7 @@ export function PrintHeader({
   servicios,
   showConvenio = true,
   showSemaforo = true,
+  showFooterBanner = false,
 }: PrintHeaderProps) {
   const [orgConfig, setOrgConfig] = useState<any>(null);
 
@@ -117,15 +119,15 @@ export function PrintHeader({
 
   return (
     <div className="print-header relative z-10">
-      {footerBannerUrl && (
+      {showFooterBanner && footerBannerUrl && (
         <div
-          className="fixed inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-90 overflow-hidden flex items-end justify-center"
-          style={{ height: "140mm" }}
+          className="pointer-events-none select-none z-0 overflow-hidden flex items-end justify-center mt-12 mb-2 print:fixed print:inset-x-0 print:bottom-0 print:m-0 opacity-40 print:opacity-90"
+          style={{ maxHeight: "110mm" }}
         >
           <img
             src={footerBannerUrl}
             alt="Pie de membrete"
-            className="w-full h-auto object-contain object-bottom opacity-95"
+            className="w-full max-w-[210mm] h-auto object-contain object-bottom"
           />
         </div>
       )}
@@ -167,6 +169,30 @@ export function PrintHeader({
         </div>
       )}
       {showSemaforo && <SemaforoLegend />}
+    </div>
+  );
+}
+
+export function PrintFooterBanner() {
+  const [orgConfig, setOrgConfig] = useState<any>(null);
+
+  useEffect(() => {
+    licenseAdminService.getPublicConfig().then(setOrgConfig).catch(() => setOrgConfig(null));
+  }, []);
+
+  const footerBannerUrl = resolvePrintBannerUrl(orgConfig?.footer_banner_path);
+  if (!footerBannerUrl) return null;
+
+  return (
+    <div
+      className="pointer-events-none select-none overflow-hidden flex items-end justify-center mt-8 print:fixed print:inset-x-0 print:bottom-0 print:m-0 z-0 opacity-40 print:opacity-95"
+      style={{ maxHeight: "90mm" }}
+    >
+      <img
+        src={footerBannerUrl}
+        alt="Pie de membrete"
+        className="w-full max-w-[210mm] h-auto object-contain object-bottom"
+      />
     </div>
   );
 }

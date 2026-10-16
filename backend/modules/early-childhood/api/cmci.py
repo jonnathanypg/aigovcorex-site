@@ -53,6 +53,62 @@ def _tenant():
     return TenantContext.get_current_tenant_id()
 
 
+def _allowed_tenant_ids():
+    """Retorna lista de tenant_ids accesibles por el usuario actual (soporta license_admin y multi-centro)."""
+    tid = _tenant()
+    if tid is not None:
+        return [int(tid)]
+    user = getattr(g, "current_user", None)
+    if not user:
+        return []
+    try:
+        from models.tenant import Tenant
+        if getattr(user, "license_id", None):
+            return [t.id for t in Tenant.query.filter_by(license_id=user.license_id).all()]
+        role = getattr(getattr(user, "role", None), "name", None)
+        if role == "super_admin":
+            return [t.id for t in Tenant.query.all()]
+    except Exception:
+        pass
+    return []
+
+
+def _resolve_center_id(body=None):
+    """Determina el center_id (tenant_id) al guardar una ficha."""
+    tid = _tenant()
+    if tid is not None:
+        return int(tid)
+    body = body or {}
+    allowed = _allowed_tenant_ids()
+    # 1. Por child_id si viene en el payload
+    child_id = body.get("child_id")
+    if child_id not in (None, ""):
+        try:
+            from models.child import Child
+            ch = Child.query.get(int(child_id))
+            if ch and ch.tenant_id and (not allowed or ch.tenant_id in allowed):
+                return int(ch.tenant_id)
+        except Exception:
+            pass
+    # 2. Por código o nombre de centro si viene en body["center"]
+    center_str = str(body.get("center") or "").strip()
+    if center_str:
+        try:
+            from models.tenant import Tenant
+            q = Tenant.query
+            if allowed:
+                q = q.filter(Tenant.id.in_(allowed))
+            t = q.filter((Tenant.cmci_code == center_str) | (Tenant.name == center_str)).first()
+            if t:
+                return int(t.id)
+        except Exception:
+            pass
+    # 3. Primer centro de la licencia
+    if allowed:
+        return int(allowed[0])
+    return None
+
+
 def _now_iso():
     return datetime.now().isoformat(timespec="seconds")
 
@@ -78,8 +134,14 @@ def _scope():
 
 
 def _check_idor(record):
-    """IDOR: el registro debe pertenecer al tenant (cmci==tenant)."""
-    if not record or record.get("tenant_id") != _tenant():
+    """IDOR: el registro debe pertenecer al tenant o licencia del usuario."""
+    if not record:
+        return jsonify({"error": "Registro no encontrado"}), 404
+    rec_tid = record.get("tenant_id")
+    allowed = _allowed_tenant_ids()
+    if rec_tid is not None and allowed and rec_tid not in allowed:
+        return jsonify({"error": "Registro no encontrado"}), 404
+    if not allowed and rec_tid != _tenant():
         return jsonify({"error": "Registro no encontrado"}), 404
     return None
 
@@ -184,8 +246,9 @@ def _vuln_insert_db(body, answers, result, params_version, source):
     result = result or {}
     assessed_in = body.get("assessed_at") or answers.get("assessed_at")
     day, raw = _parse_day(assessed_in or _now_iso())
-    birth_in = answers.get("birth_date")
+    birth_in = answers.get("birth_date") or answers.get("nacimiento")
     bday, _ = _parse_day(birth_in) if birth_in else (None, None)
+    center_id = _resolve_center_id(body)
     stored_answers = dict(answers)
     stored_answers[_META] = {
         "center": body.get("center"), "child_name": body.get("child_name"),
@@ -194,7 +257,7 @@ def _vuln_insert_db(body, answers, result, params_version, source):
         "assessed_at": raw, "result": result,
     }
     row = VulnerabilityAssessment(
-        child_id=body.get("child_id"), center_id=_tenant(),
+        child_id=body.get("child_id"), center_id=center_id,
         code=body.get("code"), assessed_at=day, birth_date=bday,
         age_months=result.get("age_months"),
         in_range=(result.get("age_range") != "FUERA DE RANGO"),
@@ -258,15 +321,28 @@ def _vuln_to_record(row):
 def _vuln_base_query(args):
     """Query base con filtros tenant + center/desde/hasta (+child_id/status)."""
     from models.cmci import VulnerabilityAssessment
+    from sqlalchemy import or_
 
-    q = VulnerabilityAssessment.query.filter(
-        VulnerabilityAssessment.center_id == _tenant())
+    allowed = _allowed_tenant_ids()
+    if allowed:
+        if _tenant() is None:
+            q = VulnerabilityAssessment.query.filter(
+                or_(VulnerabilityAssessment.center_id.in_(allowed),
+                    VulnerabilityAssessment.center_id.is_(None))
+            )
+        else:
+            q = VulnerabilityAssessment.query.filter(
+                VulnerabilityAssessment.center_id.in_(allowed))
+    else:
+        q = VulnerabilityAssessment.query.filter(
+            VulnerabilityAssessment.center_id == _tenant())
     center = args.get("center")
     if center:
         from models.tenant import Tenant
-        q = (q.join(Tenant,
-                    VulnerabilityAssessment.center_id == Tenant.id)
-              .filter(Tenant.cmci_code == str(center)))
+        q = (q.outerjoin(Tenant,
+                         VulnerabilityAssessment.center_id == Tenant.id)
+              .filter(or_(Tenant.cmci_code == str(center),
+                          Tenant.name == str(center))))
     if args.get("child_id") is not None and str(args.get("child_id")) != "":
         try:
             q = q.filter(VulnerabilityAssessment.child_id == int(args["child_id"]))
@@ -301,10 +377,19 @@ def _vuln_list_db(args):
 
 def _vuln_detail_db(rec_id):
     from models.cmci import VulnerabilityAssessment
+    from sqlalchemy import or_
 
-    row = (VulnerabilityAssessment.query
-           .filter(VulnerabilityAssessment.id == rec_id,
-                   VulnerabilityAssessment.center_id == _tenant()).first())
+    allowed = _allowed_tenant_ids()
+    q = VulnerabilityAssessment.query.filter(VulnerabilityAssessment.id == rec_id)
+    if allowed:
+        if _tenant() is None:
+            q = q.filter(or_(VulnerabilityAssessment.center_id.in_(allowed),
+                             VulnerabilityAssessment.center_id.is_(None)))
+        else:
+            q = q.filter(VulnerabilityAssessment.center_id.in_(allowed))
+    else:
+        q = q.filter(VulnerabilityAssessment.center_id == _tenant())
+    row = q.first()
     return _vuln_to_record(row) if row is not None else None
 
 
@@ -367,7 +452,7 @@ def _vuln_dashboard_db(args):
         by_center = {args["center"]: total}
     else:
         from models.tenant import Tenant
-        center_col = func.coalesce(Tenant.cmci_code, "Sin centro")
+        center_col = func.coalesce(Tenant.cmci_code, Tenant.name, "Sin centro")
         by_center = {c: cnt for c, cnt in
                      q.outerjoin(Tenant, VulnerabilityAssessment.center_id
                                  == Tenant.id)
@@ -506,9 +591,10 @@ def ml_explain(assessment_id: int):
         if not rec:
             return jsonify({'success': False,
                             'error': 'Ficha no encontrada'}), 404
-        # F5 IDOR: la ficha debe pertenecer al tenant (site==tenant).
-        tenant_id = TenantContext.get_current_tenant_id()
-        if getattr(rec, 'center_id', None) not in (None, tenant_id):
+        # F5 IDOR: la ficha debe pertenecer al tenant o licencia.
+        allowed = _allowed_tenant_ids()
+        rec_cid = getattr(rec, 'center_id', None)
+        if rec_cid is not None and allowed and rec_cid not in allowed:
             return jsonify({'success': False,
                             'error': 'Ficha no encontrada'}), 404
 
@@ -623,18 +709,30 @@ def _soc_insert_db(body, data, result, params_version, source):
     day, raw = _parse_day(assessed_in or _now_iso())
     ingresos = data.get("ingresos")
     egresos = data.get("egresos")
-    stored_in = dict(ingresos) if isinstance(ingresos, dict) else {}
+    if isinstance(ingresos, (list, tuple)):
+        stored_in = {k: float(ingresos[i] or 0) for i, k in enumerate(SE.INCOME_KEYS) if i < len(ingresos)}
+    elif isinstance(ingresos, dict):
+        stored_in = dict(ingresos)
+    else:
+        stored_in = {}
+    if isinstance(egresos, (list, tuple)):
+        stored_ex = {k: float(egresos[i] or 0) for i, k in enumerate(SE.EXPENSE_KEYS) if i < len(egresos)}
+    elif isinstance(egresos, dict):
+        stored_ex = dict(egresos)
+    else:
+        stored_ex = {}
     stored_in[_META] = {
         "center": body.get("center"), "child_name": body.get("child_name"),
         "code": body.get("code"), "params_version": params_version,
         "source": source, "assessed_at": raw,
         "data": data, "result": result,
     }
+    center_id = _resolve_center_id(body)
     row = SocioeconomicAssessment(
-        child_id=body.get("child_id"), center_id=_tenant(),
+        child_id=body.get("child_id"), center_id=center_id,
         code=body.get("code"), assessed_at=day,
         incomes=stored_in,
-        expenses=dict(egresos) if isinstance(egresos, dict) else {},
+        expenses=stored_ex,
         per_capita=result.get("per_capita"),
         expense_ratio=result.get("ratio_gasto"),
         coverage_services=result.get("cobertura_servicios"),
@@ -681,14 +779,27 @@ def _soc_to_record(row):
 
 def _soc_base_query(args):
     from models.cmci import SocioeconomicAssessment
+    from sqlalchemy import or_
 
-    q = SocioeconomicAssessment.query.filter(
-        SocioeconomicAssessment.center_id == _tenant())
+    allowed = _allowed_tenant_ids()
+    if allowed:
+        if _tenant() is None:
+            q = SocioeconomicAssessment.query.filter(
+                or_(SocioeconomicAssessment.center_id.in_(allowed),
+                    SocioeconomicAssessment.center_id.is_(None))
+            )
+        else:
+            q = SocioeconomicAssessment.query.filter(
+                SocioeconomicAssessment.center_id.in_(allowed))
+    else:
+        q = SocioeconomicAssessment.query.filter(
+            SocioeconomicAssessment.center_id == _tenant())
     if args.get("center"):
         from models.tenant import Tenant
-        q = (q.join(Tenant,
-                    SocioeconomicAssessment.center_id == Tenant.id)
-              .filter(Tenant.cmci_code == str(args["center"])))
+        q = (q.outerjoin(Tenant,
+                         SocioeconomicAssessment.center_id == Tenant.id)
+              .filter(or_(Tenant.cmci_code == str(args["center"]),
+                          Tenant.name == str(args["center"]))))
     if args.get("child_id") is not None and str(args.get("child_id")) != "":
         try:
             q = q.filter(SocioeconomicAssessment.child_id == int(args["child_id"]))
@@ -721,10 +832,19 @@ def _soc_list_db(args):
 
 def _soc_detail_db(rec_id):
     from models.cmci import SocioeconomicAssessment
+    from sqlalchemy import or_
 
-    row = (SocioeconomicAssessment.query
-           .filter(SocioeconomicAssessment.id == rec_id,
-                   SocioeconomicAssessment.center_id == _tenant()).first())
+    allowed = _allowed_tenant_ids()
+    q = SocioeconomicAssessment.query.filter(SocioeconomicAssessment.id == rec_id)
+    if allowed:
+        if _tenant() is None:
+            q = q.filter(or_(SocioeconomicAssessment.center_id.in_(allowed),
+                             SocioeconomicAssessment.center_id.is_(None)))
+        else:
+            q = q.filter(SocioeconomicAssessment.center_id.in_(allowed))
+    else:
+        q = q.filter(SocioeconomicAssessment.center_id == _tenant())
+    row = q.first()
     return _soc_to_record(row) if row is not None else None
 
 

@@ -123,7 +123,7 @@ def pre_validate(message: str, license_id: int | None, role: str | None = None) 
             1.0 if any(k in low for k in ['prompt', 'bypass', 'eval', 'select', 'where', 'delete']) else 0.0,
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         ]
-        accepted, energy = LEMNativeEngine.evaluate_state(z, schema_name="gov_action_guard_v1")
+        accepted, energy = LEMNativeEngine.evaluate_state(z, schema_name="lem_v4_pre_guard", engine="v4")
         if not accepted:
             return {
                 "ok": False,
@@ -177,7 +177,7 @@ def post_validate(llm_text: str, license_id: int | None, rag_context: str = "", 
         needs_contingency = True
         warnings.append("alucinacion_numerica_posible: cifras generadas sin contexto determinista de base de datos")
 
-    # 4. Evaluación de Estado en Silicio C99
+    # 4. Evaluación de Estado en Silicio C99 (LEM-V4)
     try:
         from services.lem_native_engine import LEMNativeEngine
         z = [
@@ -186,7 +186,7 @@ def post_validate(llm_text: str, license_id: int | None, rag_context: str = "", 
             min(1.0, len(text) / 4000.0),
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         ]
-        accepted, energy = LEMNativeEngine.evaluate_state(z, schema_name="gov_action_guard_v1")
+        accepted, energy = LEMNativeEngine.evaluate_state(z, schema_name="lem_v4_post_guard", engine="v4")
     except Exception as e:
         accepted, energy = True, 0.0
 

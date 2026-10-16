@@ -1,7 +1,9 @@
 "use client";
-/** Encabezado oficial imprimible: logos CMCI + título + código/fecha + convenio + periodo + semáforo. */
+/** Encabezado oficial imprimible dinámico por licencia: membrete opcional + título + código/fecha + convenio + periodo + semáforo. */
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
+import { licenseAdminService } from "@/services/license-admin.service";
 
 export interface Periodo {
   inicio: string;
@@ -17,11 +19,11 @@ export interface ConvenioInfo {
 }
 
 export const CMCI_CONVENIO_DEFAULTS: Required<ConvenioInfo> = {
-  convenio: "Convenio de cooperación interinstitucional — Centros Municipales de Cuidado Infantil (CMCI)",
-  finalidad: "Atención integral a niñas y niños de 12 a 42 meses en situación de vulnerabilidad",
-  poblacion: "Niñas y niños de 12 a 42 meses y sus familias (centros BH / GU / OR)",
-  objetivo: "Garantizar cuidado, nutrición, salud y desarrollo infantil integral con priorización por vulnerabilidad",
-  servicios: "Cuidado diario · Alimentación (4 tiempos) · Salud y crecimiento · Desarrollo infantil · Acompañamiento familiar",
+  convenio: "",
+  finalidad: "",
+  poblacion: "",
+  objetivo: "",
+  servicios: "",
 };
 
 export const SEMAFORO_LEYENDA = [
@@ -30,6 +32,17 @@ export const SEMAFORO_LEYENDA = [
   { nombre: "NARANJA", color: "#F8A354", rango: "60–80 · vulnerabilidad alta" },
   { nombre: "ROJO", color: "#F8696B", rango: "80–100 · vulnerabilidad crítica" },
 ];
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+export function resolvePrintBannerUrl(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith("http") || path.startsWith("blob:")) return path;
+  if (path.startsWith("/static/") || path.startsWith("/uploads/")) {
+    return `${API_URL}${path}`;
+  }
+  return path.startsWith("/") ? path : `/${path}`;
+}
 
 /** Color de fondo para un semáforo/nivel (útil en celdas impresas). */
 export function semaforoBg(semaforo?: string, nivel?: string): string {
@@ -76,27 +89,65 @@ export function PrintHeader({
   institutionsHeader,
   projectName,
   periodo,
-  convenio = CMCI_CONVENIO_DEFAULTS.convenio,
-  finalidad = CMCI_CONVENIO_DEFAULTS.finalidad,
-  poblacion = CMCI_CONVENIO_DEFAULTS.poblacion,
-  objetivo = CMCI_CONVENIO_DEFAULTS.objetivo,
-  servicios = CMCI_CONVENIO_DEFAULTS.servicios,
+  convenio,
+  finalidad,
+  poblacion,
+  objetivo,
+  servicios,
   showConvenio = true,
   showSemaforo = true,
 }: PrintHeaderProps) {
+  const [orgConfig, setOrgConfig] = useState<any>(null);
+
+  useEffect(() => {
+    licenseAdminService.getPublicConfig().then(setOrgConfig).catch(() => setOrgConfig(null));
+  }, []);
+
+  const headerBannerUrl = resolvePrintBannerUrl(orgConfig?.header_banner_path);
+  const footerBannerUrl = resolvePrintBannerUrl(orgConfig?.footer_banner_path);
+
+  const effInstitutionsHeader = institutionsHeader ?? orgConfig?.institutions_header ?? orgConfig?.legal_name ?? orgConfig?.license_name ?? "";
+  const effProjectName = projectName ?? orgConfig?.project_name ?? "";
+  const effConvenio = convenio ?? orgConfig?.convenio_text ?? "";
+  const effFinalidad = finalidad ?? orgConfig?.finalidad_text ?? "";
+  const effPoblacion = poblacion ?? orgConfig?.poblacion_text ?? "";
+  const effObjetivo = objetivo ?? orgConfig?.objetivo_text ?? "";
+  const effServicios = servicios ?? orgConfig?.servicios_text ?? "";
+  const hasConvenioData = Boolean(effConvenio || effFinalidad || effPoblacion || effObjetivo || effServicios);
+
   return (
-    <div className="print-header">
-      {institutionsHeader && (
-        <div className="text-center font-bold text-xs uppercase tracking-wider border-b pb-1 mb-2">
-          {institutionsHeader}
+    <div className="print-header relative z-10">
+      {footerBannerUrl && (
+        <div
+          className="fixed inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-90 overflow-hidden flex items-end justify-center"
+          style={{ height: "140mm" }}
+        >
+          <img
+            src={footerBannerUrl}
+            alt="Pie de membrete"
+            className="w-full h-auto object-contain object-bottom opacity-95"
+          />
         </div>
       )}
-      <div className="flex items-center justify-between gap-4 border-b-2 border-black pb-2">
-        <img src="/logos/cmci-logo-1.png" alt="Logo 1" className="h-14 object-contain" />
+      {headerBannerUrl && (
+        <div className="-mx-6 -mt-6 print:-mx-6 print:-mt-6 mb-3 w-[calc(100%+3rem)]">
+          <img
+            src={headerBannerUrl}
+            alt="Cabecera Membrete"
+            className="w-full h-auto block m-0 p-0"
+          />
+        </div>
+      )}
+      {effInstitutionsHeader && (
+        <div className="text-center font-bold text-xs uppercase tracking-wider border-b pb-1 mb-2">
+          {effInstitutionsHeader}
+        </div>
+      )}
+      <div className="flex items-center justify-center gap-4 border-b-2 border-black pb-2">
         <div className="text-center flex-1">
-          {projectName && (
+          {effProjectName && (
             <p className="text-[10px] font-bold uppercase tracking-tight text-gray-700 leading-tight mb-1">
-              {projectName}
+              {effProjectName}
             </p>
           )}
           <h1 className="text-base font-bold uppercase">{title}</h1>
@@ -105,15 +156,14 @@ export function PrintHeader({
             {periodo ? ` · Período: ${periodo.inicio} al ${periodo.fin}` : ""}
           </p>
         </div>
-        <img src="/logos/cmci-logo-2.png" alt="Logo 2" className="h-14 object-contain" />
       </div>
-      {showConvenio && (
+      {showConvenio && hasConvenioData && (
         <div className="mt-2 border border-black p-2 text-[11px] leading-snug">
-          <p><b>Convenio:</b> {convenio}</p>
-          <p><b>Finalidad:</b> {finalidad}</p>
-          <p><b>Población:</b> {poblacion}</p>
-          <p><b>Objetivo:</b> {objetivo}</p>
-          <p><b>Servicios:</b> {servicios}</p>
+          {effConvenio && <p><b>Convenio:</b> {effConvenio}</p>}
+          {effFinalidad && <p><b>Finalidad:</b> {effFinalidad}</p>}
+          {effPoblacion && <p><b>Población:</b> {effPoblacion}</p>}
+          {effObjetivo && <p><b>Objetivo:</b> {effObjetivo}</p>}
+          {effServicios && <p><b>Servicios:</b> {effServicios}</p>}
         </div>
       )}
       {showSemaforo && <SemaforoLegend />}

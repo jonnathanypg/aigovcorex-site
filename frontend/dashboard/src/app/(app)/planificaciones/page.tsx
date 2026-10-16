@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAgentRefresh } from "@/hooks/use-agent-refresh";
 import { planningService, type LudicPlanning } from "@/services/planning.service";
 import { authService } from "@/services/auth.service";
+import Link from "next/link";
 import {
     Gamepad2,
     Plus,
@@ -42,6 +43,7 @@ import {
     Calendar,
     User,
     CheckCircle2,
+    FileSpreadsheet,
 } from "lucide-react";
 
 const AGE_GROUPS = [
@@ -194,9 +196,16 @@ export default function PlanificacionesPage() {
                         Gestión de planificaciones de experiencias de aprendizaje
                     </p>
                 </div>
-                <Button onClick={openCreate}>
-                    <Plus className="mr-2 h-4 w-4" /> Nueva Planificación
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Link href="/informe-actividades">
+                        <Button variant="outline" className="border-amber-500/40 text-amber-500 hover:bg-amber-500/10">
+                            <FileSpreadsheet className="mr-2 h-4 w-4" /> Informe Mensual de Actividades
+                        </Button>
+                    </Link>
+                    <Button onClick={openCreate}>
+                        <Plus className="mr-2 h-4 w-4" /> Nueva Planificación
+                    </Button>
+                </div>
             </div>
 
             {/* Filters */}

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { OS_MODULES, type ModuleId } from '@/lib/os-modules';
+import { OS_MODULES, type ModuleId, isEducatorRole } from '@/lib/os-modules';
 import { authService } from '@/services/auth.service';
 import { X } from 'lucide-react';
 
@@ -20,23 +20,50 @@ export function OSSubNavPanel({ activeModule, isOpen, onClose, onNavigate }: OSS
   const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
-    const user = authService.getStoredUser();
-    if (user) {
-      const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-      setUserRole(roleName || '');
-    }
+    const syncRole = () => {
+      const user = authService.getStoredUser();
+      if (user) {
+        const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+        setUserRole(roleName || '');
+      }
+    };
+    syncRole();
+    window.addEventListener('user-login', syncRole);
+    return () => window.removeEventListener('user-login', syncRole);
   }, []);
 
   const mod = OS_MODULES.find(m => m.id === activeModule);
 
   if (!mod) return null;
 
+  const normalizedRole = (userRole || '').toLowerCase().trim();
+  const isEducator = isEducatorRole(normalizedRole);
+
   // Filter sections and items by user role
   const visibleSections = mod.sections
-    .filter(section => !section.roles || !userRole || section.roles.includes(userRole))
+    .filter(section => {
+      if (section.excludedRoles && section.excludedRoles.some(r => r.toLowerCase() === normalizedRole)) return false;
+      if (isEducator && section.excludedRoles?.some(r => isEducatorRole(r))) return false;
+      if (section.roles && (!normalizedRole || !section.roles.some(r => r.toLowerCase() === normalizedRole))) return false;
+      return true;
+    })
     .map(section => ({
       ...section,
-      items: section.items.filter(item => !item.roles || !userRole || item.roles.includes(userRole)),
+      items: section.items.filter(item => {
+        // Enforce: Educadoras must NEVER see Gestión de Centros or Usuarios y Colaboradores
+        if (isEducator && (
+          item.href.includes('/license-admin/centers') ||
+          item.href.includes('/license-admin/users') ||
+          item.label.toLowerCase().includes('centros') ||
+          item.label.toLowerCase().includes('colaboradores')
+        )) {
+          return false;
+        }
+        if (item.excludedRoles && item.excludedRoles.some(r => r.toLowerCase() === normalizedRole)) return false;
+        if (isEducator && item.excludedRoles?.some(r => isEducatorRole(r))) return false;
+        if (item.roles && (!normalizedRole || !item.roles.some(r => r.toLowerCase() === normalizedRole))) return false;
+        return true;
+      }),
     }))
     .filter(section => section.items.length > 0);
 

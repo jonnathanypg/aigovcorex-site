@@ -76,9 +76,10 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
     const [onlyIncomplete, setOnlyIncomplete] = useState(false);
     const [viewChild, setViewChild] = useState<Child | null>(null);
 
-    // Filtro de Educadora asignada (Audio 1 y Audio 2)
+    // Filtro de Educadora asignada: visible solo para coordinadores, supervisores, admin de licencia y roles generales (no educadoras)
+    const isEducatorRole = ['educator', 'educadora'].includes(String(role || '').toLowerCase());
     const [educatorFilter, setEducatorFilter] = useState<string>("all");
-    const [educatorsList, setEducatorsList] = useState<Array<{ id: number; full_name: string }>>([]);
+    const [educatorsList, setEducatorsList] = useState<Array<{ id: number; full_name: string; tenant_name?: string | null }>>([]);
 
     /** Completitud §10.4 heurística cliente (TODO F1-backend: profile_completeness real con IDII/tomas vigentes). */
     const getCompleteness = (r: Child) => completeness({
@@ -89,28 +90,45 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
         postulacion: !!r.enrollment_date,
     });
 
+    const getEducatorName = useCallback((r: Child): string | null => {
+        const directName = r.assigned_educator_name || r.educator_name;
+        if (directName && directName.trim()) {
+            return directName.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+        }
+        if (r.assigned_educator_id != null) {
+            const match = educatorsList.find((e) => Number(e.id) === Number(r.assigned_educator_id));
+            if (match?.full_name) {
+                return match.full_name.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+            }
+        }
+        return null;
+    }, [educatorsList]);
+
     useEffect(() => {
         setStatusFilter(tab === "activos" ? "activo" : tab === "egresados" ? "egresado" : "all");
     }, [tab]);
 
-    // Cargar educadoras del centro o licencia para el selector de filtro
+    // Cargar educadoras del centro o licencia para el selector de filtro (solo roles generales/supervisión/coordinación)
     useEffect(() => {
+        if (isEducatorRole) return;
         const loadEducators = async () => {
             try {
-                const targetTenant = tenantId || center?.id;
-                const res = await childrenService.getEducators(targetTenant);
+                const res = await childrenService.getEducators(tenantId);
                 if (res?.educators) {
                     setEducatorsList(res.educators.map((e: any) => ({
                         id: e.id,
-                        full_name: e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim()
+                        full_name: (e.full_name || `${e.first_name || ''} ${e.last_name || ''}`)
+                            .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+                            .trim(),
+                        tenant_name: e.tenant_name || null,
                     })));
                 }
             } catch (err) {
-                // Silencioso si el rol no tiene permiso o no hay centro
+                console.error("Error loading educators for filter:", err);
             }
         };
         loadEducators();
-    }, [tenantId, center?.id]);
+    }, [tenantId, isEducatorRole]);
 
     // Edit Dialog State
     const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -246,6 +264,13 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                 (record.cedula && record.cedula.includes(searchLower))
             );
             if (!matchesSearch) return false;
+            if (educatorFilter && educatorFilter !== "all") {
+                if (educatorFilter === "unassigned") {
+                    if (record.assigned_educator_id != null) return false;
+                } else {
+                    if (Number(record.assigned_educator_id) !== Number(educatorFilter)) return false;
+                }
+            }
             if (onlyIncomplete) return !getCompleteness(record).complete;
             return true;
         })
@@ -300,21 +325,23 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                             </SelectContent>
                         </Select>
 
-                        {/* Filtro por Educadora (Audio 1 y Audio 2) */}
-                        <Select value={educatorFilter} onValueChange={setEducatorFilter}>
-                            <SelectTrigger className="w-full sm:w-[200px] bg-background/50">
-                                <SelectValue placeholder="Filtrar por Educadora" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas las educadoras</SelectItem>
-                                <SelectItem value="unassigned">⚠️ Sin educadora asignada</SelectItem>
-                                {educatorsList.map((edu) => (
-                                    <SelectItem key={edu.id} value={String(edu.id)}>
-                                        👩‍🏫 {edu.full_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        {/* Filtro por Educadora: visible solo para coordinadores, supervisores, admin de licencia y roles generales */}
+                        {!isEducatorRole && (
+                            <Select value={educatorFilter} onValueChange={setEducatorFilter}>
+                                <SelectTrigger className="w-full sm:w-[240px] bg-background/50">
+                                    <SelectValue placeholder="Filtrar por Educadora" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas las educadoras</SelectItem>
+                                    <SelectItem value="unassigned">Sin educadora asignada</SelectItem>
+                                    {educatorsList.map((edu) => (
+                                        <SelectItem key={edu.id} value={String(edu.id)}>
+                                            {edu.full_name}{!tenantId && edu.tenant_name ? ` (${edu.tenant_name})` : ""}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={handleExportMatrix} className="border-primary/20 hover:bg-primary/5 text-primary">
@@ -348,6 +375,7 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                 </TableRow>
                             ) : filteredRecords.map((record) => {
                                 const comp = getCompleteness(record);
+                                const eduName = getEducatorName(record);
                                 const compCell = (
                                     <div className="flex items-center gap-2 min-w-[120px]">
                                         <Progress value={comp.pct} className={comp.complete ? "[&>div]:bg-green-600" : "[&>div]:bg-red-500"} />
@@ -363,13 +391,13 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                         </TableCell>
                                         <TableCell>
                                             <span className="font-semibold md:hidden mr-2">Educadora:</span>
-                                            {record.assigned_educator_name || (record as any).educator_name ? (
+                                            {eduName ? (
                                                 <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
-                                                    👩‍🏫 {record.assigned_educator_name || (record as any).educator_name}
+                                                    {eduName}
                                                 </Badge>
                                             ) : (
                                                 <Badge variant="secondary" className="text-xs text-amber-600 dark:text-amber-400">
-                                                    ⚠️ Sin educadora
+                                                    Sin educadora
                                                 </Badge>
                                             )}
                                         </TableCell>
@@ -397,13 +425,13 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                                         <TableCell className="font-medium">{record.cedula || 'S/C'}</TableCell>
                                         <TableCell>{record.full_name}</TableCell>
                                         <TableCell>
-                                            {record.assigned_educator_name || (record as any).educator_name ? (
+                                            {eduName ? (
                                                 <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
-                                                    👩‍🏫 {record.assigned_educator_name || (record as any).educator_name}
+                                                    {eduName}
                                                 </Badge>
                                             ) : (
                                                 <Badge variant="secondary" className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20">
-                                                    ⚠️ Sin asignar
+                                                    Sin asignar
                                                 </Badge>
                                             )}
                                         </TableCell>
@@ -500,9 +528,10 @@ export function RegisterClient({ readOnly = false, tenantId }: RegisterClientPro
                             <div><span className="text-muted-foreground block text-xs uppercase">Cédula</span>{viewChild.cedula || "S/C"}</div>
                             <div><span className="text-muted-foreground block text-xs uppercase">Edad</span>{viewChild.age_display}</div>
                             <div><span className="text-muted-foreground block text-xs uppercase">Estado</span>{statusLabelMap[viewChild.status] || viewChild.status}</div>
+                            <div><span className="text-muted-foreground block text-xs uppercase">Educadora Asignada</span>{getEducatorName(viewChild) ? getEducatorName(viewChild) : "Sin asignar"}</div>
                             <div><span className="text-muted-foreground block text-xs uppercase">Grupo</span>{viewChild.assigned_group || "—"}</div>
                             <div><span className="text-muted-foreground block text-xs uppercase">Ingreso</span>{viewChild.enrollment_date}</div>
-                            <div><span className="text-muted-foreground block text-xs uppercase">Completitud</span>{getCompleteness(viewChild).pct}% {getCompleteness(viewChild).complete ? "(completo)" : "(incompleto: salud + IDII + tomas vigentes)"}</div>
+                            <div className="col-span-2"><span className="text-muted-foreground block text-xs uppercase">Completitud</span>{getCompleteness(viewChild).pct}% {getCompleteness(viewChild).complete ? "(completo)" : "(incompleto: salud + IDII + tomas vigentes)"}</div>
                             <div className="col-span-2 flex gap-2 pt-2">
                                 <Link href={`/registro/${viewChild.id}/print`} target="_blank">
                                     <Button variant="outline" size="sm" onClick={() => setViewChild(null)}>

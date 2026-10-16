@@ -10,7 +10,7 @@ import { ClientOnly } from './client-only';
 import { ThemeSwitcher } from './theme-switcher';
 import { CenterSelector } from './center-selector';
 import { usePathname, useRouter } from 'next/navigation';
-import { getModuleByRoute, OS_MODULES } from '@/lib/os-modules';
+import { getModuleByRoute, OS_MODULES, isEducatorRole } from '@/lib/os-modules';
 import { Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -53,6 +53,7 @@ const routeLabels: Record<string, string> = {
   '/seguimiento-idii': 'Seguimiento IDII',
   '/salud-nutricion': 'Salud & Nutrición',
   '/planificaciones': 'Planificaciones',
+  '/informe-actividades': 'Informe Mensual de Actividades',
   '/intervencion-familiar': 'Intervención Familiar',
   '/operaciones': 'Operaciones',
   '/monitoreo': 'Monitoreo',
@@ -101,11 +102,16 @@ export function AppHeader() {
   const { hasModule } = useLicense();
 
   useEffect(() => {
-    const user = authService.getStoredUser();
-    if (user) {
-      const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-      setUserRole(roleName);
-    }
+    const syncRole = () => {
+      const user = authService.getStoredUser();
+      if (user) {
+        const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+        setUserRole(roleName || '');
+      }
+    };
+    syncRole();
+    window.addEventListener('user-login', syncRole);
+    return () => window.removeEventListener('user-login', syncRole);
   }, []);
 
   const [unreadNotifications, setUnreadNotifications] = useState<Notification[]>([]);
@@ -127,10 +133,17 @@ export function AppHeader() {
     return () => clearInterval(interval);
   }, []);
 
+  const normalizedRole = (userRole || '').toLowerCase().trim();
+  const isEducator = isEducatorRole(normalizedRole);
+
   // Filter modules based on user license and role
-  const allowedModules = OS_MODULES.filter(m =>
-    (!userRole || m.requiredRoles.includes(userRole)) && hasModule(m.id)
-  );
+  // Educadoras are strictly limited to KindiCore AI
+  const allowedModules = OS_MODULES.filter(m => {
+    if (isEducator) {
+      return m.id === 'kindicore';
+    }
+    return (!userRole || m.requiredRoles.some(r => r.toLowerCase() === normalizedRole)) && hasModule(m.id);
+  });
 
   // Keyboard shortcut ⌘K / Ctrl+K
   useEffect(() => {

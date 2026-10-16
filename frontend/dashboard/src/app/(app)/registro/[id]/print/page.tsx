@@ -68,39 +68,42 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   // Metadatos institucionales y de proyecto (dinámicos por la licencia específica del centro del niño)
   const childLicense = (data as any)?.license || {};
   const activeConfig = {
-    institutions_header: childLicense.institutions_header || orgConfig?.institutions_header,
-    project_name: childLicense.project_name || orgConfig?.project_name,
-    convenio_text: childLicense.convenio_text || orgConfig?.convenio_text,
-    finalidad_text: childLicense.finalidad_text || orgConfig?.finalidad_text,
-    poblacion_text: childLicense.poblacion_text || orgConfig?.poblacion_text,
-    objetivo_text: childLicense.objetivo_text || orgConfig?.objetivo_text,
-    servicios_text: childLicense.servicios_text || orgConfig?.servicios_text,
-    print_footer_note: childLicense.print_footer_note || orgConfig?.print_footer_note,
-    license_name: childLicense.name || orgConfig?.license_name,
-    header_banner_path: childLicense.header_banner_path || orgConfig?.header_banner_path || '/membretes/membrete-gasiba-cabezera.png',
-    footer_banner_path: childLicense.footer_banner_path || orgConfig?.footer_banner_path || '/membretes/membrete-gasiba-pie.png',
+    institutions_header: childLicense.institutions_header ?? orgConfig?.institutions_header ?? null,
+    project_name: childLicense.project_name ?? orgConfig?.project_name ?? null,
+    convenio_text: childLicense.convenio_text ?? orgConfig?.convenio_text ?? null,
+    finalidad_text: childLicense.finalidad_text ?? orgConfig?.finalidad_text ?? null,
+    poblacion_text: childLicense.poblacion_text ?? orgConfig?.poblacion_text ?? null,
+    objetivo_text: childLicense.objetivo_text ?? orgConfig?.objetivo_text ?? null,
+    servicios_text: childLicense.servicios_text ?? orgConfig?.servicios_text ?? null,
+    print_footer_note: childLicense.print_footer_note ?? orgConfig?.print_footer_note ?? null,
+    license_name: childLicense.name || orgConfig?.license_name || c.tenant_name || "Institución",
+    legal_name: childLicense.legal_name || orgConfig?.legal_name || null,
+    header_banner_path: childLicense.header_banner_path ?? orgConfig?.header_banner_path ?? null,
+    footer_banner_path: childLicense.footer_banner_path ?? orgConfig?.footer_banner_path ?? null,
   };
 
-  const institutionsHeader = activeConfig.institutions_header || "DASE EP  ·  FUNDACIÓN GASIBA  ·  M.I. MUNICIPALIDAD DE GUAYAQUIL";
-  const projectName = activeConfig.project_name || "PROYECTO INTEGRAL DE GESTIÓN TÉCNICA Y ADMINISTRATIVA DE LOS CENTROS MUNICIPALES DE CUIDADO INFANTIL GUASMO, ORQUÍDEAS Y BAHÍA";
-  const convenio = activeConfig.convenio_text || CMCI_CONVENIO_DEFAULTS.convenio;
-  const finalidad = activeConfig.finalidad_text || CMCI_CONVENIO_DEFAULTS.finalidad;
-  const poblacion = activeConfig.poblacion_text || CMCI_CONVENIO_DEFAULTS.poblacion;
-  const objetivo = activeConfig.objetivo_text || CMCI_CONVENIO_DEFAULTS.objetivo;
-  const servicios = activeConfig.servicios_text || CMCI_CONVENIO_DEFAULTS.servicios;
-  const footerNote = activeConfig.print_footer_note || "Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.";
+  const institutionsHeader = activeConfig.institutions_header || activeConfig.legal_name || activeConfig.license_name || "";
+  const projectName = activeConfig.project_name || activeConfig.license_name || c.tenant_name || "";
+  const convenio = activeConfig.convenio_text || "";
+  const finalidad = activeConfig.finalidad_text || "";
+  const poblacion = activeConfig.poblacion_text || "";
+  const objetivo = activeConfig.objetivo_text || "";
+  const servicios = activeConfig.servicios_text || "";
+  const hasConvenioData = Boolean(convenio || finalidad || poblacion || objetivo || servicios);
+  const footerNote = activeConfig.print_footer_note || "Se extiende la presente constancia para ser incorporada al expediente físico del niño/a.";
 
-  const headerBannerUrl = activeConfig.header_banner_path ? (
-    activeConfig.header_banner_path.startsWith('http') || activeConfig.header_banner_path.startsWith('/') 
-      ? activeConfig.header_banner_path 
-      : `/${activeConfig.header_banner_path}`
-  ) : null;
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  const resolveBannerUrl = (path?: string | null) => {
+    if (!path) return null;
+    if (path.startsWith("http") || path.startsWith("blob:")) return path;
+    if (path.startsWith("/static/") || path.startsWith("/uploads/")) {
+      return `${API_URL}${path}`;
+    }
+    return path.startsWith("/") ? path : `/${path}`;
+  };
 
-  const footerBannerUrl = activeConfig.footer_banner_path ? (
-    activeConfig.footer_banner_path.startsWith('http') || activeConfig.footer_banner_path.startsWith('/')
-      ? activeConfig.footer_banner_path
-      : `/${activeConfig.footer_banner_path}`
-  ) : null;
+  const headerBannerUrl = resolveBannerUrl(activeConfig.header_banner_path);
+  const footerBannerUrl = resolveBannerUrl(activeConfig.footer_banner_path);
 
   // Semáforo de completitud de expediente
   const checks: Array<[string, unknown]> = [
@@ -192,53 +195,59 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
             )}
 
             <div className="relative z-10">
-              {/* Cabecera Gráfica de Membrete Oficial (Ancho total) */}
+              {/* Cabecera Gráfica de Membrete Oficial (Ancho total pegada al borde superior sin espaciado) */}
               {headerBannerUrl && (
-                <div className="w-full mb-3 -mt-2">
+                <div className="-mx-8 -mt-8 print:-mx-8 print:-mt-8 mb-3 w-[calc(100%+4rem)]">
                   <img
                     src={headerBannerUrl}
                     alt="Cabecera Membrete"
-                    className="w-full h-auto object-contain max-h-[38mm]"
+                    className="w-full h-auto block m-0 p-0"
                   />
                 </div>
               )}
 
               {/* Encabezado Superior: Instituciones Cooperantes Dinámicas */}
               <div className="border-b-2 border-black pb-1 mb-2">
-                <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
-                  {institutionsHeader}
-                </div>
+                {institutionsHeader && (
+                  <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
+                    {institutionsHeader}
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-[10px] text-slate-600 mt-1">
-                  <span>Expediente {orgConfig?.license_name || "DASE EP"} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
+                  <span>Expediente {activeConfig.license_name} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
                   <span className="font-semibold">Página 1</span>
                 </div>
               </div>
 
               {/* Título Oficial del Proyecto y Documento */}
               <div className="text-center my-3">
-                <p className="text-[10px] font-bold uppercase tracking-tight text-slate-700 leading-snug">
-                  {projectName}
-                </p>
+                {projectName && (
+                  <p className="text-[10px] font-bold uppercase tracking-tight text-slate-700 leading-snug">
+                    {projectName}
+                  </p>
+                )}
                 <h1 className="text-base font-extrabold uppercase tracking-wide text-slate-950 mt-1">
                   CONSTANCIA DE INSCRIPCIÓN Y VALORACIÓN INICIAL
                 </h1>
                 <p className="text-[10px] text-slate-600 mt-0.5">
-                  Documento para expediente {orgConfig?.license_name || "DASE EP"} · Código de registro: <b>{id}</b> · Fecha de emisión: {todayStr}
+                  Documento para expediente {activeConfig.license_name} · Código de registro: <b>{id}</b> · Fecha de emisión: {todayStr}
                 </p>
               </div>
 
-              {/* Metadatos de Convenio */}
-              <div className="border border-black p-2 mb-3 text-[10px] leading-snug space-y-0.5 bg-slate-50/50">
-                <p><b>Convenio:</b> {convenio}</p>
-                <p><b>Finalidad:</b> {finalidad}</p>
-                <p><b>Población:</b> {poblacion}</p>
-                <p><b>Objetivo:</b> {objetivo}</p>
-                <p><b>Servicios:</b> {servicios}</p>
-              </div>
+              {/* Metadatos de Convenio (solo si la licencia los tiene configurados) */}
+              {hasConvenioData && (
+                <div className="border border-black p-2 mb-3 text-[10px] leading-snug space-y-0.5 bg-slate-50/50">
+                  {convenio && <p><b>Convenio:</b> {convenio}</p>}
+                  {finalidad && <p><b>Finalidad:</b> {finalidad}</p>}
+                  {poblacion && <p><b>Población:</b> {poblacion}</p>}
+                  {objetivo && <p><b>Objetivo:</b> {objetivo}</p>}
+                  {servicios && <p><b>Servicios:</b> {servicios}</p>}
+                </div>
+              )}
 
               {/* Párrafo Formal de Certificación */}
               <div className="border-l-4 border-slate-900 bg-slate-50 p-2.5 mb-3 text-[10.5px] leading-relaxed text-slate-800">
-                Por medio del presente se hace constar que el niño/a <b>{childFullNameUpper}</b>, con cédula de identidad N.° <b>{cell(c.cedula, "S/C")}</b>, se encuentra inscrito/a y en estado <b className="uppercase">{cell(c.status, "ACTIVO")}</b> en el <b>{projectName}</b>, asignado al centro <b>{cell(c.tenant_name || c.center_name, "CMCI")}</b> desde el {cell(c.enrollment_date, "____________")}.
+                Por medio del presente se hace constar que el niño/a <b>{childFullNameUpper}</b>, con cédula de identidad N.° <b>{cell(c.cedula, "S/C")}</b>, se encuentra inscrito/a y en estado <b className="uppercase">{cell(c.status, "ACTIVO")}</b>{projectName ? <> en el <b>{projectName}</b></> : null}, asignado al centro <b>{cell(c.tenant_name || c.center_name, "Centro")}</b> desde el {cell(c.enrollment_date, "____________")}.
               </div>
 
               {/* 1. IDENTIFICACIÓN DEL NIÑO / NIÑA */}
@@ -433,24 +442,26 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
             )}
 
             <div className="relative z-10">
-              {/* Cabecera Gráfica de Membrete Oficial (Ancho total) */}
+              {/* Cabecera Gráfica de Membrete Oficial (Ancho total pegada al borde superior sin espaciado) */}
               {headerBannerUrl && (
-                <div className="w-full mb-3 -mt-2">
+                <div className="-mx-8 -mt-8 print:-mx-8 print:-mt-8 mb-3 w-[calc(100%+4rem)]">
                   <img
                     src={headerBannerUrl}
                     alt="Cabecera Membrete"
-                    className="w-full h-auto object-contain max-h-[38mm]"
+                    className="w-full h-auto block m-0 p-0"
                   />
                 </div>
               )}
 
               {/* Encabezado Superior Página 2 */}
               <div className="border-b-2 border-black pb-1 mb-3">
-                <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
-                  {institutionsHeader}
-                </div>
+                {institutionsHeader && (
+                  <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
+                    {institutionsHeader}
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-[10px] text-slate-600 mt-1">
-                  <span>Expediente {orgConfig?.license_name || "DASE EP"} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
+                  <span>Expediente {activeConfig.license_name} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
                   <span className="font-semibold">Página 2</span>
                 </div>
               </div>
@@ -624,7 +635,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
             {/* Pie de página 2 */}
             <div className="pt-2 text-slate-400 flex justify-between items-center text-[9px]">
-              <span>Expediente {orgConfig?.license_name || "DASE EP"} · Código {id} · C.I. {cell(c.cedula, "S/C")}</span>
+              <span>Expediente {activeConfig.license_name} · Código {id} · C.I. {cell(c.cedula, "S/C")}</span>
               <span>Página 2</span>
             </div>
           </div>

@@ -25,6 +25,7 @@ export interface VulnRecord {
   id: string; codigo: string; fecha: string; nino: string; nacimiento: string;
   edadMeses: number; enRango: boolean; sexo: string; cmci: string; sector: string;
   representante: string; parentesco: string; telefono: string; estado: string;
+  child_id?: number | string;
   hogar: { ingresoTotal: number; integrantes: number; perceptores: number; nna: number; dormitorios: number };
   scores: Record<string, number>; subtotals: Record<string, number>;
   total: number; nivel: string; semaforo: string; color: string;
@@ -33,6 +34,7 @@ export interface VulnRecord {
 }
 export interface SocioRecord {
   id: string; codigo: string; fecha: string; nino: string; nacimiento: string; cmci: string;
+  child_id?: number | string;
   representante: string; telefono: string;
   total: number; clasificacion: string; perCapita: number; payload: unknown; createdAt: string;
 }
@@ -226,7 +228,7 @@ export const cmciService = {
 
   async createVuln(r: Omit<VulnRecord, "id" | "createdAt">): Promise<VulnRecord> {
     const payload = {
-      code: r.codigo, child_name: r.nino, center: r.cmci, status: r.estado,
+      code: r.codigo, child_name: r.nino, child_id: r.child_id, center: r.cmci, status: r.estado,
       assessed_at: r.fecha, observations: r.observaciones,
       answers: { ...r.scores, nacimiento: r.nacimiento, sexo: r.sexo, sector: r.sector, representante: r.representante, parentesco: r.parentesco, telefono: r.telefono, hogar: r.hogar },
     };
@@ -284,7 +286,7 @@ export const cmciService = {
 
   async createSocio(r: Omit<SocioRecord, "id" | "createdAt">): Promise<SocioRecord> {
     const payload = {
-      code: r.codigo, child_name: r.nino, center: r.cmci, assessed_at: r.fecha,
+      code: r.codigo, child_name: r.nino, child_id: r.child_id, center: r.cmci, assessed_at: r.fecha,
       data: { ...(r.payload as Record<string, unknown> ?? {}), representante: r.representante, telefono: r.telefono, nacimiento: r.nacimiento },
     };
     try {
@@ -378,4 +380,80 @@ export const cmciService = {
       throw toApiError(err, "Error importando excels");
     }
   },
+
+  // — Informes Mensuales de Actividades CMCI (Fase 4) —
+  async composeMonthlyReport(body: {
+    report_type?: string;
+    period_start: string;
+    period_end: string;
+    educator_notes?: string;
+    redact_with_llm?: boolean;
+    center_id?: number;
+    educator_id?: number;
+  }): Promise<{ message: string; report_id: number; report_type: string; conclusions_auto: string }> {
+    try {
+      const { data } = await api.post("/api/cmci/reports/compose", body);
+      return data;
+    } catch (err) {
+      throw toApiError(err, "Error al componer informe mensual");
+    }
+  },
+
+  async listMonthlyReports(params?: { report_type?: string; center_id?: number }): Promise<MonthlyReportListItem[]> {
+    try {
+      const { data } = await api.get<{ reports: MonthlyReportListItem[] }>("/api/cmci/monthly-reports", { params });
+      return data.reports || [];
+    } catch (err) {
+      throw toApiError(err, "Error al listar informes mensuales");
+    }
+  },
+
+  async getMonthlyReport(reportId: number): Promise<MonthlyReportDetail> {
+    try {
+      const { data } = await api.get<MonthlyReportDetail>(`/api/cmci/monthly-reports/${reportId}`);
+      return data;
+    } catch (err) {
+      throw toApiError(err, "Error al obtener detalle del informe mensual");
+    }
+  },
 };
+
+export interface MonthlyReportListItem {
+  id: number;
+  report_type: string;
+  center_id: number;
+  educator_id: number;
+  period_start: string;
+  period_end: string;
+  status: string;
+}
+
+export interface MonthlyReportPrintView {
+  titulo: string;
+  centro: string;
+  autora: string;
+  periodo: { start?: string; end?: string };
+  secciones: string[];
+  resumen: {
+    usuarios: number;
+    planificaciones: number;
+    tasa_asistencia: number;
+    casos_riesgo: number;
+  };
+  conclusions_auto: string;
+  educator_notes: string;
+  firmas: Array<{ rol: string; linea: string }>;
+  nota: string;
+}
+
+export interface MonthlyReportDetail {
+  id: number;
+  report_type: string;
+  period_start: string;
+  period_end: string;
+  status: string;
+  conclusions_auto: string;
+  educator_notes: string;
+  payload: any;
+  print_view: MonthlyReportPrintView;
+}

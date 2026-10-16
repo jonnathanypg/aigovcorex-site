@@ -5,7 +5,7 @@
 import {
   Baby, Map, MessageSquare, Brain, LayoutGrid,
   ClipboardList, UserCheck, Network, Radio,
-  BookOpen, Layers, Mic, FileText,
+  BookOpen, Layers, Mic, FileText, FileSpreadsheet,
   Scan, AlertTriangle, Users, Shield,
   Inbox,
 } from 'lucide-react';
@@ -20,11 +20,21 @@ export interface SubNavItem {
   badge?: string;
   badgeColor?: string;
   description?: string;
+  roles?: string[];
+  excludedRoles?: string[];
 }
 
 export interface NavSection {
   title: string;
+  roles?: string[];
+  excludedRoles?: string[];
   items: SubNavItem[];
+}
+
+export function isEducatorRole(role?: string | null): boolean {
+  if (!role) return false;
+  const r = role.toLowerCase().trim();
+  return ['educator', 'educadora', 'educador', 'teacher'].includes(r);
 }
 
 export interface OSModule {
@@ -58,7 +68,7 @@ export const OS_MODULES: OSModule[] = [
     badgeLabel: 'ACTIVO',
     badgeColor: 'bg-amber-500/20 text-amber-300',
     href: '/dashboard',
-    requiredRoles: ['super_admin','license_admin','supervisor','coordinator','center_coordinator','educator','educadora','doctor','nutritionist','psychologist','social_worker','administrative'],
+    requiredRoles: ['super_admin','license_admin','supervisor','coordinator','center_coordinator','educator','educadora','educador','teacher','doctor','nutritionist','psychologist','social_worker','administrative'],
     sections: [
       {
         title: 'Operaciones',
@@ -68,8 +78,20 @@ export const OS_MODULES: OSModule[] = [
           { label: 'Admisión', href: '/admision', icon: ClipboardList },
           { label: 'Asistencia', href: '/asistencia', icon: UserCheck },
           { label: 'Biblioteca Documental', href: '/biblioteca', icon: BookOpen },
-          { label: 'Gestión de Centros', href: '/license-admin/centers', icon: Network },
-          { label: 'Usuarios y Colaboradores', href: '/license-admin/users', icon: Users },
+          {
+            label: 'Gestión de Centros',
+            href: '/license-admin/centers',
+            icon: Network,
+            roles: ['super_admin','license_admin','supervisor','coordinator','center_coordinator'],
+            excludedRoles: ['educator','educadora','educador','teacher'],
+          },
+          {
+            label: 'Usuarios y Colaboradores',
+            href: '/license-admin/users',
+            icon: Users,
+            roles: ['super_admin','license_admin','supervisor','coordinator','center_coordinator'],
+            excludedRoles: ['educator','educadora','educador','teacher'],
+          },
         ],
       },
       {
@@ -87,6 +109,7 @@ export const OS_MODULES: OSModule[] = [
           { label: 'Seguimiento IDII', href: '/seguimiento-idii', icon: Layers },
           { label: 'Salud y Nutrición', href: '/salud-nutricion', icon: Shield },
           { label: 'Planificaciones', href: '/planificaciones', icon: FileText },
+          { label: 'Informe de Actividades', href: '/informe-actividades', icon: FileSpreadsheet },
           { label: 'Intervención Familiar', href: '/intervencion-familiar', icon: Users },
         ],
       },
@@ -96,7 +119,13 @@ export const OS_MODULES: OSModule[] = [
           { label: 'Monitoreo', href: '/monitoreo', icon: Scan },
           { label: 'Reportes', href: '/reportes', icon: FileText },
           { label: 'Operaciones', href: '/operaciones', icon: LayoutGrid },
-          { label: 'Carga Masiva', href: '/ingestion', icon: Layers },
+          {
+            label: 'Carga Masiva',
+            href: '/ingestion',
+            icon: Layers,
+            roles: ['super_admin','license_admin','supervisor','coordinator','center_coordinator'],
+            excludedRoles: ['educator','educadora','educador','teacher'],
+          },
           { label: 'Notificaciones', href: '/notificaciones', icon: AlertTriangle },
           { label: 'Conocimiento', href: '/knowledge', icon: BookOpen },
         ],

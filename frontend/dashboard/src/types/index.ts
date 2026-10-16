@@ -63,6 +63,9 @@ export interface Child {
     status: 'activo' | 'inactivo' | 'egresado' | 'lista_espera';
     enrollment_date: string;
     assigned_group?: string;
+    assigned_educator_id?: number | null;
+    assigned_educator_name?: string | null;
+    educator_name?: string | null;
     photo_url?: string;
     allergies?: string;
     medical_conditions?: string;

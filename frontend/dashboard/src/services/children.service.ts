@@ -20,6 +20,8 @@ export interface CenterEducator {
     full_name: string;
     first_name: string;
     last_name: string;
+    tenant_id?: number;
+    tenant_name?: string | null;
     assigned_count: number;
     max_per_educator: number;
     has_quota: boolean;

@@ -252,12 +252,21 @@ def create_app(config_name=None):
                     l.poblacion_text = IF(l.poblacion_text IS NULL OR l.poblacion_text = '', 'Niñas y niños de 12 a 42 meses y sus familias (centros BH / GU / OR)', l.poblacion_text),
                     l.objetivo_text = IF(l.objetivo_text IS NULL OR l.objetivo_text = '', 'Garantizar cuidado, nutrición, salud y desarrollo infantil integral con priorización por vulnerabilidad', l.objetivo_text),
                     l.servicios_text = IF(l.servicios_text IS NULL OR l.servicios_text = '', 'Cuidado diario · Alimentación (4 tiempos) · Salud y crecimiento · Desarrollo infantil · Acompañamiento familiar', l.servicios_text),
-                    l.print_footer_note = IF(l.print_footer_note IS NULL OR l.print_footer_note = '', 'Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.', l.print_footer_note),
-                    l.header_banner_path = IF(l.header_banner_path IS NULL OR l.header_banner_path = '', '/membretes/membrete-gasiba-cabezera.png', l.header_banner_path),
-                    l.footer_banner_path = IF(l.footer_banner_path IS NULL OR l.footer_banner_path = '', '/membretes/membrete-gasiba-pie.png', l.footer_banner_path)
+                    l.print_footer_note = IF(l.print_footer_note IS NULL OR l.print_footer_note = '', 'Se extiende la presente constancia para ser incorporada al expediente del niño/a que se entrega a la DASE EP.', l.print_footer_note)
                 WHERE u.email = 'jgastiaburo@gasiba.org' OR l.id = 1
                 """
                 db.session.execute(text(seed_sql))
+                # Limpiar rutas estáticas de membrete que fueron pre-cargadas automáticamente por código
+                db.session.execute(text("""
+                    UPDATE licenses
+                    SET header_banner_path = NULL
+                    WHERE header_banner_path = '/membretes/membrete-gasiba-cabezera.png'
+                """))
+                db.session.execute(text("""
+                    UPDATE licenses
+                    SET footer_banner_path = NULL
+                    WHERE footer_banner_path = '/membretes/membrete-gasiba-pie.png'
+                """))
                 db.session.commit()
             except Exception:
                 db.session.rollback()

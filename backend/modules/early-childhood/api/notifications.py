@@ -28,7 +28,11 @@ def _get_allowed_tenant_ids(user, requested_tenant_id=None):
                 else:
                     return None  # Access denied
             return allowed_ids
-    return [TenantContext.get_current_tenant_id()]
+        if getattr(getattr(user, "role", None), "name", None) == "super_admin":
+            all_tenants = Tenant.query.filter_by(is_active=True).all()
+            return [t.id for t in all_tenants]
+    current_tid = TenantContext.get_current_tenant_id() or getattr(user, 'tenant_id', None)
+    return [current_tid] if current_tid else []
 
 
 @notifications_bp.route('/', methods=['GET'])
@@ -53,12 +57,16 @@ def get_notifications():
         from sqlalchemy import or_, text
         
         # Build query: include if it's for user's center OR user's center is in target_tenants
+        # AND either communal (user_id is None) OR targeted to this specific user
         notifications_query = Notification.query.filter(
             or_(
                 Notification.tenant_id.in_(target_tenant_ids),
                 # Check if target_tenants JSON contains any of target_tenant_ids
-                # Using a raw SQL fallback for JSON matching is safer here for MySQL
                 *[text(f"JSON_CONTAINS(target_tenants, '{tid}')") for tid in target_tenant_ids]
+            ),
+            or_(
+                Notification.user_id.is_(None),
+                Notification.user_id == user.id
             )
         )
         

@@ -24,6 +24,20 @@ def _get(mapping, key, default=0):
         return 0.0
 
 
+def _sum_items(items, keys):
+    if isinstance(items, (list, tuple)):
+        total = 0.0
+        for x in items[:len(keys)]:
+            try:
+                total += float(x or 0)
+            except (TypeError, ValueError):
+                pass
+        return total
+    if isinstance(items, dict):
+        return sum(_get(items, k) for k in keys)
+    return 0.0
+
+
 def compute(data, params):
     """compute(data, params) -> dict con E18-E31, B54-B68, E62/E63."""
     socio = params["socioeconomic"]
@@ -31,20 +45,20 @@ def compute(data, params):
     th = socio["thresholds"]
 
     integrantes = int(data.get("integrantes") or 0)  # E4
-    perceptores = int(data.get("perceptores") or 0)  # E12
+    perceptores = int(data.get("perceptores") if data.get("perceptores") not in (None, "") else (data.get("generanIngreso") or 0))  # E12
     dormitorios = int(data.get("dormitorios") or 0)  # E13
 
     ingresos = data.get("ingresos") or {}
     egresos = data.get("egresos") or {}
-    e18 = sum(_get(ingresos, k) for k in INCOME_KEYS)  # E18
+    e18 = _sum_items(ingresos, INCOME_KEYS)  # E18
     e19 = e18 / integrantes if integrantes > 0 else 0.0  # E19
-    e29 = sum(_get(egresos, k) for k in EXPENSE_KEYS)  # E29
+    e29 = _sum_items(egresos, EXPENSE_KEYS)  # E29
     e30 = e18 - e29  # E30
     e31 = e29 / e18 if e18 > 0 else 0.0  # E31
 
-    servicios = data.get("servicios") or []  # B45:B50, lista de 'Sí'/'No'
+    servicios = data.get("servicios") or []  # B45:B50, lista de 'Sí'/'No' o booleanos
     b54 = integrantes / perceptores if perceptores > 0 else 0.0  # B54
-    b55 = sum(1 for s in servicios[:6] if s == "Sí") / 6.0  # B55
+    b55 = sum(1 for s in servicios[:6] if s is True or s in ("Sí", "Si", "sí", "si", 1, "true", "True")) / 6.0  # B55
     if data.get("personas_por_dormitorio") not in (None, ""):
         b56 = float(data["personas_por_dormitorio"])  # B56 explícito
     else:
@@ -64,11 +78,11 @@ def compute(data, params):
 
     b62 = _b62(e19, th)  # cortes 600/300
     b63 = 100 if b58 == "Baja" else (60 if b58 == "Media" else 20)
-    b64 = _b64(data.get("situacion_laboral"))  # literal §10.1
-    b65 = _b65(data.get("tenencia"), data.get("tipo_vivienda"))  # literal §10.1
+    b64 = _b64(data.get("situacion_laboral") or data.get("situacionLaboral"))  # literal §10.1
+    b65 = _b65(data.get("tenencia"), data.get("tipo_vivienda") or data.get("tipoVivienda"))  # literal §10.1
     b66 = 100 if b55 >= 0.8 else (60 if b55 >= 0.5 else 20)
     b67 = 100 if e31 < th["carga_media"] else (60 if e31 < th["carga_alta"] else 20)
-    b68 = _b68(data.get("nivel_educativo"))  # literal §10.1
+    b68 = _b68(data.get("nivel_educativo") or data.get("educacion"))  # literal §10.1
 
     subscores = [b62, b63, b64, b65, b66, b67, b68]
     e62 = sum(s * w for s, w in zip(subscores, weights))  # E62 SUMPRODUCT
@@ -79,7 +93,7 @@ def compute(data, params):
     else:
         e63 = "baja"
 
-    months = age_months(data.get("birth_date"), data.get("assessed_at"))
+    months = age_months(data.get("birth_date") or data.get("nacimiento"), data.get("assessed_at"))
 
     return {
         "ingreso_total": e18,  # E18

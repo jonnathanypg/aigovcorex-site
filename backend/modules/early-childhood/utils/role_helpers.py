@@ -81,12 +81,12 @@ def is_central_global(user):
 
 
 def is_coordinadora(user):
-    return _role_name(user) in ("coordinator", "coordinadora",
-                                "coordinadora_centro")
+    return _role_name(user) in ("coordinator", "center_coordinator",
+                                "coordinadora", "coordinadora_centro")
 
 
 def is_educadora(user):
-    return _role_name(user) in ("educadora", "educador", "teacher")
+    return _role_name(user) in ("educator", "educadora", "educador", "teacher")
 
 
 def is_auxiliar(user):
@@ -103,16 +103,25 @@ def is_catering(user):
 
 def is_admin_override(user):
     """super/license admin: bypass operativo (evita lockout)."""
-    return _role_name(user) in ("super_admin", "license_admin")
+    return _role_name(user) in ("super_admin", "license_admin", "admin")
 
 
 def can_create_ficha(user):
-    """Educadora crea, Auxiliar apoya (crea), admin override. Coordinadora
-    revisa en papel impreso (no crea en sistema); Central solo lectura;
+    """Educadora, Auxiliar, Coordinadora, Supervisor, Trabajador Social y Admin pueden crear fichas.
     Catering solo menú/ingesta."""
     if is_admin_override(user):
         return True
-    return is_educadora(user) or is_auxiliar(user)
+    if is_catering(user):
+        return False
+    return (
+        is_educadora(user)
+        or is_auxiliar(user)
+        or is_coordinadora(user)
+        or _role_name(user) in (
+            "supervisor", "social_worker", "psychologist",
+            "nutritionist", "doctor", "administrative", "worker"
+        )
+    )
 
 
 def can_view_cmci_global(user):

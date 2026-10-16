@@ -73,8 +73,8 @@ export function AgentConfigModal({ isOpen, onClose }: AgentConfigModalProps) {
                 setAgentIcon(dashboardData.license.agent_icon_path || null);
                 setAgentVoice(dashboardData.license.agent_voice || 'es-EC-LuisNeural');
                 setTimezone(dashboardData.license.timezone || 'America/Guayaquil');
-                setHeaderBanner((dashboardData.license as any).header_banner_path || '/membretes/membrete-gasiba-cabezera.png');
-                setFooterBanner((dashboardData.license as any).footer_banner_path || '/membretes/membrete-gasiba-pie.png');
+                setHeaderBanner((dashboardData.license as any).header_banner_path || null);
+                setFooterBanner((dashboardData.license as any).footer_banner_path || null);
             }
 
             // Load Sponsor Logos
@@ -195,9 +195,11 @@ export function AgentConfigModal({ isOpen, onClose }: AgentConfigModalProps) {
     const handleRemoveBanner = async (type: 'header_banner' | 'footer_banner') => {
         try {
             setIsUploadingBanner(type);
-            await licenseAdminService.updateOrganization({
-                [type]: null as any
-            });
+            await licenseAdminService.updateOrganization(
+                type === 'header_banner'
+                    ? { header_banner_path: null as any }
+                    : { footer_banner_path: null as any }
+            );
             if (type === 'header_banner') {
                 setHeaderBanner(null);
             } else {

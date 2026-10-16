@@ -134,7 +134,10 @@ export function ChildRecordForm({ form, onSubmit, onCancel, isEditing, effective
     return () => { cancelled = true; };
   }, [tenantIdForEducators]);
 
-  const educatorsWithQuota = educators.filter((e) => e.has_quota);
+  const currentEducatorId = form.watch('assigned_educator_id');
+  const educatorsWithQuota = educators.filter(
+    (e) => e.has_quota || (currentEducatorId != null && Number(e.id) === Number(currentEducatorId))
+  );
   const canAssignEducator = isLicenseAdmin || roleName === 'center_coordinator' || roleName === 'coordinator';
 
   return (

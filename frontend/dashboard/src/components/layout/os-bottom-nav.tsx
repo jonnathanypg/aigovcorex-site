@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { OS_MODULES, type ModuleId } from '@/lib/os-modules';
+import { OS_MODULES, type ModuleId, isEducatorRole } from '@/lib/os-modules';
 import { authService } from '@/services/auth.service';
 import { useLicense } from '@/contexts/license-context';
 
@@ -18,16 +18,27 @@ export function OSBottomNav({ activeModule, onModuleChange, isSubNavOpen, onTogg
   const { hasModule } = useLicense();
 
   useEffect(() => {
-    const user = authService.getStoredUser();
-    if (user) {
-      const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-      setUserRole(roleName);
-    }
+    const syncRole = () => {
+      const user = authService.getStoredUser();
+      if (user) {
+        const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+        setUserRole(roleName || '');
+      }
+    };
+    syncRole();
+    window.addEventListener('user-login', syncRole);
+    return () => window.removeEventListener('user-login', syncRole);
   }, []);
 
-  const visibleModules = OS_MODULES.filter(m =>
-    (!userRole || m.requiredRoles.includes(userRole)) && hasModule(m.id)
-  ).slice(0, 5);
+  const normalizedRole = (userRole || '').toLowerCase().trim();
+  const isEducator = isEducatorRole(normalizedRole);
+
+  const visibleModules = OS_MODULES.filter(m => {
+    if (isEducator) {
+      return m.id === 'kindicore';
+    }
+    return (!userRole || m.requiredRoles.some(r => r.toLowerCase() === normalizedRole)) && hasModule(m.id);
+  }).slice(0, 5);
 
   return (
     <nav className="os-bottom-nav fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 md:hidden print:hidden">

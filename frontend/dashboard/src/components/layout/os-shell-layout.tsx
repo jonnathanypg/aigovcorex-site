@@ -7,7 +7,8 @@ import { OSSubNavPanel } from './os-subnav-panel';
 import { OSBottomNav } from './os-bottom-nav';
 import { AppHeader } from './app-header';
 import { ChatWidget } from '@/components/chat';
-import { OS_MODULES, getModuleByRoute, type ModuleId } from '@/lib/os-modules';
+import { OS_MODULES, getModuleByRoute, type ModuleId, isEducatorRole } from '@/lib/os-modules';
+import { authService } from '@/services/auth.service';
 import { cn } from '@/lib/utils';
 import { useLicense } from '@/contexts/license-context';
 import { Lock, ArrowLeft } from 'lucide-react';
@@ -19,15 +20,37 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSubNavOpen, setIsSubNavOpen] = useState(false);
   const [activeModule, setActiveModule] = useState<ModuleId>('kindicore');
+  const [userRole, setUserRole] = useState<string>('');
+
+  useEffect(() => {
+    const syncRole = () => {
+      const user = authService.getStoredUser();
+      if (user) {
+        const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+        setUserRole(roleName || '');
+      }
+    };
+    syncRole();
+    window.addEventListener('user-login', syncRole);
+    return () => window.removeEventListener('user-login', syncRole);
+  }, []);
+
+  const normalizedRole = (userRole || '').toLowerCase().trim();
+  const isEducator = isEducatorRole(normalizedRole);
 
   // Sync active module with current route
   useEffect(() => {
     const mod = getModuleByRoute(pathname);
-    if (mod && mod.id !== activeModule) {
-      setActiveModule(mod.id);
+    if (mod) {
+      if (isEducator && mod.id !== 'kindicore') {
+        setActiveModule('kindicore');
+        router.replace('/dashboard');
+      } else if (mod.id !== activeModule) {
+        setActiveModule(mod.id);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, isEducator]);
 
   // Open subnav on desktop on mount if needed
   useEffect(() => {
@@ -48,6 +71,7 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
 
   const handleModuleChange = useCallback(
     (id: ModuleId) => {
+      if (isEducator && id !== 'kindicore') return;
       if (id === activeModule) {
         // Toggle subnav when clicking same module
         setIsSubNavOpen(v => !v);
@@ -58,7 +82,7 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
         if (mod) router.push(mod.href);
       }
     },
-    [activeModule, router],
+    [activeModule, router, isEducator],
   );
 
   const { hasModule, isSuperAdmin, isLoading: licenseLoading } = useLicense();

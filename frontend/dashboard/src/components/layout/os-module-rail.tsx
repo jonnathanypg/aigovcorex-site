@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { OS_MODULES, type ModuleId } from '@/lib/os-modules';
+import { OS_MODULES, type ModuleId, isEducatorRole } from '@/lib/os-modules';
 import { authService } from '@/services/auth.service';
 import { useLicense } from '@/contexts/license-context';
 import { cn } from '@/lib/utils';
@@ -16,17 +16,29 @@ export function OSModuleRail({ activeModule, onModuleChange }: OSModuleRailProps
   const { hasModule } = useLicense();
 
   useEffect(() => {
-    const user = authService.getStoredUser();
-    if (user) {
-      const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-      setUserRole(roleName);
-    }
+    const syncRole = () => {
+      const user = authService.getStoredUser();
+      if (user) {
+        const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+        setUserRole(roleName || '');
+      }
+    };
+    syncRole();
+    window.addEventListener('user-login', syncRole);
+    return () => window.removeEventListener('user-login', syncRole);
   }, []);
 
+  const normalizedRole = (userRole || '').toLowerCase().trim();
+  const isEducator = isEducatorRole(normalizedRole);
+
   // Filter modules based on user role AND whether the module is enabled for this license
-  const visibleModules = OS_MODULES.filter(m =>
-    (!userRole || m.requiredRoles.includes(userRole)) && hasModule(m.id)
-  );
+  // Educadoras are strictly limited to KindiCore AI
+  const visibleModules = OS_MODULES.filter(m => {
+    if (isEducator) {
+      return m.id === 'kindicore';
+    }
+    return (!userRole || m.requiredRoles.some(r => r.toLowerCase() === normalizedRole)) && hasModule(m.id);
+  });
 
   return (
     <div

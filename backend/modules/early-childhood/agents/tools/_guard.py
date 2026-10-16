@@ -9,14 +9,36 @@ logger = logging.getLogger(__name__)
 
 
 def graceful_tool(fn):
-    """Decorador para BaseTool._run: convierte excepciones en {'success': False}."""
+    """Decorador para BaseTool._run: ejecuta guarda C99 LEM-Ops y convierte excepciones en {'success': False}."""
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
+        tool_name = getattr(args[0], "name", "tool") if args else "tool"
+        try:
+            from services.lem_native_engine import LEMNativeEngine
+            tid = kwargs.get("tenant_id")
+            uid = kwargs.get("user_id")
+            lid = kwargs.get("license_id")
+            is_write = 1.0 if any(w in tool_name for w in ["record", "create", "delete", "update", "assign", "manage", "send", "log"]) else 0.0
+            has_scope = 1.0 if (tid or lid) else 0.0
+            has_user = 1.0 if uid else 0.0
+            z = [
+                is_write, has_scope, has_user,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+            ]
+            accepted, energy = LEMNativeEngine.evaluate_state(z, schema_name="gov_action_guard_v1", engine="ops")
+            if not accepted:
+                logger.warning(f"⛔ [LEM-Ops] Tool {tool_name} rechazada por equilibrio energético ({energy:.4f})")
+                return {
+                    "success": False,
+                    "error": f"Acción '{tool_name}' bloqueada por invariante determinista LEM-Ops (energía={energy:.2f})."
+                }
+        except Exception as e:
+            logger.debug(f"[LEM-Ops Guard] check bypassed on {tool_name}: {e}")
+
         try:
             return fn(*args, **kwargs)
         except Exception as e:
-            tool = getattr(args[0], "name", "tool") if args else "tool"
-            logger.warning(f"[{tool}] error controlado: {e}")
+            logger.warning(f"[{tool_name}] error controlado: {e}")
             try:
                 from models import db as _db
                 _db.session.rollback()

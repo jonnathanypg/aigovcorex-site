@@ -107,9 +107,10 @@ def get_children():
 @tenant_required
 def get_center_educators():
     """
-    Lista educadoras del centro con cupo de asignación.
-    tenant_id: obligatorio para license_admin; para otros se usa el del contexto.
-    Devuelve: id, full_name, assigned_count, max_per_educator, has_quota.
+    Lista educadoras del centro (o de toda la licencia para roles multi-centro) con cupo de asignación.
+    tenant_id: opcional para roles multi-centro (si no se envía o es 'all', devuelve todas las educadoras de la licencia);
+               para otros roles se usa el centro del contexto.
+    Devuelve: id, full_name, tenant_id, tenant_name, assigned_count, max_per_educator, has_quota.
     """
     try:
         current_user = TenantContext.get_current_user()
@@ -117,52 +118,78 @@ def get_center_educators():
         from models.tenant import Tenant
 
         requested_tenant_id = request.args.get('tenant_id')
+        has_specific_tenant = bool(
+            requested_tenant_id and str(requested_tenant_id).strip().lower() not in ('all', 'none', 'null', 'undefined', '')
+        )
+
         from utils.role_helpers import is_multi_center_role, get_license_id_for_user
+        tenants = []
         if is_multi_center_role(current_user):
             license_id = get_license_id_for_user(current_user)
-            if not license_id:
+            if not license_id and current_user.role.name != 'super_admin':
                 return jsonify({'error': 'No license assigned'}), 403
-            if not requested_tenant_id:
-                return jsonify({'error': 'tenant_id requerido'}), 400
-            tenant = Tenant.query.filter_by(
-                id=int(requested_tenant_id),
-                license_id=license_id
-            ).first()
+            if has_specific_tenant:
+                q = Tenant.query.filter_by(id=int(requested_tenant_id))
+                if license_id:
+                    q = q.filter_by(license_id=license_id)
+                t = q.first()
+                if not t:
+                    return jsonify({'error': 'Centro no encontrado'}), 404
+                tenants = [t]
+            else:
+                q = Tenant.query
+                if license_id:
+                    q = q.filter_by(license_id=license_id)
+                tenants = q.all()
         else:
             tenant_id = TenantContext.get_current_tenant_id()
-            if requested_tenant_id and int(requested_tenant_id) != tenant_id:
+            if has_specific_tenant and int(requested_tenant_id) != tenant_id:
                 return jsonify({'error': 'No puede consultar otro centro'}), 403
-            tenant = Tenant.query.get(tenant_id)
+            t = Tenant.query.get(tenant_id) if tenant_id else None
+            if not t:
+                return jsonify({'error': 'Centro no encontrado'}), 404
+            tenants = [t]
 
-        if not tenant:
-            return jsonify({'error': 'Centro no encontrado'}), 404
+        if not tenants:
+            return jsonify({'educators': [], 'max_children_per_educator': 10}), 200
+
+        tenant_map = {t.id: t for t in tenants}
+        tenant_ids = list(tenant_map.keys())
 
         from models.user import Role
-        role_ids = [r.id for r in Role.query.filter(Role.name.in_(['educadora', 'educator'])).all()]
+        role_ids = [r.id for r in Role.query.filter(Role.name.in_(['educadora', 'educator', 'educador', 'teacher'])).all()]
         educators = User.query.filter(
-            User.tenant_id == tenant.id,
+            User.tenant_id.in_(tenant_ids),
             User.role_id.in_(role_ids),
             User.is_active == True
-        ).all()
+        ).order_by(User.first_name.asc(), User.last_name.asc()).all()
 
-        max_per = getattr(tenant, 'max_children_per_educator', 10) or 10
+        default_max_per = getattr(tenants[0], 'max_children_per_educator', 10) or 10
         result = []
         for u in educators:
+            u_tenant = tenant_map.get(u.tenant_id)
+            max_per = (getattr(u_tenant, 'max_children_per_educator', 10) or 10) if u_tenant else default_max_per
             assigned = Child.query.filter_by(
-                tenant_id=tenant.id,
+                tenant_id=u.tenant_id,
                 assigned_educator_id=u.id,
                 status='activo'
             ).count()
+            import re
+            clean_fn = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff]', '', u.full_name or '').strip()
+            clean_first = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff]', '', u.first_name or '').strip()
+            clean_last = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff]', '', u.last_name or '').strip()
             result.append({
                 'id': u.id,
-                'full_name': u.full_name,
-                'first_name': u.first_name,
-                'last_name': u.last_name,
+                'full_name': clean_fn or f"{clean_first} {clean_last}".strip(),
+                'first_name': clean_first,
+                'last_name': clean_last,
+                'tenant_id': u.tenant_id,
+                'tenant_name': u_tenant.name if u_tenant else None,
                 'assigned_count': assigned,
                 'max_per_educator': max_per,
                 'has_quota': assigned < max_per,
             })
-        return jsonify({'educators': result, 'max_children_per_educator': max_per}), 200
+        return jsonify({'educators': result, 'max_children_per_educator': default_max_per}), 200
     except Exception as e:
         import traceback
         print(traceback.format_exc())
@@ -481,6 +508,8 @@ def get_child(child_id):
                     'objetivo_text': license_obj.objetivo_text,
                     'servicios_text': license_obj.servicios_text,
                     'print_footer_note': license_obj.print_footer_note,
+                    'header_banner_path': license_obj.header_banner_path,
+                    'footer_banner_path': license_obj.footer_banner_path,
                 }
             else:
                 response['license'] = None

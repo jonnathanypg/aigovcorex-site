@@ -122,6 +122,7 @@ class Child(db.Model, BaseModel):
     notes = db.Column(db.Text)
     
     # Relationships
+    assigned_educator = db.relationship('User', foreign_keys=[assigned_educator_id], lazy='joined')
     attendance_records = db.relationship('Attendance', backref='child', lazy='dynamic', cascade='all, delete-orphan')
     nutrition_records = db.relationship('NutritionDaily', backref='child', lazy='dynamic', cascade='all, delete-orphan')
     health_records = db.relationship('HealthRecord', backref='child', lazy='dynamic', cascade='all, delete-orphan')
@@ -177,6 +178,15 @@ class Child(db.Model, BaseModel):
     
     def to_dict(self):
         """Convert to dictionary"""
+        educator_name = None
+        if self.assigned_educator and self.assigned_educator.full_name:
+            educator_name = self.assigned_educator.full_name.strip()
+        elif self.assigned_educator_id:
+            from models.user import User
+            edu = User.query.get(self.assigned_educator_id)
+            if edu and edu.full_name:
+                educator_name = edu.full_name.strip()
+
         return {
             'id': self.id,
             'tenant_id': self.tenant_id,
@@ -197,6 +207,8 @@ class Child(db.Model, BaseModel):
             'status': self.status,
             'assigned_group': self.assigned_group,
             'assigned_educator_id': self.assigned_educator_id,
+            'assigned_educator_name': educator_name,
+            'educator_name': educator_name,
             'birth_weight': float(self.birth_weight) if self.birth_weight else None,
             'birth_height': float(self.birth_height) if self.birth_height else None,
             'allergies': self.allergies,

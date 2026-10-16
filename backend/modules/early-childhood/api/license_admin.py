@@ -3,7 +3,7 @@ License Admin API - Gestión de Centros
 Accesible por usuarios con rol license_admin
 """
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 from models import db
 from models.license import License, LicenseAdmin, SponsorLogo
 from models.user import User, Role
@@ -32,17 +32,44 @@ license_admin_bp = Blueprint('license_admin', __name__, url_prefix='/api/license
 
 @license_admin_bp.route('/public-config', methods=['GET'])
 def get_public_config():
-    """Endpoint público para obtener configuración básica de la marca/licencia.
+    """Endpoint para obtener configuración básica de la marca/licencia actual.
 
-    Fuente única de identidad del agente (nombre + icono) para el ChatWidget
-    del dashboard y el display de sponsors. Se mantiene público (sin JWT)
-    porque también lo consume el widget embebible.
+    Resuelve la licencia según:
+    1) Parámetros explícitos license_id o tenant_id.
+    2) Usuario autenticado vía JWT (si existe sesión activa).
+    Nunca devuelve datos institucionales ni membretes de otra licencia ajena.
     """
     try:
         from models.license import License, SponsorLogo
-        license_obj = License.query.filter_by(status='active').first()
+        from utils.role_helpers import get_license_id_for_user
+
+        license_obj = None
+        req_license_id = request.args.get('license_id', type=int)
+        req_tenant_id = request.args.get('tenant_id', type=int)
+
+        if req_license_id:
+            license_obj = License.query.get(req_license_id)
+        elif req_tenant_id:
+            tenant = Tenant.query.get(req_tenant_id)
+            if tenant and tenant.license_id:
+                license_obj = License.query.get(tenant.license_id)
+
+        if not license_obj:
+            try:
+                verify_jwt_in_request(optional=True)
+                identity = get_jwt_identity()
+                if identity:
+                    user = User.query.get(int(identity))
+                    if user:
+                        lic_id = get_license_id_for_user(user)
+                        if lic_id:
+                            license_obj = License.query.get(lic_id)
+            except Exception:
+                pass
+
         logos = SponsorLogo.query.filter_by(license_id=license_obj.id).all() if license_obj else []
         return jsonify({
+            'license_id': license_obj.id if license_obj else None,
             'license_name': license_obj.name if license_obj else 'AI GovCoreX OS',
             'legal_name': license_obj.legal_name if license_obj else 'AI GovCoreX OS Platform',
             'agent_name': (license_obj.agent_name if license_obj and license_obj.agent_name else 'KindiCore AI'),
@@ -267,10 +294,18 @@ def update_organization(license_admin):
             license.servicios_text = data['servicios_text']
         if 'print_footer_note' in data:
             license.print_footer_note = data['print_footer_note']
-        if 'header_banner_path' in data:
-            license.header_banner_path = data['header_banner_path']
-        if 'footer_banner_path' in data:
-            license.footer_banner_path = data['footer_banner_path']
+        if 'header_banner_path' in data or 'header_banner' in data:
+            new_header = data.get('header_banner_path') if 'header_banner_path' in data else data.get('header_banner')
+            if not new_header and license.header_banner_path and license.header_banner_path.startswith('/static/uploads/'):
+                from services.upload_service import FileService
+                FileService.delete_file(license.header_banner_path)
+            license.header_banner_path = new_header or None
+        if 'footer_banner_path' in data or 'footer_banner' in data:
+            new_footer = data.get('footer_banner_path') if 'footer_banner_path' in data else data.get('footer_banner')
+            if not new_footer and license.footer_banner_path and license.footer_banner_path.startswith('/static/uploads/'):
+                from services.upload_service import FileService
+                FileService.delete_file(license.footer_banner_path)
+            license.footer_banner_path = new_footer or None
         
         # SMTP Configuration
         if 'smtp_host' in data:
@@ -1199,61 +1234,58 @@ os.makedirs(UPLOAD_LICENSE_FOLDER, exist_ok=True)
 def allowed_image_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMG_EXTENSIONS
 
+@license_admin_bp.route('/upload', methods=['POST'])
 @license_admin_bp.route('/upload-file', methods=['POST'])
 @require_license_admin
 def upload_license_file(license_admin):
-    """Subir un archivo para la licencia (logo o icono de agente)"""
+    """Subir un archivo para la licencia (membrete, logo o icono de agente)"""
+    from services.upload_service import FileService
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No se envió ningún archivo'}), 400
 
         file = request.files['file']
-        upload_type = request.form.get('upload_type') # 'agent_icon' o 'sponsor_logo'
+        upload_type = request.form.get('upload_type') # 'agent_icon', 'sponsor_logo', 'header_banner', 'footer_banner'
 
         if file.filename == '' or not upload_type:
             return jsonify({'error': 'Nombre de archivo o tipo de subida vacío'}), 400
 
-        if not allowed_image_file(file.filename):
+        if not FileService.allowed_file(file.filename):
             return jsonify({'error': 'Tipo de archivo no permitido'}), 400
 
-        license_id = license_admin.license_id
-        
-        # Crear subdirectorio específico
+        # Crear subdirectorio específico en /static/uploads/<folder>
         if upload_type == 'agent_icon':
-            specific_folder = 'icons'
+            specific_folder = 'agent_icons'
         elif upload_type == 'sponsor_logo':
-            specific_folder = 'logos'
+            specific_folder = 'sponsor_logos'
         elif upload_type in ('header_banner', 'footer_banner'):
             specific_folder = 'membretes'
         else:
             return jsonify({'error': 'Tipo de subida no válido'}), 400
-            
-        target_folder = os.path.join(UPLOAD_LICENSE_FOLDER, str(license_id), specific_folder)
-        os.makedirs(target_folder, exist_ok=True)
-        
-        # Guardar archivo
-        filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        unique_filename = f"{timestamp}_{filename}"
-        file_path = os.path.join(target_folder, unique_filename)
-        
-        file.save(file_path)
 
         license_obj = license_admin.license
-        # Actualizamos la licencia según el tipo
+        public_url = FileService.save_file(file, folder=specific_folder)
+
+        # Actualizamos la licencia según el tipo y limpiamos archivo anterior si existía
         if upload_type == 'agent_icon':
-            license_obj.agent_icon_path = file_path
+            if license_obj.agent_icon_path and license_obj.agent_icon_path.startswith('/static/uploads/'):
+                FileService.delete_file(license_obj.agent_icon_path)
+            license_obj.agent_icon_path = public_url
             db.session.commit()
         elif upload_type == 'header_banner':
-            license_obj.header_banner_path = file_path
+            if license_obj.header_banner_path and license_obj.header_banner_path.startswith('/static/uploads/'):
+                FileService.delete_file(license_obj.header_banner_path)
+            license_obj.header_banner_path = public_url
             db.session.commit()
         elif upload_type == 'footer_banner':
-            license_obj.footer_banner_path = file_path
+            if license_obj.footer_banner_path and license_obj.footer_banner_path.startswith('/static/uploads/'):
+                FileService.delete_file(license_obj.footer_banner_path)
+            license_obj.footer_banner_path = public_url
             db.session.commit()
 
         return jsonify({
             'message': 'Archivo subido exitosamente',
-            'file_path': file_path,
+            'file_path': public_url,
             'upload_type': upload_type
         }), 201
 

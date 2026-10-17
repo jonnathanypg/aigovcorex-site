@@ -452,3 +452,117 @@ class SendBroadcastToParentsTool(BaseTool):
         }
 
 
+class SendMessageToStaffTool(BaseTool):
+    """
+    Permite enviar mensajes de WhatsApp o notificaciones oficiales a colaboradores
+    del proyecto (educadoras, coordinadoras, auxiliares, nutricionista o administrador).
+    Permite buscar al colaborador por nombre, rol o centro.
+    """
+    name: str = "send_message_to_staff"
+    description: str = (
+        "Envía un mensaje de WhatsApp a un colaborador/empleado específico (educadora, coordinadora, personal) "
+        "o a todo el equipo de un rol en un centro. "
+        "Input: {'staff_name': 'María Gómez', 'role_name': 'educadora', 'message': 'Estimada María...', 'tenant_id': 1}"
+    )
+
+    def _run(self, *args, **kwargs) -> dict:
+        import logging
+        import time
+        from models.user import User, Role
+        from models.tenant import Tenant
+
+        logger = logging.getLogger('SendMessageToStaffTool')
+        user_id = kwargs.get('user_id')
+        if not check_messaging_permission(user_id):
+            return {'success': False, 'error': 'No tienes permiso para enviar mensajes a colaboradores.'}
+
+        message = (kwargs.get('message') or '').strip()
+        if not message:
+            return {'success': False, 'error': 'El contenido del mensaje es requerido.'}
+
+        staff_name = kwargs.get('staff_name')
+        role_name = kwargs.get('role_name')
+        tenant_id = kwargs.get('tenant_id')
+
+        q = User.query.filter_by(is_active=True)
+        if tenant_id:
+            q = q.filter_by(tenant_id=tenant_id)
+
+        if role_name:
+            role = Role.query.filter(Role.name.ilike(f'%{role_name}%')).first()
+            if role:
+                q = q.filter_by(role_id=role.id)
+
+        if staff_name:
+            parts = normalize_search_term(staff_name)
+            conds = []
+            for p in parts:
+                conds.append(User.first_name.ilike(f'%{p}%'))
+                conds.append(User.last_name.ilike(f'%{p}%'))
+            if conds:
+                q = q.filter(or_(*conds))
+
+        staff_members = q.all()
+        if not staff_members:
+            return {'success': False, 'error': f'No se encontró ningún colaborador activo con los criterios dados (nombre: "{staff_name}", rol: "{role_name}").'}
+
+        sent_count = 0
+        failed_count = 0
+        details = []
+
+        for staff in staff_members:
+            # Buscar teléfono (whatsapp_phone o phone)
+            raw_phone = staff.whatsapp_phone or staff.phone
+            if not raw_phone:
+                failed_count += 1
+                details.append({'name': staff.full_name, 'status': 'sin_telefono'})
+                continue
+
+            clean_phone = re.sub(r'[^0-9]', '', raw_phone)
+            staff_tenant = Tenant.query.get(staff.tenant_id) if staff.tenant_id else None
+            license_id = str(staff_tenant.license_id) if (staff_tenant and staff_tenant.license_id) else str(staff.tenant_id or 1)
+
+            personalized_msg = message.replace('{nombre}', staff.full_name)
+            personalized_msg = personalized_msg.replace('{colaborador}', staff.full_name)
+            personalized_msg = personalized_msg.replace('{centro}', staff_tenant.name if staff_tenant else 'Centro CMCI')
+
+            # Enviar WhatsApp
+            success = False
+            last_err = ""
+            for attempt in range(2):
+                try:
+                    res = requests.post(
+                        f"{WHATSAPP_API_URL}/lead",
+                        json={
+                            'companyId': license_id,
+                            'phone': clean_phone,
+                            'message': personalized_msg
+                        },
+                        timeout=12
+                    )
+                    if res.status_code == 200:
+                        success = True
+                        break
+                    else:
+                        last_err = res.text
+                except Exception as ex:
+                    last_err = str(ex)
+                    time.sleep(1.0)
+
+            if success:
+                sent_count += 1
+                details.append({'name': staff.full_name, 'phone': clean_phone, 'status': 'enviado'})
+            else:
+                failed_count += 1
+                details.append({'name': staff.full_name, 'phone': clean_phone, 'status': 'fallido', 'error': last_err})
+
+        return {
+            'success': True,
+            'summary': f"Mensajería a colaboradores completada: {sent_count} enviados, {failed_count} fallidos o sin número.",
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'details': details
+        }
+
+
+

@@ -369,7 +369,7 @@ class RunSQLAgentTool(BaseTool):
 # Import new tools
 from agents.tools.analytics_tools import GetTenantAnalyticsTool, AnalyzeTrendsTool
 from agents.tools.notification_tools import CreateNotificationTool
-from agents.tools.messaging_tools import GetParentContactTool, SendWhatsAppMessageTool, SendBroadcastToParentsTool
+from agents.tools.messaging_tools import GetParentContactTool, SendWhatsAppMessageTool, SendBroadcastToParentsTool, SendMessageToStaffTool
 from agents.tools.rag_tools import ConsultKnowledgeTool
 
 class SendParentMessageTool(BaseTool):
@@ -606,6 +606,7 @@ def get_all_tools():
         GetParentContactTool(),
         SendWhatsAppMessageTool(),
         SendBroadcastToParentsTool(),
+        SendMessageToStaffTool(),
         ConsultKnowledgeTool(),
         GenerateReportTool(),
         # Management Tools (Phase 4)

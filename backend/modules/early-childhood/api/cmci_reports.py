@@ -551,3 +551,157 @@ def stream_export_task(task_id):
             yield SSEManager.create_error_event(task['error'] or 'Falló la exportación')
 
     return Response(_gen(), mimetype='text/event-stream')
+
+
+# ── Ficha de Estado Nutricional 12-42 Meses (Patrón OMS) ─────────────────
+
+@cmci_reports_bp.route('/nutritional-assessments', methods=['POST'])
+@tenant_required
+def create_nutritional_assessment():
+    """
+    Registra una valoración nutricional periódica (trimestral o inicial).
+    Calcula Z-scores automáticamente y guarda el registro histórico.
+    """
+    user = TenantContext.get_current_user()
+    data = request.get_json() or {}
+    child_id = data.get('child_id')
+    if not child_id:
+        return jsonify({'error': 'child_id es requerido'}), 400
+
+    from models.child import Child
+    from models.nutrition import ChildNutritionalAssessment
+    from services.nutritional_assessment_service import NutritionalAssessmentService
+
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({'error': 'Niño/a no encontrado'}), 404
+
+    center_id = child.tenant_id
+    denied = _ensure_site_access(user, center_id)
+    if denied:
+        return denied
+
+    try:
+        weight_kg = float(data.get('weight_kg', 0))
+        height_cm = float(data.get('height_cm', 0))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Peso y talla deben ser valores numéricos válidos'}), 400
+
+    assessment_date_str = data.get('assessment_date')
+    assessment_date = date.fromisoformat(assessment_date_str) if assessment_date_str else date.today()
+
+    metrics = NutritionalAssessmentService.calculate_assessment_metrics(
+        child=child,
+        weight_kg=weight_kg,
+        height_cm=height_cm,
+        assessment_date=assessment_date,
+        measurement_position=data.get('measurement_position', 'De pie'),
+        brachial_cm=data.get('brachial_perimeter_cm'),
+        hemoglobin_dl=data.get('hemoglobin_g_dl'),
+        cephalic_cm=data.get('cephalic_perimeter_cm'),
+        abdominal_cm=data.get('abdominal_perimeter_cm')
+    )
+
+    assessment = ChildNutritionalAssessment(
+        tenant_id=center_id,
+        child_id=child.id,
+        assessor_id=user.id if user else None,
+        assessment_date=assessment_date,
+        period_type=data.get('period_type', 'trimestral'),
+        weight_kg=weight_kg,
+        height_cm=height_cm,
+        measurement_position=data.get('measurement_position', 'De pie'),
+        brachial_perimeter_cm=data.get('brachial_perimeter_cm'),
+        hemoglobin_g_dl=data.get('hemoglobin_g_dl'),
+        cephalic_perimeter_cm=data.get('cephalic_perimeter_cm'),
+        abdominal_perimeter_cm=data.get('abdominal_perimeter_cm'),
+        age_months_calc=metrics['age_months_calc'],
+        height_corrected_cm=metrics['height_corrected_cm'],
+        z_weight_for_age=metrics['z_weight_for_age'],
+        weight_for_age_diag=metrics['weight_for_age_diag'],
+        z_height_for_age=metrics['z_height_for_age'],
+        height_for_age_diag=metrics['height_for_age_diag'],
+        z_weight_for_height=metrics['z_weight_for_height'],
+        weight_for_height_diag=metrics['weight_for_height_diag'],
+        brachial_diag=metrics['brachial_diag'],
+        hemoglobin_diag=metrics['hemoglobin_diag'],
+        semaphore=metrics['semaphore'],
+        nutritional_diagnosis=metrics['nutritional_diagnosis'],
+        requires_nutrition_plan=metrics['requires_nutrition_plan'],
+        recommended_action=metrics['recommended_action'],
+        observations=data.get('observations')
+    )
+
+    db.session.add(assessment)
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Valoración nutricional registrada exitosamente',
+        'assessment': assessment.to_dict()
+    }), 201
+
+
+@cmci_reports_bp.route('/nutritional-assessments', methods=['GET'])
+@tenant_required
+def list_nutritional_assessments():
+    """Lista las valoraciones nutricionales del centro con filtros."""
+    user = TenantContext.get_current_user()
+    center_id = _resolve_center(user, request.args.get('center_id', type=int))
+    denied = _ensure_site_access(user, center_id)
+    if denied:
+        return denied
+
+    from models.nutrition import ChildNutritionalAssessment
+    q = ChildNutritionalAssessment.query
+    if center_id:
+        q = q.filter_by(tenant_id=center_id)
+    
+    child_id = request.args.get('child_id', type=int)
+    if child_id:
+        q = q.filter_by(child_id=child_id)
+
+    period_type = request.args.get('period_type')
+    if period_type:
+        q = q.filter_by(period_type=period_type)
+
+    assessments = q.order_by(ChildNutritionalAssessment.assessment_date.desc()).all()
+    return jsonify({
+        'total': len(assessments),
+        'assessments': [a.to_dict() for a in assessments]
+    })
+
+
+@cmci_reports_bp.route('/export/ficha-nutricional', methods=['GET'])
+@tenant_required
+def export_ficha_nutricional():
+    """
+    Descarga la Ficha Oficial de Estado Nutricional en formato Excel
+    completada con todas las valoraciones registradas en el sistema.
+    """
+    user = TenantContext.get_current_user()
+    center_id = _resolve_center(user, request.args.get('center_id', type=int))
+    denied = _ensure_site_access(user, center_id)
+    if denied:
+        return denied
+
+    from services.nutritional_assessment_service import NutritionalAssessmentService
+    try:
+        wb = NutritionalAssessmentService.export_excel_ficha(
+            tenant_id=center_id,
+            period_type=request.args.get('period_type')
+        )
+        out = io.BytesIO()
+        wb.save(out)
+        out.seek(0)
+
+        filename = f"Ficha_Estado_Nutricional_12-42_meses_{date.today().isoformat()}.xlsx"
+        return send_file(
+            out,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        logger.exception("Error al generar Excel de Ficha Nutricional")
+        return jsonify({'error': str(e)}), 500
+

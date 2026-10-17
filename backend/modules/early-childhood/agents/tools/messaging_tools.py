@@ -265,3 +265,190 @@ class SendWhatsAppMessageTool(BaseTool):
                     continue
                 else:
                     return {'success': False, 'error': str(e)}
+
+
+class SendBroadcastToParentsTool(BaseTool):
+    """
+    Envía mensajes personalizados y protegidos a los padres de familia
+    (a nivel de centro específico, todos los centros, o niño en particular).
+    Blindado con LEM-Ops Guardrails para evitar envíos duplicados o fallidos.
+    """
+    name: str = "send_broadcast_to_parents"
+    description: str = (
+        "Envía mensajes personalizados de WhatsApp a padres/representantes. "
+        "Permite enviar a: un centro específico ('tenant_id': X o 'center_name': '...'), "
+        "a un niño específico ('child_name': '...'), o a todos los centros ('all_centers': true). "
+        "El mensaje puede usar variables dinámicas como {padre}, {nino}, {centro}, {sala}. "
+        "Input: {'message_template': 'Estimado/a {padre}, le recordamos...', 'center_name': '...', 'child_name': '...', 'tenant_id': 1, 'all_centers': false}"
+    )
+
+    def _run(self, *args, **kwargs) -> dict:
+        import logging
+        import time
+        from agents.tools._guard import graceful_tool
+        from services.lem_native_engine import LEMNativeEngine
+
+        logger = logging.getLogger('SendBroadcastToParentsTool')
+        user_id = kwargs.get('user_id')
+        if not check_messaging_permission(user_id):
+            return {'success': False, 'error': 'No tienes permiso para ejecutar difusiones o envíos masivos.'}
+
+        message_template = kwargs.get('message_template') or kwargs.get('message')
+        if not message_template or not message_template.strip():
+            return {'success': False, 'error': 'El contenido o plantilla del mensaje es requerido.'}
+
+        # Blindaje LEM-Ops: evaluación matemática previa
+        try:
+            tid = kwargs.get('tenant_id')
+            z = [1.0, 1.0 if tid else 0.5, 1.0 if user_id else 0.0] + [0.0] * 13
+            accepted, energy = LEMNativeEngine.evaluate_state(z, schema_name="gov_action_guard_v1", engine="ops")
+            if not accepted:
+                logger.warning(f"⛔ Difusión rechazada por balance de energía LEM ({energy:.4f})")
+                return {'success': False, 'error': f'Envío bloqueado por salvaguarda LEM (balance={energy:.2f}).'}
+        except Exception as e:
+            logger.debug(f"[LEM Native] bypass check on broadcast: {e}")
+
+        # Determinación de centros objetivo
+        tenant_id = kwargs.get('tenant_id')
+        center_name = kwargs.get('center_name')
+        child_name = kwargs.get('child_name')
+        all_centers = kwargs.get('all_centers', False)
+
+        target_tenants = []
+        if child_name:
+            # Búsqueda de infante específico
+            parts = normalize_search_term(child_name)
+            q = Child.query.filter_by(status='activo')
+            if tenant_id:
+                q = q.filter_by(tenant_id=tenant_id)
+            conds = []
+            for p in parts:
+                conds.append(Child.first_name.ilike(f'%{p}%'))
+                conds.append(Child.last_name.ilike(f'%{p}%'))
+            if conds:
+                q = q.filter(or_(*conds))
+            target_children = q.all()
+            if not target_children:
+                return {'success': False, 'error': f'No se encontró ningún niño activo con el nombre "{child_name}".'}
+        else:
+            # Centros
+            if all_centers:
+                target_tenants = Tenant.query.all()
+            elif center_name:
+                target_tenants = Tenant.query.filter(Tenant.name.ilike(f'%{center_name}%')).all()
+            elif tenant_id:
+                t = Tenant.query.get(tenant_id)
+                if t:
+                    target_tenants = [t]
+            else:
+                return {'success': False, 'error': 'Debe especificar el centro, el niño o indicar "all_centers": true.'}
+
+            if not target_tenants:
+                return {'success': False, 'error': f'No se encontraron centros que coincidan con la búsqueda.'}
+
+            tenant_ids = [t.id for t in target_tenants]
+            target_children = Child.query.filter(Child.tenant_id.in_(tenant_ids), Child.status == 'activo').all()
+
+        if not target_children:
+            return {'success': False, 'error': 'No se encontraron niños activos para enviar el mensaje.'}
+
+        # Envíos personalizados protegidos contra duplicados
+        sent_count = 0
+        failed_count = 0
+        details = []
+        seen_phones = set()
+
+        for child in target_children:
+            rep = Representative.query.filter_by(family_id=child.family_id, is_primary=True).first()
+            if not rep:
+                rep = Representative.query.filter_by(family_id=child.family_id).first()
+
+            if not rep or not rep.phone:
+                failed_count += 1
+                details.append({'child': child.full_name, 'status': 'sin_telefono'})
+                continue
+
+            clean_phone = re.sub(r'[^0-9]', '', rep.phone)
+            # Idempotencia: evitar duplicados en la misma corrida
+            dedup_key = f"{clean_phone}_{child.id}"
+            if dedup_key in seen_phones:
+                continue
+            seen_phones.add(dedup_key)
+
+            # Resolver centro y licencia
+            child_tenant = Tenant.query.get(child.tenant_id)
+            license_id = str(child_tenant.license_id) if (child_tenant and child_tenant.license_id) else None
+            if not license_id:
+                license_id = str(child.tenant_id)
+
+            # Personalización de plantilla
+            personalized_msg = message_template
+            personalized_msg = personalized_msg.replace('{padre}', rep.full_name)
+            personalized_msg = personalized_msg.replace('{nino}', child.full_name)
+            personalized_msg = personalized_msg.replace('{niño}', child.full_name)
+            personalized_msg = personalized_msg.replace('{centro}', child_tenant.name if child_tenant else 'Centro CMCI')
+            personalized_msg = personalized_msg.replace('{sala}', child.assigned_group or 'Atención Directa')
+
+            # Simulación de comportamiento humano antes de enviar (presence / typing emulation)
+            try:
+                requests.post(
+                    f"{WHATSAPP_API_URL}/presence",
+                    json={'companyId': license_id, 'phone': clean_phone, 'presence': 'composing'},
+                    timeout=3
+                )
+            except Exception:
+                pass  # Fallback silencioso si el microservicio no expone presence
+
+            # Intento de envío con reintentos
+            success = False
+            last_err = ""
+            for attempt in range(2):
+                try:
+                    res = requests.post(
+                        f"{WHATSAPP_API_URL}/lead",
+                        json={
+                            'companyId': license_id,
+                            'phone': clean_phone,
+                            'message': personalized_msg
+                        },
+                        timeout=12
+                    )
+                    if res.status_code == 200:
+                        success = True
+                        break
+                    else:
+                        last_err = res.text
+                except Exception as ex:
+                    last_err = str(ex)
+                    time.sleep(1.0)
+
+            if success:
+                sent_count += 1
+                details.append({'child': child.full_name, 'rep': rep.full_name, 'phone': clean_phone, 'status': 'enviado'})
+            else:
+                failed_count += 1
+                details.append({'child': child.full_name, 'rep': rep.full_name, 'phone': clean_phone, 'status': 'fallido', 'error': last_err})
+
+            # 🛡️ PROTECCIÓN ANTI-BAN & ANTI-SPAM (Rate Limiting Dinámico + Jitter Humano)
+            # 1. Pausa humana aleatoria entre 3.0s y 7.0s entre cada mensaje enviado
+            import random
+            sleep_seconds = round(random.uniform(3.5, 6.8), 2)
+            logger.info(f"⏳ Anti-spam pause: {sleep_seconds}s before next parent...")
+            time.sleep(sleep_seconds)
+
+            # 2. Descanso adicional tras lotes de 15 mensajes (pausa de enfriamiento de 15-25 segundos)
+            if sent_count > 0 and sent_count % 15 == 0:
+                batch_pause = round(random.uniform(15.0, 22.0), 2)
+                logger.info(f"⏸️ Batch cooldown pause after {sent_count} messages: {batch_pause}s...")
+                time.sleep(batch_pause)
+
+        return {
+            'success': True,
+            'summary': f"Proceso de mensajería completado con protección anti-bloqueo: {sent_count} enviados exitosamente, {failed_count} fallidos o sin contacto.",
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'total_children': len(target_children),
+            'details': details[:50]
+        }
+
+

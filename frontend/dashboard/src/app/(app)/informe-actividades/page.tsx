@@ -541,6 +541,43 @@ export default function InformeActividadesPage() {
                 </p>
               </div>
 
+              {/* Children Table in Preview */}
+              {previewReport.payload?.ninos && previewReport.payload.ninos.length > 0 && (
+                <div className="space-y-1.5 border rounded-lg p-3 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-amber-500" />
+                      Nómina de Niños Bajo Cobertura ({previewReport.payload.ninos.length})
+                    </h4>
+                    <span className="text-[10px] text-muted-foreground font-medium">1 por línea en orden</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="border-b text-muted-foreground text-[11px]">
+                          <th className="py-1 px-1.5 w-8">#</th>
+                          <th className="py-1 px-1.5">Cédula / ID</th>
+                          <th className="py-1 px-1.5">Nombres y Apellidos</th>
+                          <th className="py-1 px-1.5 text-center">Edad</th>
+                          <th className="py-1 px-1.5">Sala / Grupo</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {previewReport.payload.ninos.map((n: any, idx: number) => (
+                          <tr key={n.id || idx} className="hover:bg-muted/40">
+                            <td className="py-1 px-1.5 font-bold text-muted-foreground">{idx + 1}</td>
+                            <td className="py-1 px-1.5 font-mono text-[11px]">{n.cedula || "S/C"}</td>
+                            <td className="py-1 px-1.5 font-medium">{n.nombre}</td>
+                            <td className="py-1 px-1.5 text-center text-muted-foreground">{n.edad}</td>
+                            <td className="py-1 px-1.5 text-muted-foreground">{n.grupo_sala || "General"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Automatic Conclusions from LLM */}
               <div className="space-y-1.5">
                 <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">

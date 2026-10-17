@@ -131,19 +131,43 @@ export default function InformeActividadesPrintPage({
           </div>
         </div>
 
-        {/* Niños a cargo */}
+        {/* Niños a cargo - Formato Tabla Oficial */}
         {children.length > 0 && (
-          <div className="mt-2.5 pt-2 border-t border-gray-300">
-            <p className="font-semibold text-[10px] uppercase mb-1">
-              Nómina de Niños Bajo Cobertura ({children.length}):
-            </p>
-            <div className="grid grid-cols-3 gap-1 text-[10px]">
-              {children.map((c: any, i: number) => (
-                <div key={c.id || i} className="truncate">
-                  {i + 1}. {c.nombre} {c.edad ? `(${c.edad})` : ""}
-                </div>
-              ))}
+          <div className="mt-3 pt-2.5 border-t border-gray-400">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="font-bold text-[11px] uppercase tracking-wide">
+                Nómina Desglosada de Niñas y Niños bajo Cobertura ({children.length})
+              </p>
+              <span className="text-[9px] text-gray-500 uppercase font-medium">
+                1 registro por fila · Formato Oficial CMCI
+              </span>
             </div>
+            <table className="w-full text-[10px] border-collapse border border-black">
+              <thead>
+                <tr className="bg-gray-100 border-b border-black text-center font-bold">
+                  <th className="border border-black p-1 w-8">N°</th>
+                  <th className="border border-black p-1 text-left w-24">Cédula / ID</th>
+                  <th className="border border-black p-1 text-left">Apellidos y Nombres</th>
+                  <th className="border border-black p-1 w-16">Género</th>
+                  <th className="border border-black p-1 w-20">F. Nacimiento</th>
+                  <th className="border border-black p-1 w-24">Edad</th>
+                  <th className="border border-black p-1 text-left w-24">Sala / Grupo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {children.map((c: any, i: number) => (
+                  <tr key={c.id || i} className="border-b border-gray-300 hover:bg-gray-50">
+                    <td className="border border-black p-1 text-center font-bold">{i + 1}</td>
+                    <td className="border border-black p-1 font-mono">{c.cedula || c.codigo || "S/C"}</td>
+                    <td className="border border-black p-1 font-medium uppercase">{c.nombre || c.nombres || "-"}</td>
+                    <td className="border border-black p-1 text-center">{c.genero || c.sexo || "-"}</td>
+                    <td className="border border-black p-1 text-center whitespace-nowrap">{c.fecha_nacimiento || c.nacimiento || "-"}</td>
+                    <td className="border border-black p-1 text-center">{c.edad || "-"}</td>
+                    <td className="border border-black p-1">{c.grupo_sala || c.sala || c.grupo || "Atención Directa"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

@@ -371,6 +371,16 @@ from agents.tools.analytics_tools import GetTenantAnalyticsTool, AnalyzeTrendsTo
 from agents.tools.notification_tools import CreateNotificationTool
 from agents.tools.messaging_tools import GetParentContactTool, SendWhatsAppMessageTool, SendBroadcastToParentsTool, SendMessageToStaffTool
 from agents.tools.rag_tools import ConsultKnowledgeTool
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, Type
+
+class SendParentMessageInput(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    child_name: Optional[str] = Field(None, description="Nombre o apellido del niño o niña cuyo representante recibirá el mensaje (ej: 'Juan Pérez')")
+    message: Optional[str] = Field(None, description="Contenido exacto del mensaje de WhatsApp que se enviará al padre/representante")
+    tenant_id: Optional[int | str] = Field(None, description="ID del centro (se inyecta automáticamente)")
+    user_id: Optional[int | str] = Field(None, description="ID del usuario actual (se inyecta automáticamente)")
+    license_id: Optional[int | str] = Field(None, description="ID de la licencia (se inyecta automáticamente)")
 
 class SendParentMessageTool(BaseTool):
     """Tool to send proactive messages to parents via WhatsApp/Telegram"""
@@ -379,6 +389,7 @@ class SendParentMessageTool(BaseTool):
 Use when the user (staff) instructs you to notify a parent.
 IMPORTANT: The child must belong to the user's center (tenant) unless user is license_admin.
 Input: {'child_name': 'Juan Pérez', 'message': 'Texto del mensaje', 'user_id': 1, 'license_id': 1}"""
+    args_schema: Type[BaseModel] = SendParentMessageInput
 
     def _run(self, *args, **kwargs) -> dict:
         """Execute sending message to parent with role-based access control"""
@@ -386,17 +397,32 @@ Input: {'child_name': 'Juan Pérez', 'message': 'Texto del mensaje', 'user_id': 
         import os
         import logging
         from sqlalchemy import text
+        from agents.tools._guard import unwrap_tool_kwargs
+
+        kwargs = unwrap_tool_kwargs(kwargs)
+        if args and isinstance(args[0], dict):
+            for k, v in args[0].items():
+                if k not in kwargs or kwargs[k] is None:
+                    kwargs[k] = v
         
         logger = logging.getLogger('SendParentMessageTool')
         logger.info(f"🔍 SendParentMessageTool called with kwargs: {kwargs}")
         
-        child_name = kwargs.get('child_name')
-        message = kwargs.get('message')
+        child_name = kwargs.get('child_name') or kwargs.get('name') or kwargs.get('nino')
+        message = (
+            kwargs.get('message')
+            or kwargs.get('content')
+            or kwargs.get('text')
+            or kwargs.get('body')
+            or kwargs.get('msg')
+            or kwargs.get('mensaje')
+        )
         license_id = kwargs.get('license_id')
         user_id = kwargs.get('user_id')
         
         if not child_name or not message or not license_id or not user_id:
             return {'success': False, 'error': 'Se requiere child_name, message, user_id y license_id'}
+
         
         # Get calling user for permission check
         from models.user import User

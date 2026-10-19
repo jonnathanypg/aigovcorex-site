@@ -311,13 +311,12 @@ export class BaileysTransporter extends EventEmitter implements LeadExternal {
       const { useMySQLAuthState } = await import("../auth/mysql.auth");
       const { state } = await useMySQLAuthState(companyId);
 
-      // Check if credentials have been paired (me.id exists AND device is registered).
-      // Gate on `registered`: Baileys sets it to true only after the sync pair completes.
-      // A session with me.id but registered === false holds stale/corrupt creds that
-      // O.S. the server rejects with 405 — auto-restoring it hot-loops forever.
-      if (state.creds && state.creds.me && state.creds.me.id && state.creds.registered === true) {
+      // Check if credentials have been paired (me.id exists in MySQL).
+      // Note: Multi-Device (MD) QR sessions store me.id and account signatures upon sync,
+      // but `registered` may remain false or null in some Baileys MD versions.
+      if (state.creds && state.creds.me && state.creds.me.id) {
         // Auto-start session in background (don't wait for it)
-        console.log(`[${companyId}] Auto-restoring session from MySQL...`);
+        console.log(`[${companyId}] Auto-restoring session from MySQL (me.id: ${state.creds.me.id})...`);
         this.startSession(companyId).catch(err => {
           console.error(`[${companyId}] Auto-restore failed:`, err);
         });
@@ -330,15 +329,12 @@ export class BaileysTransporter extends EventEmitter implements LeadExternal {
         };
       }
 
-      // Registered=false → stale session; do NOT auto-restore (would 405 hot-loop).
-      // Return a clean "not connected" so the frontend shows the QR/re-link. Removed the
-      // indiscriminate "auto-start in background" branch that kept this machine busy.
-      console.log(`[${companyId}] Stored creds exist but device not registered. Not auto-restoring (stale). Frontend must re-link via QR.`);
+      console.log(`[${companyId}] No paired credentials found in DB. Waiting for QR pairing.`);
     } catch (error) {
       console.error(`[${companyId}] Error checking stored credentials:`, error);
     }
 
-    // No credentials or not registered
+    // No credentials found
     return { connected: false, state: null, status: null };
   }
 

@@ -11,16 +11,18 @@ logger = logging.getLogger(__name__)
 
 
 def _parse_target_date(value) -> date:
+    from utils.time_utils import get_today_date
+    today = get_today_date()
     if not value or str(value).strip().lower() in ("hoy", "today", "ahora"):
-        return date.today()
+        return today
     v = str(value).strip().lower()
     if v == "ayer":
         from datetime import timedelta
-        return date.today() - timedelta(days=1)
+        return today - timedelta(days=1)
     try:
         return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
     except Exception:
-        return date.today()
+        return today
 
 
 class GetAbsentChildrenTool(BaseTool):

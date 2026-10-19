@@ -311,7 +311,8 @@ class ManageMonitoringStaffTool(BaseTool):
         if not target_ids:
             return {"success": False, "error": "Sin centros asignados."}
         try:
-            today = date.today()
+            from utils.time_utils import get_today_date
+            today = get_today_date()
             if action == "kpis":
                 activos = Child.query.filter(Child.tenant_id.in_(target_ids), Child.status == "activo").count()
                 hoy = Attendance.query.filter(Attendance.tenant_id.in_(target_ids), Attendance.date == today).all()

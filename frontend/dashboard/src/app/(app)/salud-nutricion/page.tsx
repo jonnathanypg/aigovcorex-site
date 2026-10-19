@@ -19,7 +19,7 @@ export default function SaludNutricionPage() {
             <Tabs defaultValue="health" className="w-full">
                 <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
                     <TabsTrigger value="health">Control de Salud</TabsTrigger>
-                    <TabsTrigger value="nutrition">Nutrición Diaria</TabsTrigger>
+                    <TabsTrigger value="nutrition">Nutrición</TabsTrigger>
                     <TabsTrigger value="menu">Menú Semanal</TabsTrigger>
                 </TabsList>
                 <TabsContent value="health" className="mt-4">

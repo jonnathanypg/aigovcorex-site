@@ -36,6 +36,7 @@ export let isChatSidebarOpen = false;
 export function ChatWidget() {
     const router = useRouter();
     const { setTheme } = useTheme();
+    const { hasModule } = useLicense();
     const [isOpen, setIsOpenState] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputValue, setInputValue] = useState('');
@@ -210,39 +211,61 @@ export function ChatWidget() {
         }
 
         // ── Page navigation ──
-        const routes = [
-            { keywords: ['asistencia', 'marcar entrada', 'marcar salida', 'control de asistencia'], path: '/asistencia' },
-            { keywords: ['registro', 'registrar niño', 'registrar niña', 'ficha de niño', 'inscribir', 'registro de niños'], path: '/registro' },
-            { keywords: ['admisión', 'admision', 'admitir', 'proceso de admisión'], path: '/admision' },
-            { keywords: ['idii', 'seguimiento idii', 'desarrollo infantil', 'evaluación idii'], path: '/seguimiento-idii' },
-            { keywords: ['salud', 'nutrición', 'nutricion', 'menú', 'alimentación', 'peso', 'talla', 'salud & nutrición'], path: '/salud-nutricion' },
-            { keywords: ['planificación', 'planificaciones', 'planificar', 'actividades pedagógicas'], path: '/planificaciones' },
-            { keywords: ['intervención familiar', 'intervencion familiar', 'visita domiciliaria', 'ficha familiar'], path: '/intervencion-familiar' },
-            { keywords: ['operaciones', 'proveedores', 'inventario', 'mantenimiento'], path: '/operaciones' },
-            { keywords: ['monitoreo', 'auditoría', 'indicadores cdi'], path: '/monitoreo' },
-            { keywords: ['reporte', 'reportes', 'exportar pdf', 'informe'], path: '/reportes' },
-            { keywords: ['notificación', 'notificaciones', 'mensajes', 'alertas'], path: '/notificaciones' },
-            { keywords: ['ingestión', 'ingestion', 'carga masiva', 'importar', 'subir excel'], path: '/ingestion' },
-            { keywords: ['knowledge', 'conocimiento', 'base de conocimiento'], path: '/knowledge' },
-            { keywords: ['dashboard', 'inicio', 'panel de control', 'resumen general'], path: '/dashboard' },
-            // AI GovCoreX OS Modules
-            { keywords: ['social', 'programas sociales', 'convocatoria', 'convocatorias'], path: '/social/convocatorias' },
-            { keywords: ['postulación', 'postulaciones', 'postulantes', 'solicitudes'], path: '/social/postulaciones' },
-            { keywords: ['padrón', 'padron', 'beneficiarios', 'red social'], path: '/social/padron' },
-            { keywords: ['mapa', 'gis', 'territorio', 'cobertura territorial'], path: '/geo/mapa' },
-            { keywords: ['calor', 'heatmap', 'vulnerabilidad territorial'], path: '/geo/heatmap' },
-            { keywords: ['cercas', 'geocercas', 'perímetro'], path: '/geo/cercas' },
-            { keywords: ['equipos de campo', 'brigadas', 'técnicos'], path: '/geo/equipos-campo' },
-            { keywords: ['canales', 'whatsapp', 'telegram', 'mensajería'], path: '/canales/dashboard' },
-            { keywords: ['copiloto', 'agentes', 'inteligencia', 'rag'], path: '/copiloto' },
-            { keywords: ['super admin', 'licencias', 'organizaciones'], path: '/super-admin' },
-        ];
+        // Solo navegar si el texto contiene una intención afirmativa de navegación
+        const isExplicitNavigation =
+            t.includes('navegando a') ||
+            t.includes('te redirijo a') ||
+            t.includes('abriendo pantalla') ||
+            t.includes('abriendo sección') ||
+            t.includes('vamos a la sección') ||
+            t.includes('te llevo a');
 
-        for (const route of routes) {
-            if (route.keywords.some(k => t.includes(k))) {
-                router.push(route.path);
-                toast.success(`Navegando a: ${route.path}`);
-                break;
+        if (isExplicitNavigation) {
+            const routes: Array<{ keywords: string[]; path: string; module?: string }> = [
+                { keywords: ['asistencia', 'marcar entrada', 'marcar salida'], path: '/asistencia', module: 'kindicore' },
+                { keywords: ['registro', 'registrar niño', 'ficha de niño', 'inscribir'], path: '/registro', module: 'kindicore' },
+                { keywords: ['admisión', 'admision', 'admitir'], path: '/admision', module: 'kindicore' },
+                { keywords: ['idii', 'seguimiento idii', 'desarrollo infantil'], path: '/seguimiento-idii', module: 'kindicore' },
+                { keywords: ['salud', 'nutrición', 'nutricion'], path: '/salud-nutricion', module: 'kindicore' },
+                { keywords: ['planificación', 'planificaciones'], path: '/planificaciones', module: 'kindicore' },
+                { keywords: ['intervención familiar', 'intervencion familiar'], path: '/intervencion-familiar', module: 'kindicore' },
+                { keywords: ['operaciones', 'proveedores', 'inventario'], path: '/operaciones', module: 'kindicore' },
+                { keywords: ['monitoreo', 'auditoría'], path: '/monitoreo', module: 'kindicore' },
+                { keywords: ['reporte', 'reportes', 'exportar pdf'], path: '/reportes', module: 'kindicore' },
+                { keywords: ['notificación', 'notificaciones'], path: '/notificaciones', module: 'kindicore' },
+                { keywords: ['ingestión', 'ingestion', 'carga masiva'], path: '/ingestion', module: 'kindicore' },
+                { keywords: ['knowledge', 'conocimiento', 'base de conocimiento'], path: '/knowledge', module: 'kindicore' },
+                { keywords: ['dashboard', 'inicio', 'panel de control'], path: '/dashboard', module: 'kindicore' },
+                // Rutas de módulos adicionales (SOLO si están habilitados en la licencia)
+                ...(hasModule('social') ? [
+                    { keywords: ['programas sociales', 'convocatorias sociales'], path: '/social/convocatorias', module: 'social' },
+                    { keywords: ['postulaciones sociales', 'postulantes'], path: '/social/postulaciones', module: 'social' },
+                    { keywords: ['padrón social', 'beneficiarios sociales'], path: '/social/padron', module: 'social' },
+                ] : []),
+                ...(hasModule('geo') ? [
+                    { keywords: ['mapa interactivo', 'inteligencia geoespacial'], path: '/geo/mapa', module: 'geo' },
+                    { keywords: ['mapa de calor', 'heatmap'], path: '/geo/heatmap', module: 'geo' },
+                    { keywords: ['cercos digitales', 'geocercas'], path: '/geo/cercas', module: 'geo' },
+                    { keywords: ['equipos en campo', 'brigadas de campo'], path: '/geo/equipos-campo', module: 'geo' },
+                ] : []),
+                ...(hasModule('channels') ? [
+                    { keywords: ['pantalla de canales', 'configuración de canales'], path: '/canales/dashboard', module: 'channels' },
+                ] : []),
+                ...(hasModule('copilot') ? [
+                    { keywords: ['pantalla de copiloto', 'copiloto rag'], path: '/copiloto', module: 'copilot' },
+                ] : []),
+            ];
+
+            for (const route of routes) {
+                if (route.keywords.some(k => t.includes(k))) {
+                    if (route.module && !hasModule(route.module)) {
+                        console.warn(`[ChatWidget] Navegación abortada hacia ${route.path}: módulo '${route.module}' no habilitado para esta licencia.`);
+                        break;
+                    }
+                    router.push(route.path);
+                    toast.success(`Navegando a: ${route.path}`);
+                    break;
+                }
             }
         }
 
@@ -250,7 +273,7 @@ export function ChatWidget() {
         import('@/hooks/use-agent-refresh').then(({ dispatchAgentDataChanged }) => {
             dispatchAgentDataChanged();
         });
-    }, [router, setTheme]);
+    }, [router, setTheme, hasModule]);
 
     // ── Send text message ──
     const handleSend = async () => {

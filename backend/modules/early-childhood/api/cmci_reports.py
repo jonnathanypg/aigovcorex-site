@@ -163,6 +163,33 @@ def get_monthly_report(report_id):
         return jsonify({'error': str(e)}), 500
 
 
+@cmci_reports_bp.route('/monthly-reports/<int:report_id>', methods=['DELETE'])
+@tenant_required
+def delete_monthly_report(report_id):
+    """Eliminar informe mensual (borrador o generado)."""
+    from models.cmci import MonthlyReport
+    try:
+        user = TenantContext.get_current_user()
+        r = MonthlyReport.query.get(report_id)
+        if not r:
+            return jsonify({'error': 'Informe no encontrado'}), 404
+        if is_catering(user):
+            return jsonify({"error": "Rol catering: solo menú e ingesta diaria"}), 403
+        site_err = _ensure_site_access(user, r.center_id)
+        if site_err:
+            return site_err
+        if not is_multi_center_role(user) and r.educator_id != user.id:
+            return jsonify({'error': 'Sin acceso'}), 403
+
+        db.session.delete(r)
+        db.session.commit()
+        return jsonify({'message': 'Informe eliminado con éxito', 'id': report_id}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+
 # ── Exports 5 matrices ────────────────────────────────────────────────────
 
 def _period_label():

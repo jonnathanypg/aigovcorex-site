@@ -105,14 +105,20 @@ class ManagePlanningTool(BaseTool):
                 if not nombre or not age_group:
                     return {'success': False, 'error': 'Se requiere nombre_actividad y age_group.'}
 
+                try:
+                    from utils.time_utils import get_today_date
+                    _today_def = get_today_date()
+                except Exception:
+                    _today_def = date.today()
+
                 planning = LudicPlanning(
                     tenant_id=target_ids[0],
                     educator_id=user_id if user_id and user_id > 0 else None,
-                    planning_date=datetime.strptime(kwargs.get('planning_date', date.today().isoformat()), '%Y-%m-%d').date(),
+                    planning_date=datetime.strptime(kwargs.get('planning_date', _today_def.isoformat()), '%Y-%m-%d').date(),
                     age_group=age_group,
                     week_number=kwargs.get('week_number'),
                     month=kwargs.get('month'),
-                    year=kwargs.get('year', date.today().year),
+                    year=kwargs.get('year', _today_def.year),
                     tema_integrador=kwargs.get('tema_integrador'),
                     nombre_actividad=nombre,
                     objetivo=kwargs.get('objetivo'),
@@ -198,7 +204,11 @@ class ManageWeeklyMenuTool(BaseTool):
                     query = query.filter(Menu.week_start_date == datetime.strptime(week, '%Y-%m-%d').date())
                 else:
                     # Default: current week (Monday)
-                    today = date.today()
+                    try:
+                        from utils.time_utils import get_today_date
+                        today = get_today_date()
+                    except Exception:
+                        today = date.today()
                     monday = today - __import__('datetime').timedelta(days=today.weekday())
                     query = query.filter(Menu.week_start_date == monday)
 

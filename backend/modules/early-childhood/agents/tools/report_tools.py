@@ -67,7 +67,11 @@ def resolve_report_tenant_ids(tenant_id, user_id, center_name: str = None):
 
 def resolve_period(period: str, start_date_str: str = None, end_date_str: str = None):
     """Resolve start and end dates from period string or explicit dates."""
-    today = date.today()
+    try:
+        from utils.time_utils import get_today_date
+        today = get_today_date()
+    except Exception:
+        today = date.today()
 
     if start_date_str and end_date_str:
         try:

@@ -207,7 +207,7 @@ def receive_whatsapp_message():
             phone=phone,
             attachment=attachment
         )
-        _send_whatsapp_response(license_id, phone, response_text)
+        _send_whatsapp_response(company_id, phone, response_text)
         return jsonify({'status': 'handled_public_citizen', 'user_found': False, 'success': True}), 200
     
     # Process message through the AI orchestrator
@@ -378,10 +378,10 @@ def _build_context_for_role(identity: dict, license_obj: License) -> str:
     user_name = identity.get('user_name', 'Usuario')
     permissions = identity.get('permissions', {})
     
-    if role == 'license_admin':
+    if role in ('license_admin', 'administrative', 'admin', 'supervisor'):
         return f"""[CONTEXTO DEL SISTEMA]
-Usuario: {user_name} (Administrador de Licencia)
-Permisos: Acceso completo a todos los centros y datos."""
+Usuario: {user_name} (Administrador / Equipo Directivo - Rol: {role})
+Permisos: Acceso administrativo y de gestión a todos los centros y datos de la organización."""
 
     elif role in ('center_coordinator', 'coordinator'):
         return f"""[CONTEXTO DEL SISTEMA]

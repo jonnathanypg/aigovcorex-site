@@ -416,6 +416,15 @@ export const cmciService = {
       throw toApiError(err, "Error al obtener detalle del informe mensual");
     }
   },
+
+  async deleteMonthlyReport(reportId: number): Promise<{ message: string; id: number }> {
+    try {
+      const { data } = await api.delete<{ message: string; id: number }>(`/api/cmci/monthly-reports/${reportId}`);
+      return data;
+    } catch (err) {
+      throw toApiError(err, "Error al eliminar informe mensual");
+    }
+  },
 };
 
 export interface MonthlyReportListItem {

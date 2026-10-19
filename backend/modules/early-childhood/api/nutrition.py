@@ -5,11 +5,15 @@ Handles menu planning, daily consumption tracking, and nutrition alerts
 """
 from flask import Blueprint, request, jsonify
 from models import db
-from models.nutrition import NutritionDaily, Menu, NutritionAlert
+from models.nutrition import NutritionDaily, Menu, NutritionAlert, ChildNutritionalAssessment
 from models.child import Child
 from models.attendance import Attendance
+from models.health import HealthRecord
+from models.user import User
+from services.who_standards import WHOStandardsService
 from middleware.tenant_context import tenant_required, TenantContext
 from datetime import date, timedelta
+from sqlalchemy import or_, and_
 
 nutrition_bp = Blueprint('nutrition', __name__, url_prefix='/nutrition')
 
@@ -750,3 +754,317 @@ def delete_ration(ration_id):
         import traceback
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+
+# =========================================================================
+# NUTRITIONAL ASSESSMENTS / HISTORICAL ANALYSIS ENDPOINTS
+# =========================================================================
+
+@nutrition_bp.route('/assessments', methods=['GET'])
+@tenant_required
+def get_nutritional_assessments():
+    """Get nutritional assessments / growth analysis history with search and professional filtering"""
+    db.session.rollback()
+    try:
+        user = TenantContext.get_current_user()
+        limit = request.args.get('limit', 200, type=int)
+        search = request.args.get('search', '', type=str).strip()
+        requested_tenant_id = request.args.get('tenant_id', type=int)
+
+        target_tenant_ids = []
+        from utils.role_helpers import is_multi_center_role, get_license_id_for_user
+        if is_multi_center_role(user):
+            from models.tenant import Tenant
+            license_id = get_license_id_for_user(user)
+            if license_id:
+                all_tenants = Tenant.query.filter_by(license_id=license_id, is_active=True).all()
+                allowed_ids = [t.id for t in all_tenants]
+                if requested_tenant_id:
+                    if requested_tenant_id in allowed_ids:
+                        target_tenant_ids = [requested_tenant_id]
+                    else:
+                        return jsonify({'error': 'Acceso denegado'}), 403
+                else:
+                    target_tenant_ids = allowed_ids
+        elif user.tenant_id:
+            target_tenant_ids = [user.tenant_id]
+
+        if not target_tenant_ids:
+            return jsonify({'records': [], 'nutritionists': []}), 200
+
+        records = []
+        seen_keys = set()
+        nutritionists_set = set()
+
+        # 1. Query ChildNutritionalAssessment
+        cna_query = db.session.query(ChildNutritionalAssessment)\
+            .join(Child, ChildNutritionalAssessment.child_id == Child.id)\
+            .outerjoin(User, ChildNutritionalAssessment.assessor_id == User.id)\
+            .filter(ChildNutritionalAssessment.tenant_id.in_(target_tenant_ids))
+
+        if search:
+            search_pattern = f"%{search}%"
+            full_user_name = User.first_name + " " + User.last_name
+            full_child_name = Child.first_name + " " + Child.last_name
+            full_child_name_inv = Child.last_name + " " + Child.first_name
+            cna_query = cna_query.filter(
+                or_(
+                    Child.first_name.ilike(search_pattern),
+                    Child.last_name.ilike(search_pattern),
+                    full_child_name.ilike(search_pattern),
+                    full_child_name_inv.ilike(search_pattern),
+                    Child.cedula.ilike(search_pattern),
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern),
+                    full_user_name.ilike(search_pattern),
+                    ChildNutritionalAssessment.nutritional_diagnosis.ilike(search_pattern),
+                    ChildNutritionalAssessment.observations.ilike(search_pattern)
+                )
+            )
+
+        cnas = cna_query.order_by(ChildNutritionalAssessment.assessment_date.desc()).limit(limit).all()
+        for cna in cnas:
+            child = cna.child
+            if not child:
+                continue
+            key = (cna.child_id, cna.assessment_date)
+            seen_keys.add(key)
+            prof_name = cna.assessor.full_name if cna.assessor else 'Nutricionista'
+            if prof_name and prof_name != 'Sistema':
+                nutritionists_set.add(prof_name)
+            
+            diag = cna.nutritional_diagnosis or cna.weight_for_age_diag or 'Sin evaluación'
+            sem = cna.semaphore or ('VERDE' if 'Adecuado' in diag else 'AMARILLO')
+            
+            records.append({
+                'id': cna.id,
+                'source': 'cna',
+                'child_id': child.id,
+                'child_name': child.full_name,
+                'child_cedula': child.cedula,
+                'date': cna.assessment_date.isoformat() if cna.assessment_date else '',
+                'assessment_date': cna.assessment_date.isoformat() if cna.assessment_date else '',
+                'weight_kg': float(cna.weight_kg) if cna.weight_kg is not None else None,
+                'height_cm': float(cna.height_cm) if cna.height_cm is not None else None,
+                'z_score_weight': float(cna.z_weight_for_age) if cna.z_weight_for_age is not None else None,
+                'z_score_height': float(cna.z_height_for_age) if cna.z_height_for_age is not None else None,
+                'brachial_perimeter_cm': float(cna.brachial_perimeter_cm) if cna.brachial_perimeter_cm is not None else None,
+                'hemoglobin_g_dl': float(cna.hemoglobin_g_dl) if cna.hemoglobin_g_dl is not None else None,
+                'cephalic_perimeter_cm': float(cna.cephalic_perimeter_cm) if cna.cephalic_perimeter_cm is not None else None,
+                'nutritional_diagnosis': diag,
+                'semaphore': sem,
+                'professional': prof_name,
+                'notes': cna.observations or ''
+            })
+
+        # 2. Also incorporate HealthRecord (record_type='crecimiento') - containing the anthropometric assessments
+        hr_query = db.session.query(HealthRecord)\
+            .join(Child, HealthRecord.child_id == Child.id)\
+            .outerjoin(User, HealthRecord.registered_by_id == User.id)\
+            .filter(HealthRecord.tenant_id.in_(target_tenant_ids), HealthRecord.record_type == 'crecimiento')
+
+        if search:
+            search_pattern = f"%{search}%"
+            full_user_name = User.first_name + " " + User.last_name
+            full_child_name = Child.first_name + " " + Child.last_name
+            full_child_name_inv = Child.last_name + " " + Child.first_name
+            hr_query = hr_query.filter(
+                or_(
+                    Child.first_name.ilike(search_pattern),
+                    Child.last_name.ilike(search_pattern),
+                    full_child_name.ilike(search_pattern),
+                    full_child_name_inv.ilike(search_pattern),
+                    Child.cedula.ilike(search_pattern),
+                    HealthRecord.medical_professional.ilike(search_pattern),
+                    User.first_name.ilike(search_pattern),
+                    User.last_name.ilike(search_pattern),
+                    full_user_name.ilike(search_pattern),
+                    HealthRecord.notes.ilike(search_pattern)
+                )
+            )
+
+        hrs = hr_query.order_by(HealthRecord.record_date.desc()).limit(limit).all()
+        for hr in hrs:
+            key = (hr.child_id, hr.record_date)
+            if key in seen_keys:
+                continue
+            child = Child.query.get(hr.child_id)
+            if not child:
+                continue
+            
+            z_w = float(hr.z_score_weight) if hr.z_score_weight is not None else None
+            z_h = float(hr.z_score_height) if hr.z_score_height is not None else None
+            status = WHOStandardsService.classify_weight_status(z_w)
+            
+            # Determine semaphore
+            if 'Severa' in status or 'Obesidad' in status:
+                sem = 'ROJO'
+            elif 'Moderada' in status or 'Sobrepeso' in status:
+                sem = 'NARANJA'
+            elif 'Riesgo' in status:
+                sem = 'AMARILLO'
+            elif 'Adecuado' in status or 'Eutrófico' in status:
+                sem = 'VERDE'
+            else:
+                sem = 'VERDE'
+                
+            prof_name = hr.medical_professional or (hr.registered_by.full_name if hr.registered_by else 'Nutricionista / Médico')
+            if prof_name and prof_name != 'Sistema':
+                nutritionists_set.add(prof_name)
+
+            records.append({
+                'id': hr.id,
+                'source': 'health_record',
+                'child_id': child.id,
+                'child_name': child.full_name,
+                'child_cedula': child.cedula,
+                'date': hr.record_date.isoformat() if hr.record_date else '',
+                'assessment_date': hr.record_date.isoformat() if hr.record_date else '',
+                'weight_kg': float(hr.weight) if hr.weight is not None else None,
+                'height_cm': float(hr.height) if hr.height is not None else None,
+                'z_score_weight': z_w,
+                'z_score_height': z_h,
+                'cephalic_perimeter_cm': float(hr.head_circumference) if hr.head_circumference is not None else None,
+                'nutritional_diagnosis': status,
+                'semaphore': sem,
+                'professional': prof_name,
+                'notes': hr.notes or ''
+            })
+
+        return jsonify({
+            'records': records,
+            'nutritionists': sorted(list(nutritionists_set)),
+            'count': len(records)
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@nutrition_bp.route('/assessments', methods=['POST'])
+@tenant_required
+def create_nutritional_assessment():
+    """Create a new nutritional / anthropometric assessment"""
+    db.session.rollback()
+    try:
+        user = TenantContext.get_current_user()
+        data = request.get_json() or {}
+        
+        child_id = data.get('child_id')
+        if not child_id:
+            return jsonify({'error': 'child_id es requerido'}), 400
+            
+        child = Child.query.get(child_id)
+        if not child:
+            return jsonify({'error': 'Niño no encontrado'}), 404
+            
+        tenant_id = child.tenant_id or user.tenant_id
+        assess_date_str = data.get('assessment_date') or data.get('date')
+        assess_date = date.fromisoformat(assess_date_str) if assess_date_str else date.today()
+        
+        weight_kg = float(data.get('weight_kg') or data.get('weight') or 0)
+        height_cm = float(data.get('height_cm') or data.get('height') or 0)
+        
+        if weight_kg <= 0 or height_cm <= 0:
+            return jsonify({'error': 'Peso y talla deben ser mayores a cero'}), 400
+            
+        # Calculate age in months
+        age_months = child.age_months
+        gender = child.gender or 'M'
+        
+        # Calculate Z-scores via WHOStandardsService
+        z_w = WHOStandardsService.calculate_weight_for_age(weight_kg, age_months, gender)
+        z_h = WHOStandardsService.calculate_height_for_age(height_cm, age_months, gender)
+        
+        diag_w = WHOStandardsService.classify_weight_status(z_w)
+        diag_h = WHOStandardsService.classify_height_status(z_h)
+        
+        if 'Severa' in diag_w or 'Obesidad' in diag_w:
+            sem = 'ROJO'
+        elif 'Moderada' in diag_w or 'Sobrepeso' in diag_w:
+            sem = 'NARANJA'
+        elif 'Riesgo' in diag_w or 'Baja' in diag_h:
+            sem = 'AMARILLO'
+        else:
+            sem = 'VERDE'
+
+        cna = ChildNutritionalAssessment(
+            tenant_id=tenant_id,
+            child_id=child.id,
+            assessor_id=user.id,
+            assessment_date=assess_date,
+            period_type=data.get('period_type', 'trimestral'),
+            weight_kg=weight_kg,
+            height_cm=height_cm,
+            measurement_position=data.get('measurement_position', 'De pie'),
+            brachial_perimeter_cm=data.get('brachial_perimeter_cm'),
+            hemoglobin_g_dl=data.get('hemoglobin_g_dl'),
+            cephalic_perimeter_cm=data.get('cephalic_perimeter_cm'),
+            age_months_calc=age_months,
+            z_weight_for_age=z_w,
+            weight_for_age_diag=diag_w,
+            z_height_for_age=z_h,
+            height_for_age_diag=diag_h,
+            semaphore=sem,
+            nutritional_diagnosis=data.get('nutritional_diagnosis') or diag_w,
+            observations=data.get('notes') or data.get('observations')
+        )
+        db.session.add(cna)
+        
+        # Also create or sync HealthRecord (record_type='crecimiento') so medical and growth charts stay aligned
+        hr = HealthRecord(
+            tenant_id=tenant_id,
+            child_id=child.id,
+            registered_by_id=user.id,
+            record_date=assess_date,
+            record_type='crecimiento',
+            weight=weight_kg,
+            height=height_cm,
+            head_circumference=data.get('cephalic_perimeter_cm'),
+            z_score_weight=z_w,
+            z_score_height=z_h,
+            medical_professional=user.full_name,
+            notes=data.get('notes') or f"Evaluación nutricional: {diag_w}"
+        )
+        db.session.add(hr)
+        
+        db.session.commit()
+        return jsonify({
+            'message': 'Evaluación nutricional registrada con éxito',
+            'assessment': cna.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@nutrition_bp.route('/assessments/<int:assessment_id>', methods=['DELETE'])
+@tenant_required
+def delete_nutritional_assessment(assessment_id):
+    """Delete a nutritional assessment"""
+    db.session.rollback()
+    try:
+        user = TenantContext.get_current_user()
+        cna = ChildNutritionalAssessment.query.get(assessment_id)
+        if cna:
+            db.session.delete(cna)
+            db.session.commit()
+            return jsonify({'message': 'Evaluación nutricional eliminada'}), 200
+            
+        hr = HealthRecord.query.filter_by(id=assessment_id, record_type='crecimiento').first()
+        if hr:
+            db.session.delete(hr)
+            db.session.commit()
+            return jsonify({'message': 'Registro nutricional eliminado'}), 200
+            
+        return jsonify({'error': 'Registro no encontrado'}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+

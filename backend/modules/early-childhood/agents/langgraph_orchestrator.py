@@ -349,16 +349,25 @@ class LangGraphOrchestrator:
         
         # Inject tenant_id and user_id into tool calls AFTER LLM responds
         if hasattr(response, 'tool_calls') and response.tool_calls:
+            from agents.tools._guard import unwrap_tool_kwargs
             for tool_call in response.tool_calls:
+                raw_args = tool_call.get('args') or {}
+                if isinstance(raw_args, dict):
+                    raw_args = unwrap_tool_kwargs(raw_args)
+                tool_call['args'] = raw_args
                 tool_call['args']['tenant_id'] = state['tenant_id']
                 tool_call['args']['user_id'] = state['user_id']
                 if state.get('license_id'):
                     tool_call['args']['license_id'] = state['license_id']
-                self.logger.info(f"🛠️  Tool Call Prepared: {tool_call['name']} with tenant_id={state['tenant_id']}, user_id={state['user_id']}")
+                self.logger.info(
+                    f"🛠️  Tool Call Prepared: {tool_call['name']} with keys={list(tool_call['args'].keys())}, "
+                    f"tenant_id={state['tenant_id']}, user_id={state['user_id']}"
+                )
         
         return {
             "messages": [response]
         }
+
 
     def _should_use_tools(self, state: AgentState) -> str:
         """Determine if tools should be used"""
@@ -429,29 +438,38 @@ class LangGraphOrchestrator:
             
             # Construct organizational context string
             org_context = ""
-            if self.role == 'license_admin':
+            institutional_structure = f"""
+- Estructura Institucional:
+  * Entidad Ejecutora / Organización: {self.legal_name or 'Fundación GASIBA GI'} (Fundación sin fines de lucro encargada de la operación y gestión técnica).
+  * Entidades Cooperantes / Municipales: DASE EP (Empresa Pública Municipal de Acción Social y Educación) y la M.I. Municipalidad de Guayaquil.
+  * Proyecto / Convenio: {self.license_name_info or 'Proyecto CMCI Guayaquil DASE/GASIBA'} (Convenio interinstitucional para la administración integral de los Centros Municipales de Cuidado Infantil: CMCI Bahía, CMCI Guasmo y CMCI Orquídeas).
+  * RUC: {self.ruc or '0993366944001'}"""
+
+            if self.role in ('license_admin', 'administrative', 'admin', 'supervisor'):
                  org_context = f"""
-- Estás hablando con un ADMINISTRADOR DE LICENCIA.
-- Institución/Licencia: {self.license_name_info}
-- Razón Social: {self.legal_name}
-- RUC: {self.ruc}
+- Estás hablando con un ADMINISTRADOR / DIRECTIVO DE LA ORGANIZACIÓN (Rol: {self.role}).
+{institutional_structure}
 - Centros bajo su mando: {', '.join(self.centers_list)}
 - EL USUARIO TIENE ACCESO GLOBAL. No lo limites a un solo centro."""
             else:
                  role_display = self.role.upper() if self.role else "USUARIO"
                  org_context = f"""
 - Estás hablando con un {role_display}.
+{institutional_structure}
 - Centro asignado: {self.center_name}
 - El acceso está restringido únicamente a datos de este centro."""
 
-            # Fecha actual (América/Guayaquil) para "hoy/ayer" sin alucinar
+            # Fecha y hora actual (América/Guayaquil) para "hoy/ayer" y contexto temporal
             try:
                 from zoneinfo import ZoneInfo
                 from datetime import datetime as _dt
-                today_str = _dt.now(ZoneInfo("America/Guayaquil")).strftime("%Y-%m-%d")
+                _now_local = _dt.now(ZoneInfo("America/Guayaquil"))
+                today_str = _now_local.strftime("%Y-%m-%d")
+                time_str = _now_local.strftime("%H:%M:%S")
             except Exception:
-                from datetime import date as _date
+                from datetime import datetime as _dt, date as _date
                 today_str = str(_date.today())
+                time_str = _dt.now().strftime("%H:%M:%S")
 
             system_prompt = f"""Eres {self.agent_name}, copiloto transversal de la plataforma AI GovCoreX OS
 ({self.license_name_info or 'la organización'}). Atiendes CUALQUIER módulo habilitado,
@@ -472,6 +490,7 @@ DATOS DEL USUARIO (REAL, NO INVENTAR):
 - Usuario ID: {self.user_id}
 - Rol: {self.role}
 - Fecha actual (America/Guayaquil): {today_str} — usa 'hoy' = {today_str}.
+- Hora oficial actual (America/Guayaquil): {time_str} — cualquier respuesta sobre la hora actual o eventos del día debe considerar esta hora oficial de Ecuador.
 
 INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
 1. IDENTIDAD: si preguntan 'quién soy / mi nombre / mi rol / mi centro', USA la herramienta
@@ -494,6 +513,14 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
 12. ANTES de usar una herramienta, REVISA LA HISTORIA. Si el dato ya está en el historial, NO re-ejecutes.
 13. Cuando menciones centro/institución/programa, usa nombres reales, no IDs.
 14. SALUDO: Solo saluda EN EL PRIMER MENSAJE (sin historial). Si saludas: "Bienvenido a {self.license_name_info}" (admin) o nombre del centro (coordinador). Después, NO re-saludes.
+15. ENVÍO DE MENSAJES WHATSAPP:
+    - Cuando el usuario pida enviar un mensaje por WhatsApp a una persona, colaborador, empleado, directivo, educadora o coordinador por su nombre (ej: "envía un mensaje a Gabriela Orellana", "avisa a Jonnathan Peña"): DEBES USAR OBLIGATORIAMENTE 'send_message_to_staff' pasando 'staff_name'. Si la herramienta devuelve opciones por haber múltiples coincidencias, muéstraselas al usuario para que elija.
+    - Para enviar a TODOS los empleados o colaboradores de la organización: USA 'send_message_to_staff' con all_staff=true.
+    - Para enviar a todos los empleados de un centro específico (ej: "a los empleados de Guasmo", "a las educadoras de Bahía"): USA 'send_message_to_staff' pasando 'center_name' (y 'role_name' si aplica).
+    - Para enviar a TODOS los padres de familia o a los padres de un centro específico (ej: "envía un mensaje a los padres de Guasmo", "a todos los padres"): USA 'send_broadcast_to_parents' con 'center_name' o 'all_centers': true.
+    - NUNCA uses 'send_whatsapp_message' cuando se mencione el nombre de una persona o grupos. 'send_whatsapp_message' se usa EXCLUSIVAMENTE cuando el usuario proporciona explícitamente los dígitos numéricos del teléfono en su petición actual (ej: "envía al 0991234567").
+    - NUNCA reutilices ni asocies números de teléfono que aparezcan en el historial antiguo de la conversación para enviarle a otra persona diferente.
+    - Para mensajes a padres de familia por el nombre del niño: USA 'send_parent_message'.
 
 **REGLA #1 - LENGUAJE HUMANO (CERO VARIABLES TÉCNICAS):**
 - PROHIBIDO usar nombres de variables internas o de base de datos (ej: `tenant_id`, `child_id`, `snake_case`).
@@ -506,6 +533,11 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
 **REGLA #3 - HONESTIDAD TÉCNICA Y LÍMITE DE REINTENTOS:**
 - Si una herramienta falla o no devuelve datos, explica la situación con naturalidad. NUNCA reintentes llamar herramientas repetidamente en bucle con los mismos parámetros erróneos.
 - Si no hay datos, di simplemente que no existen registros para ese periodo. No inventes excusas técnicas.
+
+**REGLA #4 - PRECISIÓN SEMÁNTICA EN MÉTRICAS Y DATOS:**
+- Al reportar datos de asistencia o tendencias (ej: 'analyze_trends', 'get_tenant_analytics'), NUNCA uses la palabra genérica "registros" sin aclarar a qué corresponde.
+- Especifica siempre: "X tomas de asistencia registradas en el mes" o "X evaluaciones individuales de asistencia en clase".
+- Distingue con total claridad entre: (a) niños matriculados/activos, (b) tomas de asistencia en el aula, y (c) usuarios o colaboradores del sistema. Jamás confundas el número de asistencias evaluadas con la cantidad de niños inscritos.
 """
 
             # Load conversation history

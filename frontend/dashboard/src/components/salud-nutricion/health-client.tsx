@@ -144,24 +144,27 @@ export function HealthClient({ tenantId, readOnly = false }: HealthClientProps) 
               />
             </div>
 
-            {/* Selector de Profesional / Doctor / Nutricionista (Filtro como en Educadoras) */}
-            <div className="w-full sm:w-[220px]">
-              <Select value={professionalFilter} onValueChange={setProfessionalFilter}>
-                <SelectTrigger className="bg-background/50 border-border/50 text-xs h-9">
-                  <UserCheck className="h-3.5 w-3.5 mr-1.5 text-primary shrink-0" />
-                  <SelectValue placeholder="Todos los profesionales" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los profesionales</SelectItem>
-                  {professionalsList.map((prof) => (
-                    <SelectItem key={prof} value={prof}>
-                      {prof}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Selector de Profesional (Solo se muestra si existen más de un profesional registrado) */}
+            {professionalsList.length > 1 && (
+              <div className="w-full sm:w-[220px]">
+                <Select value={professionalFilter} onValueChange={setProfessionalFilter}>
+                  <SelectTrigger className="bg-background/50 border-border/50 text-xs h-9">
+                    <UserCheck className="h-3.5 w-3.5 mr-1.5 text-primary shrink-0" />
+                    <SelectValue placeholder="Todos los profesionales" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los profesionales</SelectItem>
+                    {professionalsList.map((prof) => (
+                      <SelectItem key={prof} value={prof}>
+                        {prof}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
+
 
           <div className="flex items-center gap-2 w-full md:w-auto justify-end">
             <div className="flex bg-muted/40 p-1 rounded-lg border border-border/30">

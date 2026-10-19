@@ -416,10 +416,23 @@ def get_all_channels_status():
     if not license_obj:
         return jsonify({'error': 'No tienes permisos o no perteneces a una licencia activa'}), 403
     
+    # Sincronizar en tiempo real el estado de WhatsApp con el microservicio
+    is_wa_connected = bool(license_obj.whatsapp_connected)
+    try:
+        wa_res = requests.get(f"{WHATSAPP_API_URL}/session/status/{license_obj.id}", timeout=3)
+        if wa_res.status_code == 200:
+            wa_data = wa_res.json()
+            is_wa_connected = (wa_data.get('status') == 'open')
+            if license_obj.whatsapp_connected != is_wa_connected:
+                license_obj.whatsapp_connected = is_wa_connected
+                db.session.commit()
+    except Exception:
+        pass
+
     # Return status (safe for all users)
     return jsonify({
         'whatsapp': {
-            'connected': license_obj.whatsapp_connected,
+            'connected': is_wa_connected,
             'phone': license_obj.whatsapp_phone,
             # Only show admin_phone to admins, though it's not critical
             'admin_phone': license_obj.whatsapp_admin_phone if is_multi_center_role(current_user) else None

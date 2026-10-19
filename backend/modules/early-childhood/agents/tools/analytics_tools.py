@@ -103,74 +103,87 @@ class GetTenantAnalyticsTool(BaseTool):
                 'error': 'No se encontraron centros asignados. Verifique que el usuario tiene centros activos.'
             }
 
-        try:
-            today = date.today()
-            start_date = today
-            
-            if period == 'semana':
-                start_date = today - timedelta(days=7)
-            elif period == 'mes':
-                start_date = today.replace(day=1)
-            elif period == 'anio':
-                start_date = today.replace(month=1, day=1)
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    db.session.rollback()
+                    db.session.remove()
+
+                from utils.time_utils import get_today_date
+                today = get_today_date()
+                start_date = today
                 
-            result = {'metric': metric, 'period': period, 'scope': f"{len(target_ids)} centro(s)", 'data': {}}
-            
-            if metric in ['asistencia', 'general']:
-                # Attendance Rate (multi-tenant)
-                total = Attendance.query.filter(
-                    Attendance.tenant_id.in_(target_ids),
-                    Attendance.date >= start_date
-                ).count()
+                if period == 'semana':
+                    start_date = today - timedelta(days=7)
+                elif period == 'mes':
+                    start_date = today.replace(day=1)
+                elif period == 'anio':
+                    start_date = today.replace(month=1, day=1)
+                    
+                result = {'metric': metric, 'period': period, 'scope': f"{len(target_ids)} centro(s)", 'data': {}}
                 
-                present = Attendance.query.filter(
-                    Attendance.tenant_id.in_(target_ids),
-                    Attendance.date >= start_date,
-                    Attendance.status == 'presente'
-                ).count()
-                
-                rate = (present / total * 100) if total > 0 else 0
-                result['data']['attendance_rate'] = f"{round(rate, 1)}%"
-                result['data']['total_records'] = total
-                result['data']['present_records'] = present
-                
-                if total == 0:
-                    result['data']['note'] = 'No hay registros de asistencia en este periodo.'
-                
-            if metric in ['salud', 'general']:
-                # Health checks count (multi-tenant)
-                checks = HealthRecord.query.filter(
-                    HealthRecord.tenant_id.in_(target_ids),
-                    HealthRecord.record_date >= start_date
-                ).count()
-                result['data']['health_checks'] = checks
-                
-            if metric in ['general']:
-                # Active children (multi-tenant)
-                active = Child.query.filter(
-                    Child.tenant_id.in_(target_ids), 
-                    Child.status == 'activo'
-                ).count()
-                result['data']['active_children'] = active
-                
-            return {
-                'success': True,
-                'analytics': result
-            }
-            
-        except Exception as e:
-            logger.error(f"❌ Analytics error: {e}")
-            return {'success': False, 'error': str(e)}
+                if metric in ['asistencia', 'general']:
+                    # Attendance Rate (multi-tenant)
+                    total = Attendance.query.filter(
+                        Attendance.tenant_id.in_(target_ids),
+                        Attendance.date >= start_date
+                    ).count()
+                    
+                    present = Attendance.query.filter(
+                        Attendance.tenant_id.in_(target_ids),
+                        Attendance.date >= start_date,
+                        Attendance.status == 'presente'
+                    ).count()
+                    
+                    rate = (present / total * 100) if total > 0 else 0
+                    result['data']['attendance_rate'] = f"{round(rate, 1)}%"
+                    result['data']['total_attendance_records'] = total
+                    result['data']['present_records'] = present
+                    result['data']['attendance_records_description'] = f"tomas individuales de asistencia registradas en el período ({period})"
+                    
+                    if total == 0:
+                        result['data']['note'] = 'No hay registros de asistencia en este periodo.'
+                    
+                if metric in ['salud', 'general']:
+                    # Health checks count (multi-tenant)
+                    checks = HealthRecord.query.filter(
+                        HealthRecord.tenant_id.in_(target_ids),
+                        HealthRecord.record_date >= start_date
+                    ).count()
+                    result['data']['health_checks'] = checks
+                    
+                if metric in ['general']:
+                    # Active children (multi-tenant)
+                    active = Child.query.filter(
+                        Child.tenant_id.in_(target_ids), 
+                        Child.status == 'activo'
+                    ).count()
+                    result['data']['active_children'] = active
+                    result['data']['active_children_description'] = "total de niños y niñas actualmente matriculados y activos en los centros"
+                    
+                return {
+                    'success': True,
+                    'analytics': result
+                }
+            except Exception as e:
+                db.session.rollback()
+                if attempt < max_retries - 1:
+                    logger.warning(f"⚠️ Retrying GetTenantAnalyticsTool due to session error: {e}")
+                    continue
+                logger.error(f"❌ Analytics error: {e}")
+                return {'success': False, 'error': str(e)}
 
 
 class AnalyzeTrendsTool(BaseTool):
     """Tool to analyze trends over time (supports multi-tenant for license_admin)"""
     name: str = "analyze_trends"
     description: str = (
-        "Analyze trends and patterns in data over time "
-        "(e.g., increasing/decreasing attendance). "
+        "Analiza tendencias de asistencia histórica comparando las últimas dos quincenas de los últimos 30 días. "
+        "IMPORTANTE: El campo 'total_records' representa TOMAS DE ASISTENCIA (evaluaciones de asistencia diarias de niños en clase), "
+        "NO la cantidad de niños inscritos ni de usuarios. "
         "Input: {'aspect': 'asistencia_trend', 'tenant_id': 1, 'user_id': 1}. "
-        "For license admins, tenant_id can be omitted for global trends."
+        "Para license_admin, omitir tenant_id para evaluar todos los centros de la organización."
     )
     
     def _run(self, *args, **kwargs) -> dict:
@@ -187,46 +200,59 @@ class AnalyzeTrendsTool(BaseTool):
                 'error': 'No se encontraron centros asignados.'
             }
 
-        try:
-            today = date.today()
-            last_month = today - timedelta(days=30)
-            
-            if aspect == 'asistencia_trend':
-                records = Attendance.query.filter(
-                    Attendance.tenant_id.in_(target_ids),
-                    Attendance.date >= last_month
-                ).order_by(Attendance.date).all()
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    db.session.rollback()
+                    db.session.remove()
+
+                today = date.today()
+                last_month = today - timedelta(days=30)
                 
-                if not records:
+                if aspect == 'asistencia_trend':
+                    records = Attendance.query.filter(
+                        Attendance.tenant_id.in_(target_ids),
+                        Attendance.date >= last_month
+                    ).order_by(Attendance.date).all()
+                    
+                    if not records:
+                        return {
+                            'success': True, 
+                            'trend': 'Sin datos',
+                            'period': 'últimos 30 días',
+                            'details': 'No hay registros de asistencia en los últimos 30 días.'
+                        }
+                    
+                    # Split into halves for trend comparison
+                    first_half = records[:len(records)//2]
+                    second_half = records[len(records)//2:]
+                    
+                    rate1 = sum(1 for r in first_half if r.status == 'presente') / len(first_half) if first_half else 0
+                    rate2 = sum(1 for r in second_half if r.status == 'presente') / len(second_half) if second_half else 0
+                    
+                    trend = "Estable"
+                    if rate2 > rate1 + 0.05:
+                        trend = "Mejorando"
+                    elif rate2 < rate1 - 0.05:
+                        trend = "Disminuyendo"
+                    
                     return {
-                        'success': True, 
-                        'trend': 'Sin datos',
-                        'details': 'No hay registros de asistencia en los últimos 30 días.'
+                        'success': True,
+                        'trend': trend,
+                        'period': 'últimos 30 días',
+                        'scope': f"{len(target_ids)} centro(s)",
+                        'details': f"Tasa primeros 15 días: {round(rate1*100)}%, Tasa últimos 15 días: {round(rate2*100)}%",
+                        'total_records': len(records),
+                        'records_semantic_meaning': f"tomas individuales de asistencia registradas en el aula durante los últimos 30 días (no corresponde al número de niños matriculados)"
                     }
+                    
+                return {'success': False, 'error': f'Aspecto "{aspect}" no soportado. Use: asistencia_trend'}
                 
-                # Split into halves for trend comparison
-                first_half = records[:len(records)//2]
-                second_half = records[len(records)//2:]
-                
-                rate1 = sum(1 for r in first_half if r.status == 'presente') / len(first_half) if first_half else 0
-                rate2 = sum(1 for r in second_half if r.status == 'presente') / len(second_half) if second_half else 0
-                
-                trend = "Estable"
-                if rate2 > rate1 + 0.05:
-                    trend = "Mejorando"
-                elif rate2 < rate1 - 0.05:
-                    trend = "Disminuyendo"
-                
-                return {
-                    'success': True,
-                    'trend': trend,
-                    'scope': f"{len(target_ids)} centro(s)",
-                    'details': f"Tasa anterior: {round(rate1*100)}%, Tasa actual: {round(rate2*100)}%",
-                    'total_records': len(records)
-                }
-                
-            return {'success': False, 'error': f'Aspecto "{aspect}" no soportado. Use: asistencia_trend'}
-            
-        except Exception as e:
-            logger.error(f"❌ Trend analysis error: {e}")
-            return {'success': False, 'error': str(e)}
+            except Exception as e:
+                db.session.rollback()
+                if attempt < max_retries - 1:
+                    logger.warning(f"⚠️ Retrying AnalyzeTrendsTool due to session error: {e}")
+                    continue
+                logger.error(f"❌ Trend analysis error: {e}")
+                return {'success': False, 'error': str(e)}

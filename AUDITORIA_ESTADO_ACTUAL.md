@@ -155,13 +155,34 @@ Status: clean, sin conflictos, ambos branches empujados
 
 ---
 
+## 🛡️ BLINDAJE OPERATIVO — CANALES DE MENSAJERÍA Y ANALÍTICA (2026-10-18)
+
+### 1. Mensajería WhatsApp Inteligente y Asignación de Roles
+- **Herramienta central:** `send_message_to_staff` (definida en `backend/modules/early-childhood/agents/tools/messaging_tools.py`).
+- **Regla inmutable:** Cuando el usuario pide enviar un mensaje a una persona o directivo por su nombre natural (ej: *"Envía un mensaje a Gabriela Orellana..."*), el sistema:
+  1. NO requiere que el usuario mencione la palabra "WhatsApp".
+  2. Resuelve de forma unívoca al colaborador en la base de datos bajo el alcance de la organización (multi-tenant estricto con `resolve_license_scope`).
+  3. Despacha directamente vía API interna de WhatsApp (`http://127.0.0.1:3001/lead`).
+  4. Si se solicita envío a todo el equipo (*"a todos los colaboradores y equipo"*), invoca `send_message_to_staff` con `all_staff=True`, incluyendo espaciado anti-spam entre mensajes.
+
+### 2. Precisión Semántica en Analítica y Tendencias
+- **Herramientas:** `GetTenantAnalyticsTool` y `AnalyzeTrendsTool` (en `backend/modules/early-childhood/agents/tools/analytics_tools.py`).
+- **Resiliencia de Conexión:** Manejo de reintentos automáticos con `db.session.rollback()` y remoción de sesión limpia ante desincronización de sockets PyMySQL (`Command Out of Sync` / `Packet sequence number wrong`).
+- **Especificidad Semántica:**
+  - `total_attendance_records` / `total_records`: Representa exclusivamente **tomas individuales de asistencia registradas en el aula durante el periodo** (últimos 30 días o semana).
+  - PROHIBIDO reportar "X registros" sin calificar: el sistema califica explícitamente como *"tomas de asistencia"* para evitar confusiones con el censo de niños matriculados o usuarios.
+  - El censo de niños matriculados se reporta exclusivamente mediante `active_children` de `GetTenantAnalyticsTool`.
+
+---
+
 ## 📝 NOTAS TÉCNICAS PARA FUTUROS DESARROLLADORES
 1. **`joinedload(Child.tenant)` es crítico** en `search_children` y `get_child` para license_admin; sin él `child.tenant` es `None` y `center_name` falla.
 2. **`CMCI_LIST` usa nombres completos** (`"CMCI Guasmo"`) pero `tenant.name` devuelve slug (`"Guasmo"`). El match normalizado resuelve esto.
 3. **Código unificado `FICHA-*`** no es retroactivo: fichas existentes con `FV-*`/`FS-*` conviven; la primera vez que se abre la ficha "hermana" se reutiliza ese código.
 4. **Date filter keys** (`key={\`${tenantId}-${from}-${to}\`}`) fuerzan remount del componente para refetch limpio.
 5. **`TENANT_ID_TO_CMCI`** es mapa en memoria; si el usuario cambia de centro en el selector superior, la próxima búsqueda re-mapea automáticamente.
+6. **Políticas VPS:** Nunca reiniciar procesos ajenos (`aikrofy-*`, `ms-*`, `lefri-*`). Toda recarga se hace estrictamente con `pm2 reload aigovcorex-backend` de forma aislada.
 
 ---
 
-*Generado automáticamente como parte de la auditoría post-despliegue 2026-10-01*
+*Actualizado y blindado post-auditoría 2026-10-18*

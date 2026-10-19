@@ -29,6 +29,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   FileText,
   Printer,
   Sparkles,
@@ -41,6 +51,7 @@ import {
   ArrowRight,
   ShieldAlert,
   Users,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { authService } from "@/services/auth.service";
@@ -56,6 +67,10 @@ export default function InformeActividadesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
+
+  // Delete state
+  const [reportToDelete, setReportToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [startDate, setStartDate] = useState("");
@@ -160,6 +175,22 @@ export default function InformeActividadesPage() {
       setIsPreviewOpen(false);
     } finally {
       setIsLoadingPreview(false);
+    }
+  };
+
+  const handleDeleteReport = async () => {
+    if (!reportToDelete) return;
+    setIsDeleting(true);
+    try {
+      await cmciService.deleteMonthlyReport(reportToDelete);
+      toast.success("Informe mensual eliminado con éxito.");
+      setReports((prev) => prev.filter((r) => r.id !== reportToDelete));
+    } catch (err: any) {
+      console.error("Error deleting report:", err);
+      toast.error(err.message || "No se pudo eliminar el informe.");
+    } finally {
+      setIsDeleting(false);
+      setReportToDelete(null);
     }
   };
 
@@ -472,8 +503,18 @@ export default function InformeActividadesPage() {
                           Imprimir A4
                         </Button>
                       </Link>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setReportToDelete(r.id)}
+                        className="text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 px-2"
+                        title="Eliminar informe"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
+
                 ))}
               </div>
             )}
@@ -626,6 +667,30 @@ export default function InformeActividadesPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Dialog for Deleting Report */}
+      <AlertDialog open={!!reportToDelete} onOpenChange={(open) => !open && setReportToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar informe mensual?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente el informe de actividades #{reportToDelete} de la lista para evitar acumulación innecesaria de borradores.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteReport}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Eliminar Definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+

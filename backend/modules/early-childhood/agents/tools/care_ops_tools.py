@@ -14,6 +14,38 @@ def _scope_ids(tenant_id, user_id):
     return resolve_tenant_ids(tenant_id, user_id)
 
 
+def _find_child_flexible(target_ids, name_query):
+    """Busca al niño en los centros autorizados soportando apellidos primero o tokens parciales."""
+    from models.child import Child
+    if not name_query or not target_ids:
+        return None
+    nm = name_query.strip().lower()
+    tokens = [t for t in nm.replace(',', ' ').split() if len(t) > 2]
+    all_children = Child.query.filter(Child.tenant_id.in_(target_ids), Child.status == "activo").all()
+
+    # 1. Coincidencia exacta o contenida directa
+    for c in all_children:
+        c_full = (c.full_name or f"{c.first_name} {c.last_name}").lower()
+        c_inv = f"{c.last_name} {c.first_name}".lower()
+        if nm in c_full or nm in c_inv or nm in (c.first_name or '').lower() or nm in (c.last_name or '').lower():
+            return c
+
+    # 2. Coincidencia por tokens (ej. 'LARA FIGUEROA' o 'EITHAN ELIEL')
+    if tokens:
+        best_match = None
+        best_score = 0
+        for c in all_children:
+            c_text = f"{c.first_name or ''} {c.last_name or ''} {c.full_name or ''}".lower()
+            score = sum(1 for tok in tokens if tok in c_text)
+            if score > best_score and score >= max(1, len(tokens) // 2):
+                best_score = score
+                best_match = c
+        if best_match:
+            return best_match
+
+    return None
+
+
 class ManageMilestonesTool(BaseTool):
     name: str = "manage_milestones"
     description: str = (
@@ -41,13 +73,7 @@ class ManageMilestonesTool(BaseTool):
                     rows = db.session.query(Milestone.domain, Milestone.milestone_description).distinct().limit(100).all()
                     return {"success": True, "catalogo": [{"dominio": r[0], "hito": r[1]} for r in rows]}
             # ubicar niño si se da nombre
-            child = None
-            nm = (kwargs.get("child_name") or "").strip().lower()
-            if nm:
-                for c in Child.query.filter(Child.tenant_id.in_(target_ids), Child.status == "activo").all():
-                    if nm in c.first_name.lower() or nm in c.full_name.lower():
-                        child = c
-                        break
+            child = _find_child_flexible(target_ids, kwargs.get("child_name") or kwargs.get("name"))
             if action == "record":
                 if not child:
                     return {"success": False, "error": "Indícame el nombre del niño para registrar el hito."}
@@ -114,13 +140,7 @@ class ManageHealthVaccinesTool(BaseTool):
         if not target_ids:
             return {"success": False, "error": "Sin centros asignados."}
         try:
-            child = None
-            nm = (kwargs.get("child_name") or "").strip().lower()
-            if nm:
-                for c in Child.query.filter(Child.tenant_id.in_(target_ids), Child.status == "activo").all():
-                    if nm in c.first_name.lower() or nm in c.full_name.lower():
-                        child = c
-                        break
+            child = _find_child_flexible(target_ids, kwargs.get("child_name") or kwargs.get("name"))
             if action == "pending":
                 q = Vaccine.query.filter(Vaccine.tenant_id.in_(target_ids))
                 try:

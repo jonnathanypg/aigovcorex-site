@@ -197,7 +197,10 @@ export default function InformeActividadesPrintPage({
                   <td className="border border-black p-1 text-center">#{p.week_number || "-"}</td>
                   <td className="border border-black p-1">{p.age_group}</td>
                   <td className="border border-black p-1">
-                    <strong>{p.tema || p.title || "Sin título"}</strong>
+                    <strong>{p.tema_integrador || p.nombre_actividad || p.tema || p.title || "Sin título"}</strong>
+                    {(p.nombre_actividad && p.tema_integrador && p.nombre_actividad !== p.tema_integrador) && (
+                      <p className="text-[9px] text-gray-700 mt-0.5">{p.nombre_actividad}</p>
+                    )}
                     {p.actividad_principal && (
                       <p className="text-[9px] text-gray-700 mt-0.5 line-clamp-2">{p.actividad_principal}</p>
                     )}

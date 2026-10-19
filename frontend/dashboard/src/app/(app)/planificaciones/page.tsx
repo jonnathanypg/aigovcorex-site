@@ -49,7 +49,8 @@ import {
 const AGE_GROUPS = [
     "12 a 18 meses",
     "19 a 24 meses",
-    "25 a 36 meses",
+    "25 a 30 meses",
+    "31 a 36 meses",
     "37 a 42 meses"
 ];
 const STATUS_OPTIONS = [

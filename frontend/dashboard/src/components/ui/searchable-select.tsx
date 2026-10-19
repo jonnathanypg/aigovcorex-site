@@ -85,6 +85,12 @@ export function SearchableSelect({
                                         if (onChange) onChange(option.value)
                                         setOpen(false)
                                     }}
+                                    onPointerDown={(e) => {
+                                        e.preventDefault()
+                                        if (onValueChange) onValueChange(option.value)
+                                        if (onChange) onChange(option.value)
+                                        setOpen(false)
+                                    }}
                                 >
                                     <Check
                                         className={cn(

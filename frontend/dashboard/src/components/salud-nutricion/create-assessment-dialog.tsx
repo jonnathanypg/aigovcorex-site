@@ -177,7 +177,7 @@ export function CreateAssessmentDialog({
               <SearchableSelect
                 options={childOptions}
                 value={childId}
-                onChange={setChildId}
+                onValueChange={setChildId}
                 placeholder="Buscar infante por nombre o cédula..."
               />
             )}

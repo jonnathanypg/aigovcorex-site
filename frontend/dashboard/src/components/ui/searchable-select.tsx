@@ -28,7 +28,8 @@ export interface ComboboxOption {
 interface SearchableSelectProps {
     options: ComboboxOption[]
     value: string
-    onValueChange: (value: string) => void
+    onValueChange?: (value: string) => void
+    onChange?: (value: string) => void
     placeholder?: string
     searchPlaceholder?: string
     emptyMessage?: string
@@ -40,6 +41,7 @@ export function SearchableSelect({
     options,
     value,
     onValueChange,
+    onChange,
     placeholder = "Seleccionar...",
     searchPlaceholder = "Buscar...",
     emptyMessage = "No se encontraron resultados.",
@@ -79,7 +81,8 @@ export function SearchableSelect({
                                     key={option.value}
                                     value={option.searchKeywords ? `${option.label} ${option.searchKeywords}` : option.label}
                                     onSelect={() => {
-                                        onValueChange(option.value)
+                                        if (onValueChange) onValueChange(option.value)
+                                        if (onChange) onChange(option.value)
                                         setOpen(false)
                                     }}
                                 >

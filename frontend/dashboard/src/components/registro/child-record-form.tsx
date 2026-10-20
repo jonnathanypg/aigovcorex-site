@@ -351,14 +351,16 @@ export function ChildRecordForm({ form, onSubmit, onCancel, isEditing, effective
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Parentesco</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger></FormControl>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Seleccione parentesco" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="madre">Madre</SelectItem>
                           <SelectItem value="padre">Padre</SelectItem>
                           <SelectItem value="abuela">Abuela</SelectItem>
                           <SelectItem value="abuelo">Abuelo</SelectItem>
-                          <SelectItem value="tio">Tío/a</SelectItem>
+                          <SelectItem value="tia">Tía</SelectItem>
+                          <SelectItem value="tio">Tío</SelectItem>
+                          <SelectItem value="tutor_legal">Tutor Legal</SelectItem>
                           <SelectItem value="otro">Otro</SelectItem>
                         </SelectContent>
                       </Select>

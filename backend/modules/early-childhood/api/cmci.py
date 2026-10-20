@@ -159,6 +159,20 @@ def _deny_unless_can_create():
     return None
 
 
+def _normalize_center_code(center_name_or_code):
+    """Mapea nombres comunes de centros (ej: 'CMCI Guasmo', 'CMCI Bahía') a su código ('GU', 'BH', 'OR')."""
+    if not center_name_or_code:
+        return ""
+    c = str(center_name_or_code).strip().lower()
+    if "guasmo" in c or c == "gu":
+        return "GU"
+    if "bahia" in c or "bahía" in c or c == "bh":
+        return "BH"
+    if "orquidea" in c or "orquídea" in c or c == "or":
+        return "OR"
+    return str(center_name_or_code).strip().upper()
+
+
 def _enforce_site(requested_center):
     """F5 filtro site forzado: si el usuario no es global y pide otro
     centro distinto al suyo → 404 (IDOR tenant==site)."""
@@ -168,7 +182,14 @@ def _enforce_site(requested_center):
     if can_view_cmci_global(user):
         return None
     own = TenantContext.get_current_cmci_code()
-    if own and str(requested_center) != str(own):
+    if not own:
+        # Fallback al tenant_id si el user no tiene cmci_code explícito
+        return None
+
+    norm_own = _normalize_center_code(own)
+    norm_req = _normalize_center_code(requested_center)
+
+    if norm_own and norm_req and norm_own != norm_req:
         return jsonify({"error": "Registro no encontrado"}), 404
     return None
 

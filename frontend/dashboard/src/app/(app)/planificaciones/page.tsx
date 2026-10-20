@@ -47,6 +47,8 @@ import {
     Clock,
     Target,
     Sparkles,
+    Check,
+    CheckCheck,
 } from "lucide-react";
 
 const AGE_GROUPS = [
@@ -266,6 +268,23 @@ export default function PlanificacionesPage() {
         }
     };
 
+    const handleUpdateStatus = async (id: number, newStatus: 'borrador' | 'revisado' | 'aprobado') => {
+        try {
+            await planningService.update(id, { status: newStatus });
+            toast({
+                title: newStatus === 'aprobado' ? "Planificación Aprobada" : newStatus === 'revisado' ? "Marcada como Revisada" : "En Borrador",
+                description: `Estado actualizado a ${newStatus} correctamente.`,
+            });
+            loadPlannings();
+        } catch (err: any) {
+            toast({
+                title: "Error al actualizar estado",
+                description: err.response?.data?.error || "No se pudo actualizar el estado",
+                variant: "destructive"
+            });
+        }
+    };
+
     const filteredPlannings = plannings.filter((p) =>
         p.nombre_actividad.toLowerCase().includes(search.toLowerCase()) ||
         (p.tema_integrador || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -381,11 +400,46 @@ export default function PlanificacionesPage() {
                                 {p.objetivo && (
                                     <p className="text-xs text-muted-foreground line-clamp-2">{p.objetivo}</p>
                                 )}
-                                <div className="flex gap-2 pt-2">
-                                    <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
-                                        <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+                                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/50">
+                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => openEdit(p)}>
+                                        <Pencil className="h-3 w-3 mr-1" /> Editar
                                     </Button>
-                                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => handleDelete(p.id)}>
+
+                                    {/* Botones rápidos de Revisión y Aprobación */}
+                                    {p.status !== 'aprobado' ? (
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-8 text-xs bg-green-500/10 text-green-700 hover:bg-green-500/20 border border-green-300"
+                                            onClick={() => handleUpdateStatus(p.id, 'aprobado')}
+                                            title="Aprobar Planificación"
+                                        >
+                                            <CheckCheck className="h-3.5 w-3.5 mr-1" /> Aprobar
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-8 text-xs bg-yellow-500/10 text-yellow-700 hover:bg-yellow-500/20"
+                                            onClick={() => handleUpdateStatus(p.id, 'revisado')}
+                                            title="Pasar a Revisado"
+                                        >
+                                            <Check className="h-3.5 w-3.5 mr-1" /> Revisado
+                                        </Button>
+                                    )}
+
+                                    {p.status === 'borrador' && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-8 text-xs text-blue-700 hover:bg-blue-50"
+                                            onClick={() => handleUpdateStatus(p.id, 'revisado')}
+                                        >
+                                            Marcar Revisado
+                                        </Button>
+                                    )}
+
+                                    <Button size="sm" variant="ghost" className="h-8 text-xs ml-auto text-destructive hover:text-destructive" onClick={() => handleDelete(p.id)}>
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </Button>
                                 </div>
@@ -464,7 +518,7 @@ export default function PlanificacionesPage() {
                             <div className="flex items-center justify-between border-b border-sky-200 pb-2">
                                 <h4 className="text-sm font-bold text-sky-900 flex items-center gap-2">
                                     <Clock className="h-4 w-4 text-sky-600" />
-                                    Actividad 1 · Primera Jornada / Mañana
+                                    Actividad 1 · Primera Jornada
                                 </h4>
                                 <Badge variant="secondary" className="bg-sky-100 text-sky-800 text-[10px]">
                                     Juego Intencionado
@@ -519,7 +573,7 @@ export default function PlanificacionesPage() {
                             <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
                                 <h4 className="text-sm font-bold text-emerald-900 flex items-center gap-2">
                                     <Sparkles className="h-4 w-4 text-emerald-600" />
-                                    Actividad 2 · Segunda Jornada / Tarde
+                                    Actividad 2 · Segunda Jornada
                                 </h4>
                                 <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 text-[10px]">
                                     Juego Libre / Lenguaje
@@ -574,6 +628,27 @@ export default function PlanificacionesPage() {
                             <Textarea rows={2} value={formData.observaciones}
                                 onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
                                 placeholder="Notas adicionales sobre la jornada, adaptaciones o recursos especiales..." />
+                        </div>
+
+                        {/* Estado / Revisión y Aprobación */}
+                        <div className="border border-border/80 rounded-lg p-3 bg-muted/30 flex items-center justify-between">
+                            <div>
+                                <Label className="text-xs font-semibold">Estado de la Planificación</Label>
+                                <p className="text-[11px] text-muted-foreground">Define si está en borrador, revisada o aprobada para el centro.</p>
+                            </div>
+                            <Select
+                                value={formData.status}
+                                onValueChange={(v: any) => setFormData({ ...formData, status: v })}
+                            >
+                                <SelectTrigger className="w-[160px] h-9">
+                                    <SelectValue placeholder="Estado..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="borrador">Borrador</SelectItem>
+                                    <SelectItem value="revisado">Revisado</SelectItem>
+                                    <SelectItem value="aprobado">Aprobado</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 

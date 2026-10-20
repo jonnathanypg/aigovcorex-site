@@ -59,8 +59,10 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
     const [weight, setWeight] = useState<string>("");
     const [height, setHeight] = useState<string>("");
     const [headCircumference, setHeadCircumference] = useState<string>("");
+    const [vaccineScheme, setVaccineScheme] = useState<"completo" | "incompleto">("completo");
     const [vaccineName, setVaccineName] = useState("");
     const [vaccineDose, setVaccineDose] = useState("");
+    const [pendingVaccines, setPendingVaccines] = useState("");
     const [incidentDescription, setIncidentDescription] = useState("");
     const [symptoms, setSymptoms] = useState("");
     const [treatment, setTreatment] = useState("");
@@ -110,6 +112,9 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
             } else if (record.record_type === 'vacunacion') {
                 setVaccineName(record.vaccine_name || "");
                 setVaccineDose(record.vaccine_dose || "");
+                const isInc = (record.notes || "").toLowerCase().includes("incompleto") || (record.vaccine_dose || "").toLowerCase().includes("incomplet");
+                setVaccineScheme(isInc ? "incompleto" : "completo");
+                setPendingVaccines((record as any).pending_vaccines || "");
             } else {
                 setIncidentDescription(record.incident_description || "");
                 setSymptoms(record.symptoms || "");
@@ -137,8 +142,10 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
         setWeight("");
         setHeight("");
         setHeadCircumference("");
-        setVaccineName("");
-        setVaccineDose("");
+        setVaccineScheme("completo");
+        setVaccineName("Esquema Regular");
+        setVaccineDose("Completo");
+        setPendingVaccines("");
         setIncidentDescription("");
         setSymptoms("");
         setTreatment("");
@@ -168,8 +175,14 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
                 if (height) recordData.height = parseFloat(height);
                 if (headCircumference) recordData.head_circumference = parseFloat(headCircumference);
             } else if (recordType === 'vacunacion') {
-                recordData.vaccine_name = vaccineName;
-                recordData.vaccine_dose = vaccineDose;
+                recordData.vaccine_name = vaccineScheme === 'completo' ? (vaccineName || 'Esquema de Vacunación Completo') : (vaccineName || 'Esquema Incompleto');
+                recordData.vaccine_dose = vaccineScheme === 'completo' ? 'Completo' : (vaccineDose || 'Incompleto');
+                recordData.pending_vaccines = pendingVaccines;
+                if (pendingVaccines) {
+                    recordData.notes = recordData.notes
+                        ? `${recordData.notes} | Pendientes: ${pendingVaccines}`
+                        : `Vacunas pendientes: ${pendingVaccines}`;
+                }
             } else {
                 recordData.incident_description = incidentDescription;
                 recordData.symptoms = symptoms;
@@ -310,32 +323,78 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
 
                         {recordType === 'vacunacion' && (
                             <>
+                                <div className="space-y-2 border border-blue-200 bg-blue-50/40 p-3 rounded-lg">
+                                    <Label className="text-xs font-semibold text-blue-900">Estado del Esquema de Vacunación *</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                            type="button"
+                                            variant={vaccineScheme === 'completo' ? 'default' : 'outline'}
+                                            className={`h-9 text-xs justify-center ${vaccineScheme === 'completo' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                                            onClick={() => {
+                                                setVaccineScheme('completo');
+                                                if (!vaccineName || vaccineName === 'Esquema Incompleto') setVaccineName('Esquema Regular');
+                                                setVaccineDose('Completo');
+                                            }}
+                                        >
+                                            ✓ Esquema Completo
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={vaccineScheme === 'incompleto' ? 'default' : 'outline'}
+                                            className={`h-9 text-xs justify-center ${vaccineScheme === 'incompleto' ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+                                            onClick={() => {
+                                                setVaccineScheme('incompleto');
+                                                setVaccineDose('Incompleto');
+                                            }}
+                                        >
+                                            ⚠️ Esquema Incompleto
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {vaccineScheme === 'incompleto' && (
+                                    <div className="space-y-2 border border-amber-200 bg-amber-50/40 p-3 rounded-lg">
+                                        <Label htmlFor="pendingVaccines" className="text-xs font-semibold text-amber-900">
+                                            Vacunas Pendientes / Dosis Faltantes *
+                                        </Label>
+                                        <Input
+                                            id="pendingVaccines"
+                                            placeholder="Ej: Falta Neumococo 2da dosis, Pentavalente 3ra..."
+                                            value={pendingVaccines}
+                                            onChange={(e) => setPendingVaccines(e.target.value)}
+                                            required={vaccineScheme === 'incompleto'}
+                                        />
+                                        <p className="text-[11px] text-amber-800/80">
+                                            Estas vacunas pendientes se registrarán en observaciones para seguimiento prioritario.
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-2">
-                                        <Label htmlFor="vaccineName">Nombre de Vacuna *</Label>
+                                        <Label htmlFor="vaccineName">Nombre de Vacuna / Descripción</Label>
                                         <Input
                                             id="vaccineName"
-                                            placeholder="BCG, Pentavalente, etc."
+                                            placeholder="BCG, Pentavalente, Rotavirus, etc."
                                             value={vaccineName}
                                             onChange={(e) => setVaccineName(e.target.value)}
-                                            required={recordType === 'vacunacion'}
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="vaccineDose">Dosis</Label>
+                                        <Label htmlFor="vaccineDose">Dosis / Detalle</Label>
                                         <Input
                                             id="vaccineDose"
-                                            placeholder="1ra, 2da, Refuerzo..."
+                                            placeholder="1ra, 2da, Refuerzo, Al día..."
                                             value={vaccineDose}
                                             onChange={(e) => setVaccineDose(e.target.value)}
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="professional">Profesional de Salud</Label>
+                                    <Label htmlFor="professional">Profesional de Salud / Responsable</Label>
                                     <Input
                                         id="professional"
-                                        placeholder="Nombre del profesional"
+                                        placeholder="Nombre del profesional de salud o enfermera"
                                         value={medicalProfessional}
                                         onChange={(e) => setMedicalProfessional(e.target.value)}
                                     />

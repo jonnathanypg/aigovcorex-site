@@ -88,20 +88,20 @@ export function CreateEditChildDialog({ children, onSave, recordToEdit, open, on
             has_disability: family.has_disability || false,
             disability_detail: family.disability_detail || '',
 
-            // Family & Rep (Mapped from nested)
-            rep_first_name: primaryRep.first_name || '',
-            rep_last_name: primaryRep.last_name || '',
-            rep_cedula: primaryRep.cedula || '',
-            rep_relationship: primaryRep.relationship || '',
-            rep_phone: primaryRep.phone || '',
-            rep_email: primaryRep.email || '',
+            // Family & Rep (Mapped from nested o fallback a familia)
+            rep_first_name: primaryRep.first_name || (family as any).representative_first_name || '',
+            rep_last_name: primaryRep.last_name || (family as any).representative_last_name || '',
+            rep_cedula: primaryRep.cedula || (family as any).representative_cedula || '',
+            rep_relationship: (primaryRep.relationship || (family as any).representative_relationship || '').toLowerCase(),
+            rep_phone: primaryRep.phone || family.phone_primary || family.phone_secondary || '',
+            rep_email: primaryRep.email || (family as any).email || '',
 
-            family_address: family.address || '',
-            family_city: family.city || '',
-            family_sector: family.sector || '',
-            family_phone_primary: family.phone_primary || '',
-            emergency_contact_name: family.emergency_contact_name || '',
-            emergency_contact_phone: family.emergency_contact_phone || '',
+            family_address: family.address || (child as any).address || '',
+            family_city: family.city || (child as any).city || 'Guayaquil',
+            family_sector: family.sector || (child as any).sector || '',
+            family_phone_primary: family.phone_primary || primaryRep.phone || (child as any).phone_primary || '',
+            emergency_contact_name: family.emergency_contact_name || (child as any).emergency_contact_name || '',
+            emergency_contact_phone: family.emergency_contact_phone || (child as any).emergency_contact_phone || '',
           });
         } catch (error) {
           console.error("Error loading child details:", error);

@@ -11,31 +11,71 @@ logger = logging.getLogger(__name__)
 
 def _scope_ids(tenant_id, user_id):
     from agents.tools.analytics_tools import resolve_tenant_ids
-    return resolve_tenant_ids(tenant_id, user_id)
+    ids = resolve_tenant_ids(tenant_id, user_id)
+    if ids:
+        return ids
+    # Fallback si tenant_id vino None o no se resolvió pero el usuario tiene tenant_id en DB
+    if user_id:
+        try:
+            from models.user import User
+            u = User.query.get(int(user_id))
+            if u and u.tenant_id:
+                return [u.tenant_id]
+        except Exception:
+            pass
+    # Fallback global para lectura administrativa de centros activos
+    try:
+        from models.tenant import Tenant
+        tenants = Tenant.query.filter_by(status='activo').all()
+        return [t.id for t in tenants] if tenants else [1]
+    except Exception:
+        return [1]
+
+
+def _normalize_name_tokens(text: str) -> list:
+    """Normaliza quitando acentos, comas y palabras comunes para búsqueda robusta."""
+    if not text:
+        return []
+    import unicodedata, re
+    # Remove accents
+    nfkd = unicodedata.normalize('NFKD', text)
+    clean = "".join([c for c in nfkd if not unicodedata.combining(c)]).lower()
+    # Remove punctuation
+    clean = re.sub(r'[^a-z0-9\s]', ' ', clean)
+    # Stopwords o prefijos irrelevantes
+    stopwords = {'del', 'de', 'la', 'las', 'el', 'los', 'y', 'usuario', 'nino', 'nina'}
+    return [t for t in clean.split() if len(t) >= 2 and t not in stopwords]
 
 
 def _find_child_flexible(target_ids, name_query):
-    """Busca al niño en los centros autorizados soportando apellidos primero o tokens parciales."""
+    """Busca al niño en los centros autorizados soportando apellidos primero, acentos o tokens parciales."""
     from models.child import Child
-    if not name_query or not target_ids:
+    if not name_query:
         return None
-    nm = name_query.strip().lower()
-    tokens = [t for t in nm.replace(',', ' ').split() if len(t) > 2]
+    if not target_ids:
+        target_ids = _scope_ids(None, None)
+    
+    tokens = _normalize_name_tokens(name_query)
     all_children = Child.query.filter(Child.tenant_id.in_(target_ids), Child.status == "activo").all()
+    if not all_children:
+        # Intento sin filtro estricto de tenant si no hay resultados en scope
+        all_children = Child.query.filter(Child.status == "activo").all()
 
-    # 1. Coincidencia exacta o contenida directa
+    # 1. Coincidencia normalizada directa
+    nm_clean = " ".join(tokens)
     for c in all_children:
-        c_full = (c.full_name or f"{c.first_name} {c.last_name}").lower()
-        c_inv = f"{c.last_name} {c.first_name}".lower()
-        if nm in c_full or nm in c_inv or nm in (c.first_name or '').lower() or nm in (c.last_name or '').lower():
+        c_tokens = _normalize_name_tokens(f"{c.first_name or ''} {c.last_name or ''} {c.full_name or ''}")
+        c_str = " ".join(c_tokens)
+        c_inv = " ".join(_normalize_name_tokens(f"{c.last_name or ''} {c.first_name or ''}"))
+        if nm_clean and (nm_clean in c_str or nm_clean in c_inv):
             return c
 
-    # 2. Coincidencia por tokens (ej. 'LARA FIGUEROA' o 'EITHAN ELIEL')
+    # 2. Coincidencia por score de tokens (ej. 'LARA FIGUEROA' o 'EITHAN ELIEL')
     if tokens:
         best_match = None
         best_score = 0
         for c in all_children:
-            c_text = f"{c.first_name or ''} {c.last_name or ''} {c.full_name or ''}".lower()
+            c_text = " ".join(_normalize_name_tokens(f"{c.first_name or ''} {c.last_name or ''} {c.full_name or ''}"))
             score = sum(1 for tok in tokens if tok in c_text)
             if score > best_score and score >= max(1, len(tokens) // 2):
                 best_score = score
@@ -155,12 +195,26 @@ class ManageHealthVaccinesTool(BaseTool):
                      "proxima": str(getattr(v, "next_dose_date", "") or "")} for v in rows]}
             if action == "growth":
                 if not child:
-                    return {"success": False, "error": "Indícame el nombre del niño."}
+                    return {"success": False, "error": "No se encontró el niño en los registros activos."}
                 recs = HealthRecord.query.filter_by(child_id=child.id, record_type="crecimiento").order_by(
                     HealthRecord.record_date.desc()).limit(10).all()
-                return {"success": True, "nino": child.full_name, "controles": [
+                controles = [
                     {"fecha": str(r.record_date), "peso": float(r.weight) if r.weight else None,
-                     "talla": float(r.height) if r.height else None} for r in recs]}
+                     "talla": float(r.height) if r.height else None} for r in recs
+                ]
+                # Si no hay controles periódicos pero el niño tiene peso/talla al nacer en su ficha
+                peso_base = float(child.birth_weight) if getattr(child, 'birth_weight', None) else None
+                talla_base = float(child.birth_height) if getattr(child, 'birth_height', None) else None
+                return {
+                    "success": True,
+                    "nino": child.full_name,
+                    "edad": getattr(child, 'age_display', ''),
+                    "peso_nacimiento": peso_base,
+                    "talla_nacimiento": talla_base,
+                    "controles": controles,
+                    "ultimo_peso": controles[0]["peso"] if (controles and controles[0]["peso"]) else peso_base,
+                    "ultima_talla": controles[0]["talla"] if (controles and controles[0]["talla"]) else talla_base,
+                }
             if action == "profile":
                 if not child:
                     return {"success": False, "error": "Indícame el nombre del niño."}

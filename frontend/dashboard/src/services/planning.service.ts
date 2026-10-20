@@ -25,7 +25,8 @@ export interface LudicPlanning {
     ambito_descubrimiento?: string;
     ambito_expresion?: string;
     ambito_exploracion?: string;
-    indicadores_logro?: string[];
+    indicadores_logro?: string[] | string;
+    indicador?: string;
     observaciones?: string;
     status: 'borrador' | 'aprobado' | 'revisado';
     reviewed_by?: number;

@@ -44,6 +44,9 @@ import {
     User,
     CheckCircle2,
     FileSpreadsheet,
+    Clock,
+    Target,
+    Sparkles,
 } from "lucide-react";
 
 const AGE_GROUPS = [
@@ -64,6 +67,13 @@ const MONTHS = [
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
+const AMBITOS_OPTIONS = [
+    { value: "vinculacion_emocional", label: "Vinculación Emocional y Social" },
+    { value: "descubrimiento_natural", label: "Descubrimiento Natural y Cultural" },
+    { value: "manifestacion_lenguaje", label: "Manifestación del Lenguaje Verbal y No Verbal" },
+    { value: "exploracion_corporal", label: "Exploración del Cuerpo y Motricidad" },
+];
+
 const emptyForm = {
     planning_date: new Date().toISOString().split("T")[0],
     age_group: "",
@@ -73,10 +83,24 @@ const emptyForm = {
     tema_integrador: "",
     nombre_actividad: "",
     objetivo: "",
+    // Actividad 1 (Primera jornada / Mañana)
+    actividad_1_nombre: "",
+    actividad_1_ambito: "vinculacion_emocional",
+    actividad_1_objetivo: "",
+    actividad_1_destreza: "",
+    actividad_1_indicador: "",
+    // Actividad 2 (Segunda jornada / Tarde)
+    actividad_2_nombre: "",
+    actividad_2_ambito: "manifestacion_lenguaje",
+    actividad_2_objetivo: "",
+    actividad_2_destreza: "",
+    actividad_2_indicador: "",
+    // Ámbitos descriptivos generales
     ambito_vinculacion: "",
     ambito_descubrimiento: "",
     ambito_expresion: "",
     ambito_exploracion: "",
+    indicador_general: "",
     observaciones: "",
     status: "borrador" as 'borrador' | 'aprobado' | 'revisado',
 };
@@ -121,6 +145,14 @@ export default function PlanificacionesPage() {
 
     const openEdit = (p: LudicPlanning) => {
         setEditingId(p.id);
+        const jInt = (p.momento_juego_intencionado as any) || {};
+        const jLib = (p.momento_juego_libre as any) || {};
+        const ind = (
+            p.indicadores_logro && Array.isArray(p.indicadores_logro)
+                ? p.indicadores_logro.join(", ")
+                : (typeof p.indicadores_logro === 'string' ? p.indicadores_logro : (p.indicador || ""))
+        );
+
         setFormData({
             planning_date: p.planning_date,
             age_group: p.age_group,
@@ -130,10 +162,24 @@ export default function PlanificacionesPage() {
             tema_integrador: p.tema_integrador || "",
             nombre_actividad: p.nombre_actividad,
             objetivo: p.objetivo || "",
+            // Actividad 1
+            actividad_1_nombre: jInt.nombre || p.nombre_actividad || "",
+            actividad_1_ambito: jInt.ambito || "vinculacion_emocional",
+            actividad_1_objetivo: jInt.objetivo || p.objetivo || "",
+            actividad_1_destreza: jInt.destreza || p.ambito_vinculacion || "",
+            actividad_1_indicador: jInt.indicador || ind || "",
+            // Actividad 2
+            actividad_2_nombre: jLib.nombre || "",
+            actividad_2_ambito: jLib.ambito || "manifestacion_lenguaje",
+            actividad_2_objetivo: jLib.objetivo || "",
+            actividad_2_destreza: jLib.destreza || p.ambito_expresion || "",
+            actividad_2_indicador: jLib.indicador || "",
+            // Ámbitos
             ambito_vinculacion: p.ambito_vinculacion || "",
             ambito_descubrimiento: p.ambito_descubrimiento || "",
             ambito_expresion: p.ambito_expresion || "",
             ambito_exploracion: p.ambito_exploracion || "",
+            indicador_general: ind,
             observaciones: p.observaciones || "",
             status: p.status,
         });
@@ -141,17 +187,63 @@ export default function PlanificacionesPage() {
     };
 
     const handleSave = async () => {
-        if (!formData.nombre_actividad || !formData.age_group) {
+        const nombrePrincipal = formData.actividad_1_nombre || formData.nombre_actividad;
+        if (!nombrePrincipal || !formData.age_group) {
             toast({ title: "Campos requeridos", description: "Nombre de actividad y grupo etario son obligatorios", variant: "destructive" });
             return;
         }
         setIsSaving(true);
         try {
+            // Unificar objetivos e indicadores para compatibilidad backend y vistas PDF
+            const objetivosList = [
+                formData.actividad_1_objetivo ? `Objetivo 1: ${formData.actividad_1_objetivo}` : '',
+                formData.actividad_2_objetivo ? `Objetivo 2: ${formData.actividad_2_objetivo}` : ''
+            ].filter(Boolean);
+            const objetivoConsolidado = objetivosList.length > 0 ? objetivosList.join('\n') : (formData.objetivo || '');
+
+            const indicadoresList = [
+                formData.actividad_1_indicador ? `Actividad 1: ${formData.actividad_1_indicador}` : '',
+                formData.actividad_2_indicador ? `Actividad 2: ${formData.actividad_2_indicador}` : '',
+                formData.indicador_general
+            ].filter(Boolean);
+
+            const payload: any = {
+                ...formData,
+                nombre_actividad: nombrePrincipal,
+                objetivo: objetivoConsolidado,
+                momento_juego_intencionado: {
+                    nombre: formData.actividad_1_nombre || nombrePrincipal,
+                    ambito: formData.actividad_1_ambito,
+                    objetivo: formData.actividad_1_objetivo,
+                    destreza: formData.actividad_1_destreza,
+                    indicador: formData.actividad_1_indicador,
+                },
+                momento_juego_libre: {
+                    nombre: formData.actividad_2_nombre,
+                    ambito: formData.actividad_2_ambito,
+                    objetivo: formData.actividad_2_objetivo,
+                    destreza: formData.actividad_2_destreza,
+                    indicador: formData.actividad_2_indicador,
+                },
+                indicadores_logro: indicadoresList,
+            };
+
+            // Mapeo retrocompatible a ámbitos si la actividad 1 o 2 los eligieron
+            if (formData.actividad_1_ambito === 'vinculacion_emocional') payload.ambito_vinculacion = formData.actividad_1_destreza || payload.ambito_vinculacion;
+            if (formData.actividad_1_ambito === 'descubrimiento_natural') payload.ambito_descubrimiento = formData.actividad_1_destreza || payload.ambito_descubrimiento;
+            if (formData.actividad_1_ambito === 'manifestacion_lenguaje') payload.ambito_expresion = formData.actividad_1_destreza || payload.ambito_expresion;
+            if (formData.actividad_1_ambito === 'exploracion_corporal') payload.ambito_exploracion = formData.actividad_1_destreza || payload.ambito_exploracion;
+
+            if (formData.actividad_2_ambito === 'vinculacion_emocional') payload.ambito_vinculacion = formData.actividad_2_destreza || payload.ambito_vinculacion;
+            if (formData.actividad_2_ambito === 'descubrimiento_natural') payload.ambito_descubrimiento = formData.actividad_2_destreza || payload.ambito_descubrimiento;
+            if (formData.actividad_2_ambito === 'manifestacion_lenguaje') payload.ambito_expresion = formData.actividad_2_destreza || payload.ambito_expresion;
+            if (formData.actividad_2_ambito === 'exploracion_corporal') payload.ambito_exploracion = formData.actividad_2_destreza || payload.ambito_exploracion;
+
             if (editingId) {
-                await planningService.update(editingId, formData);
+                await planningService.update(editingId, payload);
                 toast({ title: "Actualizado", description: "Planificación actualizada exitosamente" });
             } else {
-                await planningService.create(formData);
+                await planningService.create(payload);
                 toast({ title: "Creado", description: "Planificación creada exitosamente" });
             }
             setIsDialogOpen(false);
@@ -359,60 +451,129 @@ export default function PlanificacionesPage() {
                             </div>
                         </div>
 
-                        {/* Row 3: Tema, Actividad */}
+                        {/* Row 3: Tema Integrador */}
                         <div className="space-y-1.5">
-                            <Label>Tema Integrador</Label>
+                            <Label className="font-semibold text-sm">Tema Integrador de la Semana *</Label>
                             <Input value={formData.tema_integrador}
                                 onChange={(e) => setFormData({ ...formData, tema_integrador: e.target.value })}
-                                placeholder="Ej: Mi Familia, Los Animales..." />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label>Nombre de la Actividad *</Label>
-                            <Input value={formData.nombre_actividad}
-                                onChange={(e) => setFormData({ ...formData, nombre_actividad: e.target.value })}
-                                placeholder="Ej: Descubriendo los colores" />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label>Objetivo de Aprendizaje</Label>
-                            <Textarea rows={2} value={formData.objetivo}
-                                onChange={(e) => setFormData({ ...formData, objetivo: e.target.value })}
-                                placeholder="Ej: Identificar colores primarios mediante el juego" />
+                                placeholder="Ej: Conociendo los animales, Mi Familia, Descubriendo los colores..." />
                         </div>
 
-                        {/* Ámbitos */}
-                        <div className="border rounded-lg p-4 space-y-3">
-                            <h4 className="text-sm font-semibold flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-primary" />
-                                Ámbitos de Desarrollo
-                            </h4>
+                        {/* ACTIVIDAD 1 / PRIMERA JORNADA */}
+                        <div className="border border-sky-300 rounded-lg p-4 space-y-3 bg-sky-50/40">
+                            <div className="flex items-center justify-between border-b border-sky-200 pb-2">
+                                <h4 className="text-sm font-bold text-sky-900 flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-sky-600" />
+                                    Actividad 1 · Primera Jornada / Mañana
+                                </h4>
+                                <Badge variant="secondary" className="bg-sky-100 text-sky-800 text-[10px]">
+                                    Juego Intencionado
+                                </Badge>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">Nombre de la Actividad 1 *</Label>
+                                <Input value={formData.actividad_1_nombre}
+                                    onChange={(e) => setFormData({ ...formData, actividad_1_nombre: e.target.value, nombre_actividad: e.target.value })}
+                                    placeholder="Ej: Reconozco los animales y los nombro" />
+                            </div>
+
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs">Vinculación Emocional</Label>
-                                    <Textarea rows={2} value={formData.ambito_vinculacion}
-                                        onChange={(e) => setFormData({ ...formData, ambito_vinculacion: e.target.value })} />
+                                    <Label className="text-xs font-semibold">Ámbito a Trabajar</Label>
+                                    <Select value={formData.actividad_1_ambito}
+                                        onValueChange={(v) => setFormData({ ...formData, actividad_1_ambito: v })}>
+                                        <SelectTrigger><SelectValue placeholder="Seleccione ámbito..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {AMBITOS_OPTIONS.map((a) => (
+                                                <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs">Descubrimiento Natural</Label>
-                                    <Textarea rows={2} value={formData.ambito_descubrimiento}
-                                        onChange={(e) => setFormData({ ...formData, ambito_descubrimiento: e.target.value })} />
+                                    <Label className="text-xs font-semibold">Indicador de Evaluación (Actividad 1)</Label>
+                                    <Input value={formData.actividad_1_indicador}
+                                        onChange={(e) => setFormData({ ...formData, actividad_1_indicador: e.target.value })}
+                                        placeholder="Ej: Cumple consignas sencillas, imita sonidos..." />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">Objetivo de Aprendizaje (Actividad 1)</Label>
+                                <Textarea rows={2} value={formData.actividad_1_objetivo}
+                                    onChange={(e) => setFormData({ ...formData, actividad_1_objetivo: e.target.value })}
+                                    placeholder="Ej: Incrementar su capacidad de relacionarse positivamente con otras personas..." />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">Descripción de la Destreza / Desarrollo del Juego</Label>
+                                <Textarea rows={2} value={formData.actividad_1_destreza}
+                                    onChange={(e) => setFormData({ ...formData, actividad_1_destreza: e.target.value })}
+                                    placeholder="Inicio y exploración: Saludo con canción. Demostración y desarrollo: Espacios con animales..." />
+                            </div>
+                        </div>
+
+                        {/* ACTIVIDAD 2 / SEGUNDA JORNADA */}
+                        <div className="border border-emerald-300 rounded-lg p-4 space-y-3 bg-emerald-50/40">
+                            <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                                <h4 className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                                    Actividad 2 · Segunda Jornada / Tarde
+                                </h4>
+                                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 text-[10px]">
+                                    Juego Libre / Lenguaje
+                                </Badge>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">Nombre de la Actividad 2</Label>
+                                <Input value={formData.actividad_2_nombre}
+                                    onChange={(e) => setFormData({ ...formData, actividad_2_nombre: e.target.value })}
+                                    placeholder="Ej: Juego de lenguaje con títeres y cuentos" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-semibold">Ámbito a Trabajar</Label>
+                                    <Select value={formData.actividad_2_ambito}
+                                        onValueChange={(v) => setFormData({ ...formData, actividad_2_ambito: v })}>
+                                        <SelectTrigger><SelectValue placeholder="Seleccione ámbito..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {AMBITOS_OPTIONS.map((a) => (
+                                                <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs">Expresión/Lenguaje</Label>
-                                    <Textarea rows={2} value={formData.ambito_expresion}
-                                        onChange={(e) => setFormData({ ...formData, ambito_expresion: e.target.value })} />
+                                    <Label className="text-xs font-semibold">Indicador de Evaluación (Actividad 2)</Label>
+                                    <Input value={formData.actividad_2_indicador}
+                                        onChange={(e) => setFormData({ ...formData, actividad_2_indicador: e.target.value })}
+                                        placeholder="Ej: Demuestra interés por imágenes y nombra animales..." />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs">Exploración Corporal</Label>
-                                    <Textarea rows={2} value={formData.ambito_exploracion}
-                                        onChange={(e) => setFormData({ ...formData, ambito_exploracion: e.target.value })} />
-                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">Objetivo de Aprendizaje (Actividad 2)</Label>
+                                <Textarea rows={2} value={formData.actividad_2_objetivo}
+                                    onChange={(e) => setFormData({ ...formData, actividad_2_objetivo: e.target.value })}
+                                    placeholder="Ej: Disfrutar de las imágenes y gráficos como medio de expresión..." />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold">Descripción de la Destreza / Desarrollo del Juego</Label>
+                                <Textarea rows={2} value={formData.actividad_2_destreza}
+                                    onChange={(e) => setFormData({ ...formData, actividad_2_destreza: e.target.value })}
+                                    placeholder="Demostrar interés por las imágenes de cuentos y títeres. Rincón de lectura..." />
                             </div>
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label>Observaciones</Label>
+                            <Label className="text-xs font-semibold">Observaciones Generales</Label>
                             <Textarea rows={2} value={formData.observaciones}
-                                onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })} />
+                                onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
+                                placeholder="Notas adicionales sobre la jornada, adaptaciones o recursos especiales..." />
                         </div>
                     </div>
 

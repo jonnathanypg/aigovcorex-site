@@ -136,6 +136,7 @@ class MonthlyReportService:
         # 4. Casos riesgo: intervenciones + familias con riesgos sociales
         interventions = []
         risk_cases = 0
+        detalle_riesgo = []
         if center_id:
             interventions = FamilyIntervention.query.filter(
                 FamilyIntervention.tenant_id == center_id,
@@ -144,10 +145,24 @@ class MonthlyReportService:
             ).all()
             risk_families = Family.query.filter(
                 Family.tenant_id == center_id).all()
-            risk_cases = sum(
-                1 for f in risk_families
-                if f.social_risks and isinstance(f.social_risks, list) and len(f.social_risks) > 0
-            ) + sum(1 for i in interventions if (i.reason or '').strip())
+            
+            # Recolectar detalle transparente de cada caso de riesgo
+            for f in risk_families:
+                if f.social_risks and isinstance(f.social_risks, list) and len(f.social_risks) > 0:
+                    risk_cases += 1
+                    detalle_riesgo.append({
+                        'origen': 'Riesgo Social Familiar',
+                        'referencia': f"Familia {getattr(f, 'address', '') or f'ID #{f.id}'}",
+                        'motivo': ", ".join(str(r) for r in f.social_risks)
+                    })
+            for i in interventions:
+                if (i.reason or '').strip():
+                    risk_cases += 1
+                    detalle_riesgo.append({
+                        'origen': 'Intervención Familiar',
+                        'referencia': f"Fecha {i.date.strftime('%Y-%m-%d') if hasattr(i.date, 'strftime') else i.date}",
+                        'motivo': i.reason.strip()
+                    })
 
         # 5. Hitos IDII + salud + nutrición del periodo (agregados para conclusiones)
         milestones = Milestone.query.filter(
@@ -205,6 +220,7 @@ class MonthlyReportService:
                            'presentes': n_present,
                            'tasa': att_rate},
             'casos_riesgo': risk_cases,
+            'detalle_casos_riesgo': detalle_riesgo,
             'intervenciones': [i.to_dict() for i in interventions],
             'capacitaciones_talleres': [],  # carga manual/operativa futura
             'hitos_por_nivel': by_level,
@@ -273,6 +289,7 @@ class MonthlyReportService:
                 'planificaciones': p.get('n_planificaciones', 0),
                 'tasa_asistencia': (p.get('asistencia') or {}).get('tasa', 0),
                 'casos_riesgo': p.get('casos_riesgo', 0),
+                'detalle_casos_riesgo': p.get('detalle_casos_riesgo', []),
             },
             'conclusions_auto': report.conclusions_auto or '',
             'educator_notes': report.educator_notes or '',

@@ -131,6 +131,28 @@ export default function InformeActividadesPrintPage({
           </div>
         </div>
 
+        {/* Desglose explicativo de Casos de Riesgo (Origen de los datos) */}
+        {((pv.resumen?.detalle_casos_riesgo && pv.resumen.detalle_casos_riesgo.length > 0) || (pv.resumen?.casos_riesgo > 0)) && (
+          <div className="mt-2.5 p-2 bg-amber-50/70 border border-amber-300 text-[10px]">
+            <p className="font-bold text-amber-900 uppercase flex items-center gap-1.5 mb-1">
+              <span>⚠️ Trazabilidad y Origen de Casos de Riesgo ({pv.resumen?.casos_riesgo || 0})</span>
+            </p>
+            {pv.resumen?.detalle_casos_riesgo && pv.resumen.detalle_casos_riesgo.length > 0 ? (
+              <ul className="list-disc list-inside space-y-0.5 text-gray-800">
+                {pv.resumen.detalle_casos_riesgo.map((d: any, dIdx: number) => (
+                  <li key={dIdx}>
+                    <strong className="text-gray-900">{d.origen}</strong> ({d.referencia}): {d.motivo}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-700">
+                Corresponde a factores de riesgo social registrados en la ficha familiar y/o intervenciones activas del equipo de trabajo social en este período.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Niños a cargo - Formato Tabla Oficial */}
         {children.length > 0 && (
           <div className="mt-3 pt-2.5 border-t border-gray-400">
@@ -188,26 +210,35 @@ export default function InformeActividadesPrintPage({
                 <th className="border border-black p-1 text-left w-20">Grupo</th>
                 <th className="border border-black p-1 text-left">Tema / Ámbito / Actividad</th>
                 <th className="border border-black p-1 text-left">Objetivo de Aprendizaje</th>
+                <th className="border border-black p-1 text-left w-36">Indicador de Evaluación</th>
               </tr>
             </thead>
             <tbody>
-              {plannings.map((p: any, idx: number) => (
-                <tr key={p.id || idx} className="border-b border-gray-400">
-                  <td className="border border-black p-1 whitespace-nowrap">{p.planning_date}</td>
-                  <td className="border border-black p-1 text-center">#{p.week_number || "-"}</td>
-                  <td className="border border-black p-1">{p.age_group}</td>
-                  <td className="border border-black p-1">
-                    <strong>{p.tema_integrador || p.nombre_actividad || p.tema || p.title || "Sin título"}</strong>
-                    {(p.nombre_actividad && p.tema_integrador && p.nombre_actividad !== p.tema_integrador) && (
-                      <p className="text-[9px] text-gray-700 mt-0.5">{p.nombre_actividad}</p>
-                    )}
-                    {p.actividad_principal && (
-                      <p className="text-[9px] text-gray-700 mt-0.5 line-clamp-2">{p.actividad_principal}</p>
-                    )}
-                  </td>
-                  <td className="border border-black p-1">{p.objetivo || "-"}</td>
-                </tr>
-              ))}
+              {plannings.map((p: any, idx: number) => {
+                const indicadorText = (
+                  p.indicadores_logro && Array.isArray(p.indicadores_logro)
+                    ? p.indicadores_logro.join(", ")
+                    : (typeof p.indicadores_logro === 'string' ? p.indicadores_logro : (p.indicador || "-"))
+                );
+                return (
+                  <tr key={p.id || idx} className="border-b border-gray-400">
+                    <td className="border border-black p-1 whitespace-nowrap">{p.planning_date}</td>
+                    <td className="border border-black p-1 text-center">#{p.week_number || "-"}</td>
+                    <td className="border border-black p-1">{p.age_group}</td>
+                    <td className="border border-black p-1">
+                      <strong>{p.tema_integrador || p.nombre_actividad || p.tema || p.title || "Sin título"}</strong>
+                      {(p.nombre_actividad && p.tema_integrador && p.nombre_actividad !== p.tema_integrador) && (
+                        <p className="text-[9px] text-gray-700 mt-0.5">{p.nombre_actividad}</p>
+                      )}
+                      {p.actividad_principal && (
+                        <p className="text-[9px] text-gray-700 mt-0.5 line-clamp-2">{p.actividad_principal}</p>
+                      )}
+                    </td>
+                    <td className="border border-black p-1">{p.objetivo || "-"}</td>
+                    <td className="border border-black p-1 text-[9px] text-gray-800">{indicadorText}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

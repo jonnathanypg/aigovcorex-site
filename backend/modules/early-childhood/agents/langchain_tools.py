@@ -71,16 +71,36 @@ class SearchChildTool(BaseTool):
                 ).all()
                 logger.info(f"  Found {len(children)} active children")
                 
-                name_lower = name.lower()
+                # Búsqueda flexible tolerante a formato 'Apellidos, Nombres', acentos y tokens parciales
+                import unicodedata, re
+                def _norm(txt):
+                    if not txt:
+                        return ""
+                    nfkd = unicodedata.normalize('NFKD', str(txt))
+                    clean = "".join([c for c in nfkd if not unicodedata.combining(c)]).lower()
+                    return re.sub(r'[^a-z0-9\s]', ' ', clean).strip()
+
+                norm_search = _norm(name)
+                search_tokens = [t for t in norm_search.split() if len(t) >= 2 and t not in {'del', 'de', 'la', 'las', 'el', 'los', 'y', 'usuario', 'nino', 'nina'}]
                 matches = []
-                
+
                 for child in children:
-                    child_full = child.full_name.lower()
-                    child_first = child.first_name.lower()
-                    is_match = (name_lower in child_first or name_lower in child_full)
-                    
+                    c_first = _norm(child.first_name)
+                    c_last = _norm(child.last_name)
+                    c_full = _norm(child.full_name)
+                    c_inv = f"{c_last} {c_first}".strip()
+                    c_all = f"{c_first} {c_last} {c_full}"
+
+                    is_match = False
+                    if norm_search and (norm_search in c_full or norm_search in c_inv or norm_search in c_first or norm_search in c_last):
+                        is_match = True
+                    elif search_tokens:
+                        score = sum(1 for tok in search_tokens if tok in c_all)
+                        if score >= max(1, len(search_tokens) // 2):
+                            is_match = True
+
                     if is_match:
-                        logger.info(f"  ✅ MATCH: '{name_lower}' in '{child_full}'")
+                        logger.info(f"  ✅ MATCH: '{name}' matches child ID={child.id} ('{child.full_name}')")
                         matches.append({
                             'id': child.id,
                             'name': child.full_name,
@@ -302,20 +322,33 @@ class GetChildSummaryTool(BaseTool):
         recent_health = HealthRecord.query.filter_by(child_id=child_id).order_by(
             HealthRecord.record_date.desc()
         ).limit(5).all()
-        
+
+        peso_base = float(child.birth_weight) if getattr(child, 'birth_weight', None) else None
+        talla_base = float(child.birth_height) if getattr(child, 'birth_height', None) else None
+        health_controles = [
+            {'date': str(h.record_date), 'type': h.record_type, 'weight': float(h.weight) if h.weight else None, 'height': float(h.height) if h.height else None}
+            for h in recent_health
+        ]
+        ultimo_control_crecimiento = next((c for c in health_controles if c.get('weight') or c.get('height')), None)
+
         return {
             'success': True,
             'child': {
+                'id': child.id,
                 'name': child.full_name,
                 'age': child.age_display,
-                'group': child.assigned_group
+                'group': child.assigned_group,
+                'peso_actual': ultimo_control_crecimiento['weight'] if ultimo_control_crecimiento and ultimo_control_crecimiento['weight'] else peso_base,
+                'talla_actual': ultimo_control_crecimiento['height'] if ultimo_control_crecimiento and ultimo_control_crecimiento['height'] else talla_base,
+                'peso_nacimiento': peso_base,
+                'talla_nacimiento': talla_base,
             },
             'attendance_count': len(recent_attendance),
             'nutrition_count': len(recent_nutrition),
             'health_count': len(recent_health),
             'recent_attendance': [{'date': str(a.date), 'status': a.status} for a in recent_attendance],
             'recent_nutrition': [{'date': str(n.date), 'meal': n.meal_type, 'consumption': n.consumption_level} for n in recent_nutrition],
-            'recent_health': [{'date': str(h.record_date), 'type': h.record_type} for h in recent_health]
+            'recent_health': health_controles
         }
 
 

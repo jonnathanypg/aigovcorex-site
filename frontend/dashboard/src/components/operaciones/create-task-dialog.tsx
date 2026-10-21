@@ -296,17 +296,6 @@ export function CreateTaskDialog({ children, taskToEdit, onSuccess, onClose }: C
                                 </SelectContent>
                             </Select>
                         </div>
-                                <SelectContent>
-                                    <SelectItem value="aulas">Aulas</SelectItem>
-                                    <SelectItem value="cocina">Cocina</SelectItem>
-                                    <SelectItem value="baños">Baños</SelectItem>
-                                    <SelectItem value="patio">Patio</SelectItem>
-                                    <SelectItem value="oficina">Oficina</SelectItem>
-                                    <SelectItem value="bodega">Bodega</SelectItem>
-                                    <SelectItem value="general">General</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="assignedTo">Asignado a</Label>

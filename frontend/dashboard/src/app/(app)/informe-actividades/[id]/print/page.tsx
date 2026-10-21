@@ -64,7 +64,7 @@ export default function InformeActividadesPrintPage({
   };
 
   return (
-    <div className="print-sheet bg-white text-black p-8 max-w-[210mm] mx-auto min-h-screen text-xs leading-normal">
+    <div className="print-sheet bg-white text-black p-8 print:p-0 max-w-[210mm] print:max-w-none mx-auto min-h-screen print:min-h-0 text-xs leading-normal">
       {/* Non-printed action bar */}
       <div className="print:hidden mb-6 flex items-center justify-between border-b pb-3">
         <Link href="/informe-actividades">

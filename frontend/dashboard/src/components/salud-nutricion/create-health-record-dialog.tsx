@@ -39,6 +39,27 @@ interface CreateHealthRecordDialogProps {
 
 type RecordType = 'crecimiento' | 'vacunacion' | 'incidente' | 'enfermedad' | 'brigada_medica';
 
+const VACCINE_CHECKLIST = [
+    { id: 'bcg', name: 'BCG (Recién nacido)' },
+    { id: 'hep_b', name: 'Hepatitis B (Recién nacido)' },
+    { id: 'penta_1', name: 'Pentavalente 1ra (2m)' },
+    { id: 'rota_1', name: 'Rotavirus 1ra (2m)' },
+    { id: 'neumo_1', name: 'Neumococo 1ra (2m)' },
+    { id: 'polio_1', name: 'Polio IPV 1ra (2m)' },
+    { id: 'penta_2', name: 'Pentavalente 2da (4m)' },
+    { id: 'rota_2', name: 'Rotavirus 2da (4m)' },
+    { id: 'neumo_2', name: 'Neumococo 2da (4m)' },
+    { id: 'polio_2', name: 'Polio IPV 2da (4m)' },
+    { id: 'penta_3', name: 'Pentavalente 3ra (6m)' },
+    { id: 'polio_3', name: 'Polio bOPV 3ra (6m)' },
+    { id: 'srp_1', name: 'SRP 1ra (12m)' },
+    { id: 'neumo_3', name: 'Neumococo 3ra (12m)' },
+    { id: 'varicela', name: 'Varicela (12m)' },
+    { id: 'fa', name: 'Fiebre Amarilla (15m)' },
+    { id: 'dpt_ref1', name: 'DPT Refuerzo 1 (18m)' },
+    { id: 'polio_ref1', name: 'Polio Refuerzo 1 (18m)' },
+];
+
 export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, open, onOpenChange }: CreateHealthRecordDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
 
@@ -364,6 +385,46 @@ export function CreateHealthRecordDialog({ children, onSuccess, recordIdToEdit, 
                                             onChange={(e) => setPendingVaccines(e.target.value)}
                                             required={vaccineScheme === 'incompleto'}
                                         />
+                                        
+                                        {/* Cartilla MIES Selección Rápida */}
+                                        <div className="pt-2">
+                                            <Label className="text-[11px] font-medium text-amber-950 mb-1.5 block">
+                                                Seleccionar de la Cartilla Oficial MIES para agregar a pendientes:
+                                            </Label>
+                                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1.5 bg-white/70 rounded border border-amber-200">
+                                                {VACCINE_CHECKLIST.map((vac) => {
+                                                    const isSelected = pendingVaccines.includes(vac.name);
+                                                    return (
+                                                        <button
+                                                            key={vac.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (isSelected) {
+                                                                    const updated = pendingVaccines
+                                                                        .split(', ')
+                                                                        .filter(v => v.trim() !== vac.name)
+                                                                        .join(', ');
+                                                                    setPendingVaccines(updated);
+                                                                } else {
+                                                                    const updated = pendingVaccines 
+                                                                        ? `${pendingVaccines}, ${vac.name}`
+                                                                        : vac.name;
+                                                                    setPendingVaccines(updated);
+                                                                }
+                                                            }}
+                                                            className={`text-[11px] px-2 py-0.5 rounded-full border transition-all ${
+                                                                isSelected 
+                                                                    ? 'bg-amber-600 text-white border-amber-700 font-medium' 
+                                                                    : 'bg-white text-muted-foreground border-gray-200 hover:border-amber-400'
+                                                            }`}
+                                                        >
+                                                            {isSelected ? '✓ ' : '+ '}{vac.name}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
                                         <p className="text-[11px] text-amber-800/80">
                                             Estas vacunas pendientes se registrarán en observaciones para seguimiento prioritario.
                                         </p>

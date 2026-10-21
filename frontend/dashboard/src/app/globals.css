@@ -455,6 +455,15 @@ textarea:focus {
 .print-sheet tr { page-break-inside: avoid; }
 .print-sheet .print-row-alt { background: #f3f4f6; }
 @media print {
+  html, body, .os-shell-root, main, #__next {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    position: static !important;
+    background: #fff !important;
+    animation: none !important;
+  }
+
   .os-module-rail, .os-subnav-panel, .os-bottom-nav, .app-header,
   .os-shell-root > div:first-child, header.app-header,
   #kindicore-chat-open-btn, audio { display: none !important; }
@@ -464,16 +473,22 @@ textarea:focus {
   [data-state="open"]:not(:has(.print-sheet)),
   [data-radix-popper-content-wrapper] { display: none !important; }
 
-  body { background: #fff !important; animation: none; overflow: visible !important; }
   body * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .print-sheet { box-shadow: none !important; margin: 0 auto !important; max-width: 100% !important; font-size: 11pt; }
+  .print-sheet { 
+    box-shadow: none !important; 
+    margin: 0 auto !important; 
+    max-width: 100% !important; 
+    font-size: 11pt;
+    min-height: auto !important;
+    height: auto !important;
+  }
   .print-only { display: block !important; }
   thead { display: table-header-group; }
-  table { page-break-inside: avoid; }
+  table { page-break-inside: auto; }
   tr { page-break-inside: avoid; }
   .print-row-alt { background: #f3f4f6 !important; }
-  @page { size: A4 portrait; margin: 0; }
+  @page { size: A4 portrait; margin: 12mm 10mm 15mm 10mm; }
   .print-landscape { page: landscape-sheet; }
-  @page landscape-sheet { size: A4 landscape; margin: 0; }
+  @page landscape-sheet { size: A4 landscape; margin: 10mm; }
 }
 

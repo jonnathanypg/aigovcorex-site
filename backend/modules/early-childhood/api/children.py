@@ -792,8 +792,22 @@ def update_child(child_id):
         if 'enrollment_date' in data and data['enrollment_date']:
              child.enrollment_date = datetime.strptime(data['enrollment_date'], '%Y-%m-%d').date()
 
-        # 2. Update Family Fields
+        # 2. Update or Create Family Fields
         family = child.family
+        if not family:
+            family = Family(
+                tenant_id=child.tenant_id,
+                address=data.get('family_address') or data.get('address'),
+                city=data.get('family_city') or data.get('city') or 'Guayaquil',
+                sector=data.get('family_sector') or data.get('sector'),
+                phone_primary=data.get('family_phone_primary') or data.get('phone_primary'),
+                emergency_contact_name=data.get('emergency_contact_name'),
+                emergency_contact_phone=data.get('emergency_contact_phone')
+            )
+            db.session.add(family)
+            db.session.flush()
+            child.family_id = family.id
+
         if family:
             family_fields = [
                 'city', 'province', 'sector', 'neighborhood',
@@ -809,6 +823,8 @@ def update_child(child_id):
             # Map 'family_address' to 'address'
             if 'family_address' in data:
                 family.address = data['family_address']
+            elif 'address' in data:
+                family.address = data['address']
             
             # Map prefixed fields (e.g. family_city -> city)
             for key, value in data.items():
@@ -819,13 +835,24 @@ def update_child(child_id):
                 elif key.startswith('family_') and key[7:] in family_fields:
                      setattr(family, key[7:], value)
 
-        # 3. Update Primary Representative (Simplification)
-        # If representatives array is passed, update the Primary one
+        # 3. Update or Create Primary Representative
+        # If representatives array is passed, or if flat rep_* fields exist in data
         representatives_data = data.get('representatives', [])
+        primary_data = None
         if representatives_data:
-            # Assume the first one is primary or find primary
             primary_data = next((r for r in representatives_data if r.get('is_primary')), representatives_data[0])
-            
+        elif data.get('rep_first_name') or data.get('rep_last_name'):
+            primary_data = {
+                'first_name': data.get('rep_first_name', ''),
+                'last_name': data.get('rep_last_name', ''),
+                'cedula': data.get('rep_cedula'),
+                'relationship': data.get('rep_relationship', 'madre'),
+                'phone': data.get('rep_phone'),
+                'email': data.get('rep_email'),
+                'is_primary': True
+            }
+
+        if primary_data and family:
             # Find existing primary rep
             rep = Representative.query.filter_by(family_id=family.id, is_primary=True).first()
             if not rep:
@@ -840,10 +867,29 @@ def update_child(child_id):
                 rep.email = primary_data.get('email', rep.email)
                 rep.occupation = primary_data.get('occupation', rep.occupation)
                 rep.workplace = primary_data.get('workplace', rep.workplace)
-                rep.relationship = primary_data.get('relationship', rep.relationship)
+                rel = (primary_data.get('relationship') or rep.relationship or 'madre').lower()
+                rel_map = {'mamá': 'madre', 'mama': 'madre', 'papá': 'padre', 'papa': 'padre', 'tía': 'tia', 'tío': 'tio'}
+                rep.relationship = rel_map.get(rel, rel)
                 rep.birth_place = primary_data.get('birth_place', rep.birth_place)
                 rep.birth_province = primary_data.get('birth_province', rep.birth_province)
                 rep.nationality = primary_data.get('nationality', rep.nationality)
+            else:
+                rel = (primary_data.get('relationship') or 'madre').lower()
+                rel_map = {'mamá': 'madre', 'mama': 'madre', 'papá': 'padre', 'papa': 'padre', 'tía': 'tia', 'tío': 'tio'}
+                new_rep = Representative(
+                    family_id=family.id,
+                    first_name=primary_data.get('first_name', ''),
+                    last_name=primary_data.get('last_name', ''),
+                    cedula=primary_data.get('cedula') if primary_data.get('cedula') else None,
+                    relationship=rel_map.get(rel, rel),
+                    phone=primary_data.get('phone'),
+                    email=primary_data.get('email'),
+                    occupation=primary_data.get('occupation'),
+                    workplace=primary_data.get('workplace'),
+                    nationality=primary_data.get('nationality', 'Ecuatoriana'),
+                    is_primary=True
+                )
+                db.session.add(new_rep)
 
         db.session.commit()
         

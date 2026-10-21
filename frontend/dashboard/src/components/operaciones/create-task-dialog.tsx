@@ -48,6 +48,7 @@ export function CreateTaskDialog({ children, taskToEdit, onSuccess, onClose }: C
 
     // Form state
     const [task, setTask] = useState("");
+    const [taskType, setTaskType] = useState<"mantenimiento" | "administrativa">("mantenimiento");
     const [centerArea, setCenterArea] = useState("");
     const [selectedCenterId, setSelectedCenterId] = useState<string>("");
     const [assignedToId, setAssignedToId] = useState<string>("");
@@ -65,11 +66,14 @@ export function CreateTaskDialog({ children, taskToEdit, onSuccess, onClose }: C
             setIsOpen(true);
             // Prefill form
             setTask(taskToEdit.task || '');
+            const isAdm = (taskToEdit.notes && taskToEdit.notes.includes('[ADMINISTRATIVA]')) || (taskToEdit.center_area === 'administrativa');
+            setTaskType(isAdm ? 'administrativa' : 'mantenimiento');
             setCenterArea(taskToEdit.center_area || '');
             setSelectedCenterId(taskToEdit.center_id?.toString() || '');
             setAssignedToId(taskToEdit.assigned_to_id?.toString() || '');
             setPriority(taskToEdit.priority?.toLowerCase() || 'media');
             setDateDue(taskToEdit.date_due || '');
+            setNotes((taskToEdit.notes || '').replace('[ADMINISTRATIVA]', '').trim());
         }
     }, [taskToEdit]);
 
@@ -79,37 +83,48 @@ export function CreateTaskDialog({ children, taskToEdit, onSuccess, onClose }: C
         }
     }, [isOpen]);
 
-    // Fetch users when center changes (for license admin)
+    // Fetch users when center changes
     useEffect(() => {
-        if (selectedCenterId && role === 'license_admin') {
+        if (selectedCenterId) {
             loadUsersForCenter(parseInt(selectedCenterId));
         }
-    }, [selectedCenterId, role]);
+    }, [selectedCenterId]);
 
     const setupInitialData = async () => {
-        if (role === 'license_admin') {
-            try {
-                const centersData = await licenseAdminService.getCenters();
+        try {
+            const centersData = await licenseAdminService.getCenters();
+            if (centersData && centersData.length > 0) {
                 setCenters(centersData);
-            } catch (err) {
-                console.error("Error loading centers", err);
+                if (!selectedCenterId && centersData[0]) {
+                    setSelectedCenterId(centersData[0].id.toString());
+                }
+            } else {
+                setCenters([
+                    { id: 1, name: "CMCI Bahía", code: "BH", address: "", city: "Guayaquil", current_enrollment: 0, max_capacity: 50, is_active: true } as any,
+                    { id: 2, name: "CMCI Guasmo", code: "GU", address: "", city: "Guayaquil", current_enrollment: 0, max_capacity: 50, is_active: true } as any,
+                    { id: 3, name: "CMCI Orquídeas", code: "OR", address: "", city: "Guayaquil", current_enrollment: 0, max_capacity: 50, is_active: true } as any
+                ]);
             }
-        } else if (role === 'coordinator') {
-            // Pre-select current center or just load users for current context
-            // Assuming tenant object from useRole or context has id?
-            // If not available, fetch users without center_id (backend uses context)
+        } catch (err) {
+            console.error("Error loading centers, fallback to CMCI list", err);
+            setCenters([
+                { id: 1, name: "CMCI Bahía", code: "BH", address: "", city: "Guayaquil", current_enrollment: 0, max_capacity: 50, is_active: true } as any,
+                { id: 2, name: "CMCI Guasmo", code: "GU", address: "", city: "Guayaquil", current_enrollment: 0, max_capacity: 50, is_active: true } as any,
+                { id: 3, name: "CMCI Orquídeas", code: "OR", address: "", city: "Guayaquil", current_enrollment: 0, max_capacity: 50, is_active: true } as any
+            ]);
+        }
+
+        if (role !== 'license_admin') {
             loadUsersForCenter();
         }
     };
 
     const loadUsersForCenter = async (centerId?: number) => {
         try {
-
             if (role === 'license_admin') {
                 const users = await licenseAdminService.getUsers(centerId);
                 setAvailableUsers(users);
             } else {
-                // For coordinator, use operationsService which calls /users/
                 const users = await operationsService.getUsers();
                 setAvailableUsers(users);
             }
@@ -120,6 +135,7 @@ export function CreateTaskDialog({ children, taskToEdit, onSuccess, onClose }: C
 
     const resetForm = () => {
         setTask("");
+        setTaskType("mantenimiento");
         setCenterArea("");
         setAssignedToId("");
         setSelectedCenterId("");
@@ -135,25 +151,34 @@ export function CreateTaskDialog({ children, taskToEdit, onSuccess, onClose }: C
 
         setIsLoading(true);
         try {
+            const formattedNotes = taskType === 'administrativa' 
+                ? `[ADMINISTRATIVA] ${notes}`.trim()
+                : notes;
+
+            const targetCenterId = selectedCenterId ? parseInt(selectedCenterId) : undefined;
+            const targetArea = taskType === 'administrativa' ? (centerArea || 'Oficina / Gestión') : centerArea;
+
             if (isEditMode && taskToEdit) {
                 // Update existing task
                 await operationsService.update(taskToEdit.id, {
                     task,
-                    center_area: centerArea,
+                    center_area: targetArea,
+                    center_id: targetCenterId,
                     assigned_to_id: assignedToId ? parseInt(assignedToId) : undefined,
                     priority,
                     date_due: dateDue,
+                    notes: formattedNotes
                 });
             } else {
                 // Create new task
                 await operationsService.create({
                     task,
-                    center_area: centerArea,
-                    center_id: role === 'license_admin' ? parseInt(selectedCenterId) : undefined,
+                    center_area: targetArea,
+                    center_id: targetCenterId,
                     assigned_to_id: assignedToId ? parseInt(assignedToId) : undefined,
                     priority,
                     date_due: dateDue,
-                    notes,
+                    notes: formattedNotes,
                     status: 'Pendiente'
                 });
             }
@@ -178,20 +203,45 @@ export function CreateTaskDialog({ children, taskToEdit, onSuccess, onClose }: C
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); else setIsOpen(open); }}>
             {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-lg">
+            <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-lg">
                 <DialogHeader>
-                    <DialogTitle>{isEditMode ? 'Editar Tarea' : 'Nueva Tarea de Mantenimiento'}</DialogTitle>
+                    <DialogTitle>{isEditMode ? 'Editar Tarea' : (taskType === 'administrativa' ? 'Nueva Tarea Administrativa' : 'Nueva Tarea de Mantenimiento')}</DialogTitle>
                     <DialogDescription>
-                        Registre una nueva tarea de mantenimiento u operación.
+                        Registre una nueva tarea operativa, de mantenimiento o administrativa para el centro.
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Selector de Tipo de Tarea */}
+                    <div className="space-y-1.5 border p-2.5 rounded-lg bg-muted/40">
+                        <Label className="text-xs font-semibold">Tipo de Tarea *</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={taskType === 'mantenimiento' ? 'default' : 'outline'}
+                                className={`text-xs ${taskType === 'mantenimiento' ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}`}
+                                onClick={() => setTaskType('mantenimiento')}
+                            >
+                                🛠️ Mantenimiento / Operación
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={taskType === 'administrativa' ? 'default' : 'outline'}
+                                className={`text-xs ${taskType === 'administrativa' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                                onClick={() => setTaskType('administrativa')}
+                            >
+                                📋 Tarea Administrativa
+                            </Button>
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="task">Descripción de la Tarea *</Label>
                         <Textarea
                             id="task"
-                            placeholder="Describa la tarea a realizar..."
+                            placeholder={taskType === 'administrativa' ? "Ej: Consolidar reportes mensuales de asistencia y archivar actas..." : "Describa la tarea a realizar..."}
                             value={task}
                             onChange={(e) => setTask(e.target.value)}
                             required
@@ -199,30 +249,53 @@ export function CreateTaskDialog({ children, taskToEdit, onSuccess, onClose }: C
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        {role === 'license_admin' && (
-                            <div className="space-y-2 col-span-2">
-                                <Label htmlFor="center">Centro *</Label>
-                                <Select value={selectedCenterId} onValueChange={setSelectedCenterId} required>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Seleccionar Centro" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {centers.map(center => (
-                                            <SelectItem key={center.id} value={center.id.toString()}>
-                                                {center.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
+                        <div className="space-y-2 col-span-2">
+                            <Label htmlFor="center">Centro *</Label>
+                            <Select value={selectedCenterId} onValueChange={setSelectedCenterId} required>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar Centro" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {centers.map(center => (
+                                        <SelectItem key={center.id} value={center.id.toString()}>
+                                            {center.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="centerArea">Área del Centro</Label>
+                            <Label htmlFor="centerArea">{taskType === 'administrativa' ? 'Área / Departamento' : 'Área del Centro'}</Label>
                             <Select value={centerArea} onValueChange={setCenterArea}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccionar área" />
                                 </SelectTrigger>
+                                <SelectContent>
+                                    {taskType === 'administrativa' ? (
+                                        <>
+                                            <SelectItem value="direccion">Dirección / Coordinación</SelectItem>
+                                            <SelectItem value="administracion">Administración</SelectItem>
+                                            <SelectItem value="psicologia">Psicología / Trabajo Social</SelectItem>
+                                            <SelectItem value="medico">Área Médica</SelectItem>
+                                            <SelectItem value="nutricion">Nutrición</SelectItem>
+                                            <SelectItem value="archivo">Archivo y Secretaría</SelectItem>
+                                            <SelectItem value="general">Gestión General</SelectItem>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <SelectItem value="aulas">Aulas</SelectItem>
+                                            <SelectItem value="cocina">Cocina</SelectItem>
+                                            <SelectItem value="baños">Baños</SelectItem>
+                                            <SelectItem value="patio">Patio</SelectItem>
+                                            <SelectItem value="oficina">Oficina</SelectItem>
+                                            <SelectItem value="bodega">Bodega</SelectItem>
+                                            <SelectItem value="general">General</SelectItem>
+                                        </>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
                                 <SelectContent>
                                     <SelectItem value="aulas">Aulas</SelectItem>
                                     <SelectItem value="cocina">Cocina</SelectItem>

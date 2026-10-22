@@ -195,12 +195,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 1
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:p-6 min-h-[297mm] print:min-h-[297mm] flex flex-col justify-between page-break-after break-after-page">
-            {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
+          <div className="relative p-8 print:px-6 print:py-3 min-h-[297mm] print:min-h-0 flex flex-col justify-between page-break-after break-after-page">
+            {/* Pie de membrete en el fondo detrás del contenido (Watermark sutil) */}
             {footerBannerUrl && (
               <div 
-                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-35 print:opacity-30 overflow-hidden flex items-end justify-center"
-                style={{ height: '55mm' }}
+                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-25 print:opacity-20 overflow-hidden flex items-end justify-center"
+                style={{ height: '42mm' }}
               >
                 <img
                   src={footerBannerUrl}
@@ -213,7 +213,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
             <div className="relative z-10">
               {/* Cabecera Gráfica de Membrete Oficial (Ancho total pegada al borde superior sin espaciado) */}
               {headerBannerUrl && (
-                <div className="-mx-8 -mt-8 print:-mx-8 print:-mt-8 mb-3 w-[calc(100%+4rem)]">
+                <div className="-mx-8 -mt-8 print:-mx-6 print:-mt-3 mb-2 w-[calc(100%+4rem)] print:w-[calc(100%+3rem)]">
                   <img
                     src={headerBannerUrl}
                     alt="Cabecera Membrete"
@@ -223,36 +223,36 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               )}
 
               {/* Encabezado Superior: Instituciones Cooperantes Dinámicas */}
-              <div className="border-b-2 border-black pb-1 mb-2">
+              <div className="border-b-2 border-black pb-1 mb-1.5">
                 {institutionsHeader && (
                   <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
                     {institutionsHeader}
                   </div>
                 )}
-                <div className="flex justify-between items-center text-[10px] text-slate-600 mt-1">
+                <div className="flex justify-between items-center text-[10px] text-slate-600 mt-0.5">
                   <span>Expediente {activeConfig.license_name} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
                   <span className="font-semibold">Página 1</span>
                 </div>
               </div>
 
               {/* Título Oficial del Proyecto y Documento */}
-              <div className="text-center my-3">
+              <div className="text-center my-2 print:my-1.5">
                 {projectName && (
                   <p className="text-[10px] font-bold uppercase tracking-tight text-slate-700 leading-snug">
                     {projectName}
                   </p>
                 )}
-                <h1 className="text-base font-extrabold uppercase tracking-wide text-slate-950 mt-1">
+                <h1 className="text-base font-extrabold uppercase tracking-wide text-slate-950 mt-0.5">
                   CONSTANCIA DE INSCRIPCIÓN Y VALORACIÓN INICIAL
                 </h1>
-                <p className="text-[10px] text-slate-600 mt-0.5">
+                <p className="text-[9.5px] text-slate-600 mt-0.5">
                   Documento para expediente {activeConfig.license_name} · Código de registro: <b>{id}</b> · Fecha de emisión: {todayStr}
                 </p>
               </div>
 
               {/* Metadatos de Convenio (solo si la licencia los tiene configurados) */}
               {hasConvenioData && (
-                <div className="border border-black p-2 mb-3 text-[10px] leading-snug space-y-0.5 bg-slate-50/50">
+                <div className="border border-black p-1.5 mb-2 text-[9.5px] leading-snug space-y-0.5 bg-slate-50/50">
                   {convenio && <p><b>Convenio:</b> {convenio}</p>}
                   {finalidad && <p><b>Finalidad:</b> {finalidad}</p>}
                   {poblacion && <p><b>Población:</b> {poblacion}</p>}
@@ -262,69 +262,69 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               )}
 
               {/* Párrafo Formal de Certificación */}
-              <div className="border-l-4 border-slate-900 bg-slate-50 p-2.5 mb-3 text-[10.5px] leading-relaxed text-slate-800">
+              <div className="border-l-4 border-slate-900 bg-slate-50 p-2 mb-2 text-[10px] leading-relaxed text-slate-800">
                 Por medio del presente se hace constar que el niño/a <b>{childFullNameUpper}</b>, con cédula de identidad N.° <b>{cell(c.cedula, "S/C")}</b>, se encuentra inscrito/a y en estado <b className="uppercase">{cell(c.status, "ACTIVO")}</b>{projectName ? <> en el <b>{projectName}</b></> : null}, asignado al centro <b>{cell(c.tenant_name || c.center_name, "Centro")}</b> desde el {cell(c.enrollment_date, "____________")}.
               </div>
 
               {/* 1. IDENTIFICACIÓN DEL NIÑO / NIÑA */}
-              <div className="mb-3">
-                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
+              <div className="mb-2">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   1. IDENTIFICACIÓN DEL NIÑO / NIÑA
                 </div>
-                <table className="w-full border-collapse border border-slate-300 text-[10.5px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nombres y apellidos</td>
-                      <td className="w-1/4 py-1 px-2 font-bold border-r border-slate-200">{cell(c.full_name)}</td>
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Cédula de identidad</td>
-                      <td className="w-1/4 py-1 px-2 font-mono font-medium">{cell(c.cedula, "S/C")}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nombres y apellidos</td>
+                      <td className="w-1/4 py-0.5 px-2 font-bold border-r border-slate-200">{cell(c.full_name)}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Cédula de identidad</td>
+                      <td className="w-1/4 py-0.5 px-2 font-mono font-medium">{cell(c.cedula, "S/C")}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de nacimiento</td>
-                      <td className="py-1 px-2 border-r border-slate-200">{cell(c.birth_date)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Edad actual</td>
-                      <td className="py-1 px-2 font-semibold">{cell(c.age_display)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de nacimiento</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(c.birth_date)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Edad actual</td>
+                      <td className="py-0.5 px-2 font-semibold">{cell(c.age_display)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Género</td>
-                      <td className="py-1 px-2 capitalize border-r border-slate-200">{cell(c.gender)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tipo de sangre</td>
-                      <td className="py-1 px-2">{cell(c.blood_type)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Género</td>
+                      <td className="py-0.5 px-2 capitalize border-r border-slate-200">{cell(c.gender)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tipo de sangre</td>
+                      <td className="py-0.5 px-2">{cell(c.blood_type)}</td>
                     </tr>
                     <tr>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de ingreso</td>
-                      <td className="py-1 px-2 border-r border-slate-200">{cell(c.enrollment_date)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Estado en programa</td>
-                      <td className="py-1 px-2 uppercase font-bold text-slate-900">{cell(c.status, "ACTIVO")}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de ingreso</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(c.enrollment_date)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Estado en programa</td>
+                      <td className="py-0.5 px-2 uppercase font-bold text-slate-900">{cell(c.status, "ACTIVO")}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
               {/* 2. ASIGNACIÓN EN EL CENTRO */}
-              <div className="mb-3">
-                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
+              <div className="mb-2">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   2. ASIGNACIÓN EN EL CENTRO
                 </div>
-                <table className="w-full border-collapse border border-slate-300 text-[10.5px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Centro</td>
-                      <td className="w-1/4 py-1 px-2 font-semibold border-r border-slate-200">{cell(c.tenant_name || c.center_name)}</td>
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Grupo asignado</td>
-                      <td className="w-1/4 py-1 px-2 font-medium">{cell(effectiveAssignedGroup)}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Centro</td>
+                      <td className="w-1/4 py-0.5 px-2 font-semibold border-r border-slate-200">{cell(c.tenant_name || c.center_name)}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Grupo asignado</td>
+                      <td className="w-1/4 py-0.5 px-2 font-medium">{cell(effectiveAssignedGroup)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Educadora asignada</td>
-                      <td className="py-1 px-2 font-medium border-r border-slate-200">{cell(c.educator_name || c.assigned_educator_name)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">C.I. educadora</td>
-                      <td className="py-1 px-2 font-mono">{cell(c.educator_cedula, c.educator_name || c.assigned_educator_name ? "Registrada en legajo" : "____________")}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Educadora asignada</td>
+                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{cell(c.educator_name || c.assigned_educator_name)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">C.I. educadora</td>
+                      <td className="py-0.5 px-2 font-mono">{cell(c.educator_cedula, c.educator_name || c.assigned_educator_name ? "Registrada en legajo" : "____________")}</td>
                     </tr>
                     <tr>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Coordinadora del centro</td>
-                      <td className="py-1 px-2 font-medium border-r border-slate-200">{cell(c.coordinator_name)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Jornada</td>
-                      <td className="py-1 px-2">
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Coordinadora del centro</td>
+                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{cell(c.coordinator_name)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Jornada</td>
+                      <td className="py-0.5 px-2">
                         <span className="inline-flex items-center gap-3">
                           <span>☐ Matutina</span>
                           <span>☑ Completa</span>
@@ -336,27 +336,27 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 3. DATOS FAMILIARES Y REPRESENTANTE LEGAL */}
-              <div className="mb-3">
-                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
+              <div className="mb-2">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   3. DATOS FAMILIARES Y REPRESENTANTE LEGAL
                 </div>
-                <table className="w-full border-collapse border border-slate-300 text-[10.5px]">
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Domicilio</td>
-                      <td colSpan={3} className="py-1 px-2">{cell(f.address)}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Domicilio</td>
+                      <td colSpan={3} className="py-0.5 px-2">{cell(f.address)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Sector / Parroquia</td>
-                      <td className="py-1 px-2 border-r border-slate-200">{cell(f.sector || f.neighborhood || f.city)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Representante</td>
-                      <td className="py-1 px-2 font-semibold">{cell(primaryRep.full_name || `${primaryRep.first_name || ""} ${primaryRep.last_name || ""}`.trim())}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Sector / Parroquia</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(f.sector || f.neighborhood || f.city)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Representante</td>
+                      <td className="py-0.5 px-2 font-semibold">{cell(primaryRep.full_name || `${primaryRep.first_name || ""} ${primaryRep.last_name || ""}`.trim())}</td>
                     </tr>
                     <tr>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Parentesco</td>
-                      <td className="py-1 px-2 capitalize border-r border-slate-200">{cell(primaryRep.relationship, "Madre")}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Teléfono / Emergencia</td>
-                      <td className="py-1 px-2 font-mono">{cell(primaryRep.phone || f.phone_primary || f.emergency_contact_phone)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Parentesco</td>
+                      <td className="py-0.5 px-2 capitalize border-r border-slate-200">{cell(primaryRep.relationship, "Madre")}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Teléfono / Emergencia</td>
+                      <td className="py-0.5 px-2 font-mono">{cell(primaryRep.phone || f.phone_primary || f.emergency_contact_phone)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -364,51 +364,51 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* 4. VALORACIÓN INICIAL — NUTRICIÓN Y CRECIMIENTO */}
               <div className="mb-2">
-                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   4. VALORACIÓN INICIAL — NUTRICIÓN Y CRECIMIENTO
                 </div>
-                <table className="w-full border-collapse border border-slate-300 text-[10px]">
+                <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de valoración</td>
-                      <td className="py-1 px-2 border-r border-slate-200">{cell(lastHealth?.record_date)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Responsable</td>
-                      <td className="py-1 px-2">{cell(lastHealth?.registered_by || lastHealth?.medical_professional || c.educator_name)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de valoración</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(lastHealth?.record_date)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Responsable</td>
+                      <td className="py-0.5 px-2">{cell(lastHealth?.registered_by || lastHealth?.medical_professional || c.educator_name)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso (kg)</td>
-                      <td className="py-1 px-2 font-mono border-r border-slate-200">{pesoKg ? `${pesoKg} kg` : "____________"}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla / Longitud (cm)</td>
-                      <td className="py-1 px-2 font-mono">{tallaCm ? `${tallaCm} cm` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso (kg)</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{pesoKg ? `${pesoKg} kg` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla / Longitud (cm)</td>
+                      <td className="py-0.5 px-2 font-mono">{tallaCm ? `${tallaCm} cm` : "____________"}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Perímetro cefálico (cm)</td>
-                      <td className="py-1 px-2 font-mono border-r border-slate-200">{perimetroCefalico ? `${perimetroCefalico} cm` : "____________"}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">IMC (kg/m²)</td>
-                      <td className="py-1 px-2 font-mono">{imc ? `${imc} kg/m²` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Perímetro cefálico (cm)</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{perimetroCefalico ? `${perimetroCefalico} cm` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">IMC (kg/m²)</td>
+                      <td className="py-0.5 px-2 font-mono">{imc ? `${imc} kg/m²` : "____________"}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso al nacer (g)</td>
-                      <td className="py-1 px-2 font-mono border-r border-slate-200">{c.birth_weight ? `${c.birth_weight} kg` : "____________"}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla al nacer (cm)</td>
-                      <td className="py-1 px-2 font-mono">{c.birth_height ? `${c.birth_height} cm` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso al nacer (g)</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{c.birth_weight ? `${c.birth_weight} kg` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla al nacer (cm)</td>
+                      <td className="py-0.5 px-2 font-mono">{c.birth_height ? `${c.birth_height} cm` : "____________"}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso / Edad (DE)</td>
-                      <td className="py-1 px-2 font-mono border-r border-slate-200">{formatDE(zWeight)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla / Edad (DE)</td>
-                      <td className="py-1 px-2 font-mono">{formatDE(zHeight)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso / Edad (DE)</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{formatDE(zWeight)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla / Edad (DE)</td>
+                      <td className="py-0.5 px-2 font-mono">{formatDE(zHeight)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso / Talla (DE)</td>
-                      <td className="py-1 px-2 font-mono border-r border-slate-200">{formatDE(zWeight)}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Hemoglobina (g/dL)</td>
-                      <td className="py-1 px-2 font-mono">____________</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso / Talla (DE)</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{formatDE(zWeight)}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Hemoglobina (g/dL)</td>
+                      <td className="py-0.5 px-2 font-mono">____________</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Diagnóstico nutricional</td>
-                      <td colSpan={3} className="py-1 px-2">
-                        <span className="inline-flex flex-wrap gap-x-4 gap-y-1">
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Diagnóstico nutricional</td>
+                      <td colSpan={3} className="py-0.5 px-2">
+                        <span className="inline-flex flex-wrap gap-x-4 gap-y-0.5">
                           <span>{zWeight !== undefined && zWeight !== null && zWeight >= -2 && zWeight <= 2 ? "☑" : "☐"} Normal</span>
                           <span>{zWeight !== undefined && zWeight !== null && zWeight < -2 ? "☑" : "☐"} Desnutrición aguda</span>
                           <span>{zHeight !== undefined && zHeight !== null && zHeight < -2 ? "☑" : "☐"} Desnutrición crónica</span>
@@ -418,8 +418,8 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Anemia</td>
-                      <td colSpan={3} className="py-1 px-2">
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Anemia</td>
+                      <td colSpan={3} className="py-0.5 px-2">
                         <span className="inline-flex gap-4">
                           <span>☑ No</span>
                           <span>☐ Leve</span>
@@ -434,7 +434,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
             </div>
 
             {/* Pie de página 1 */}
-            <div className="pt-2 border-t border-slate-200 text-center text-[9px] text-slate-500">
+            <div className="pt-1.5 border-t border-slate-200 text-center text-[9px] text-slate-500">
               Expediente físico confidencial · Constancia Oficial de Inscripción · Continúa en Página 2
             </div>
           </div>
@@ -442,25 +442,25 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 2
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:p-6 min-h-[297mm] print:min-h-[297mm] flex flex-col justify-between border-t print:border-none">
-            {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
+          <div className="relative p-8 print:px-6 print:py-3 min-h-[297mm] print:min-h-0 flex flex-col justify-between border-t print:border-none page-break-after break-after-page">
+            {/* Pie de membrete en el fondo detrás del contenido (Watermark sutil) */}
             {footerBannerUrl && (
               <div 
-                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-80 overflow-hidden flex items-end justify-center"
-                style={{ height: '65mm' }}
+                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-25 print:opacity-20 overflow-hidden flex items-end justify-center"
+                style={{ height: '42mm' }}
               >
                 <img
                   src={footerBannerUrl}
                   alt="Pie de membrete"
-                  className="w-full h-auto object-contain object-bottom opacity-95"
+                  className="w-full h-auto object-contain object-bottom"
                 />
               </div>
             )}
 
-            <div className="relative z-10">
+            <div className="relative z-10 pb-8 print:pb-6">
               {/* Cabecera Gráfica de Membrete Oficial (Ancho total pegada al borde superior sin espaciado) */}
               {headerBannerUrl && (
-                <div className="-mx-8 -mt-8 print:-mx-8 print:-mt-8 mb-3 w-[calc(100%+4rem)]">
+                <div className="-mx-8 -mt-8 print:-mx-6 print:-mt-3 mb-2 w-[calc(100%+4rem)] print:w-[calc(100%+3rem)]">
                   <img
                     src={headerBannerUrl}
                     alt="Cabecera Membrete"
@@ -470,35 +470,35 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               )}
 
               {/* Encabezado Superior Página 2 */}
-              <div className="border-b-2 border-black pb-1 mb-3">
+              <div className="border-b-2 border-black pb-1 mb-2">
                 {institutionsHeader && (
                   <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
                     {institutionsHeader}
                   </div>
                 )}
-                <div className="flex justify-between items-center text-[10px] text-slate-600 mt-1">
+                <div className="flex justify-between items-center text-[10px] text-slate-600 mt-0.5">
                   <span>Expediente {activeConfig.license_name} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
                   <span className="font-semibold">Página 2</span>
                 </div>
               </div>
 
               {/* 5. VALORACIÓN INICIAL — SALUD */}
-              <div className="mb-3">
-                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
+              <div className="mb-2">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   5. VALORACIÓN INICIAL — SALUD
                 </div>
-                <table className="w-full border-collapse border border-slate-300 text-[10px]">
+                <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Esquema de vacunación</td>
-                      <td className="w-1/4 py-1 px-2 border-r border-slate-200">
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Esquema de vacunación</td>
+                      <td className="w-1/4 py-0.5 px-2 border-r border-slate-200">
                         <span className="inline-flex gap-3">
                           <span>☑ Completo</span>
                           <span>☐ Incompleto</span>
                         </span>
                       </td>
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Control niño sano</td>
-                      <td className="w-1/4 py-1 px-2">
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Control niño sano</td>
+                      <td className="w-1/4 py-0.5 px-2">
                         <span className="inline-flex gap-3">
                           <span>☑ Al día</span>
                           <span>☐ Pendiente</span>
@@ -506,46 +506,46 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                       </td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Alergias</td>
-                      <td className="py-1 px-2 border-r border-slate-200">{cell(c.allergies, "Ninguna registrada")}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Condiciones médicas</td>
-                      <td className="py-1 px-2">{cell(c.medical_conditions, "Ninguna registrada")}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Alergias</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(c.allergies, "Ninguna registrada")}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Condiciones médicas</td>
+                      <td className="py-0.5 px-2">{cell(c.medical_conditions, "Ninguna registrada")}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Discapacidad registrada</td>
-                      <td className="py-1 px-2 border-r border-slate-200 font-semibold">{f.has_disability ? `SÍ (${cell(f.disability_detail)})` : "NO"}</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Necesidades especiales</td>
-                      <td className="py-1 px-2">{cell(c.special_needs, "Ninguna registrada")}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Discapacidad registrada</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200 font-semibold">{f.has_disability ? `SÍ (${cell(f.disability_detail)})` : "NO"}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Necesidades especiales</td>
+                      <td className="py-0.5 px-2">{cell(c.special_needs, "Ninguna registrada")}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Desparasitación</td>
-                      <td className="py-1 px-2 border-r border-slate-200">☐ Sí ☐ No Fecha: ______</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Suplementación (Fe / Vit. A)</td>
-                      <td className="py-1 px-2">☐ Sí ☐ No</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Desparasitación</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">☐ Sí ☐ No Fecha: ______</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Suplementación (Fe / Vit. A)</td>
+                      <td className="py-0.5 px-2">☐ Sí ☐ No</td>
                     </tr>
                     <tr>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Establecimiento de salud</td>
-                      <td className="py-1 px-2 border-r border-slate-200">____________</td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Observaciones</td>
-                      <td className="py-1 px-2">____________</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Establecimiento de salud</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">____________</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Observaciones</td>
+                      <td className="py-0.5 px-2">____________</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
               {/* 6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII) */}
-              <div className="mb-3">
-                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
+              <div className="mb-2">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII)
                 </div>
-                <table className="w-full border-collapse border border-slate-300 text-[10px]">
+                <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
                   <thead>
                     <tr className="border-b border-slate-300 bg-slate-100 font-bold text-center">
-                      <th className="text-left py-1 px-2 w-2/5 border-r border-slate-300">Ámbito de desarrollo</th>
-                      <th className="py-1 px-2 w-[15%] border-r border-slate-300">Adquirido (A)</th>
-                      <th className="py-1 px-2 w-[15%] border-r border-slate-300">En proceso (EP)</th>
-                      <th className="py-1 px-2 w-[15%] border-r border-slate-300">Inicio (I)</th>
-                      <th className="text-left py-1 px-2 w-[15%]">Observaciones</th>
+                      <th className="text-left py-0.5 px-2 w-2/5 border-r border-slate-300">Ámbito de desarrollo</th>
+                      <th className="py-0.5 px-2 w-[15%] border-r border-slate-300">Adquirido (A)</th>
+                      <th className="py-0.5 px-2 w-[15%] border-r border-slate-300">En proceso (EP)</th>
+                      <th className="py-0.5 px-2 w-[15%] border-r border-slate-300">Inicio (I)</th>
+                      <th className="text-left py-0.5 px-2 w-[15%]">Observaciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -553,59 +553,61 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                       const lvl = getDomainLevel(dom.prefix);
                       return (
                         <tr key={dom.key} className="border-b border-slate-200 text-center">
-                          <td className="text-left py-1 px-2 font-medium bg-slate-50 border-r border-slate-200">{dom.label}</td>
-                          <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "adquirido" || lvl === "consolidado" ? "☑" : "☐"}</td>
-                          <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "en_proceso" ? "☑" : "☐"}</td>
-                          <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "no_iniciado" ? "☑" : "☐"}</td>
-                          <td className="text-left py-1 px-2 text-[9px] text-slate-600 leading-tight">{domainObservations(dom.prefix) || "—"}</td>
+                          <td className="text-left py-0.5 px-2 font-medium bg-slate-50 border-r border-slate-200">{dom.label}</td>
+                          <td className="py-0.5 px-2 font-bold border-r border-slate-200">{lvl === "adquirido" || lvl === "consolidado" ? "☑" : "☐"}</td>
+                          <td className="py-0.5 px-2 font-bold border-r border-slate-200">{lvl === "en_proceso" ? "☑" : "☐"}</td>
+                          <td className="py-0.5 px-2 font-bold border-r border-slate-200">{lvl === "no_iniciado" ? "☑" : "☐"}</td>
+                          <td className="text-left py-0.5 px-2 text-[8.5px] text-slate-600 leading-tight">
+                            <span className="line-clamp-1">{domainObservations(dom.prefix) || "Logro alcanzado"}</span>
+                          </td>
                         </tr>
                       );
                     })}
                     <tr className="bg-slate-50">
-                      <td className="py-1.5 px-2 font-semibold text-left border-r border-slate-200">Resultado global IDII</td>
-                      <td colSpan={2} className="py-1.5 px-2 text-left border-r border-slate-200">
+                      <td className="py-1 px-2 font-semibold text-left border-r border-slate-200">Resultado global IDII</td>
+                      <td colSpan={2} className="py-1 px-2 text-left border-r border-slate-200">
                         <span className="inline-flex gap-3">
                           <span>☑ Acorde a la edad</span>
                           <span>☐ En riesgo</span>
                           <span>☐ Requiere derivación</span>
                         </span>
                       </td>
-                      <td className="py-1.5 px-2 font-semibold border-r border-slate-200">Fecha de aplicación</td>
-                      <td className="py-1.5 px-2 font-mono text-left">{cell(milestones[0]?.record_date)}</td>
+                      <td className="py-1 px-2 font-semibold border-r border-slate-200">Fecha de aplicación</td>
+                      <td className="py-1 px-2 font-mono text-left">{cell(milestones[0]?.record_date)}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
               {/* 7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE */}
-              <div className="mb-3">
-                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[10px] tracking-wide">
+              <div className="mb-2">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE
                 </div>
-                <table className="w-full border-collapse border border-slate-300 text-[10px]">
+                <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
                   <tbody>
                     <tr className="border-b border-slate-300">
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Completitud de expediente</td>
-                      <td className="w-1/4 py-1 px-2 border-r border-slate-200 font-semibold">
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Completitud de expediente</td>
+                      <td className="w-1/4 py-0.5 px-2 border-r border-slate-200 font-semibold">
                         {filled}/{checks.length} ({pct}%) — <span style={{ background: semaforoBg(sem), padding: "0 4px", fontWeight: "bold" }}>{sem}</span>
                       </td>
-                      <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Puntaje vulnerabilidad</td>
-                      <td className="w-1/4 py-1 px-2 font-bold font-mono">
+                      <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Puntaje vulnerabilidad</td>
+                      <td className="w-1/4 py-0.5 px-2 font-bold font-mono">
                         {lastVuln ? `${lastVuln.total}/100` : "____________"}
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nivel de semáforo</td>
-                      <td className="py-1 px-2 border-r border-slate-200">
-                        <span className="inline-flex flex-wrap gap-2 text-[9.5px]">
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nivel de semáforo</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">
+                        <span className="inline-flex flex-wrap gap-2 text-[9px]">
                           <span>{lastVuln?.semaphore?.toUpperCase().includes("VERDE") || (lastVuln?.total && lastVuln.total <= 40) ? "☑" : "☐"} Verde (0–40)</span>
                           <span>{lastVuln?.semaphore?.toUpperCase().includes("AMARILLO") || (lastVuln?.total && lastVuln.total > 40 && lastVuln.total <= 60) ? "☑" : "☐"} Amarillo (40–60)</span>
                           <span>{lastVuln?.semaphore?.toUpperCase().includes("NARANJA") || (lastVuln?.total && lastVuln.total > 60 && lastVuln.total <= 80) ? "☑" : "☐"} Naranja (60–80)</span>
                           <span>{lastVuln?.semaphore?.toUpperCase().includes("ROJO") || (lastVuln?.total && lastVuln.total > 80) ? "☑" : "☐"} Rojo (80–100)</span>
                         </span>
                       </td>
-                      <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Priorización</td>
-                      <td className="py-1 px-2">
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Priorización</td>
+                      <td className="py-0.5 px-2">
                         <span className="inline-flex gap-3">
                           <span>{lastVuln?.priority ? "☑ Sí" : "☐ Sí"}</span>
                           <span>{!lastVuln?.priority ? "☑ No" : "☐ No"}</span>
@@ -617,32 +619,32 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO */}
-              <div className="mb-4">
-                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2.5 py-1 font-bold uppercase text-[10px] tracking-wide">
+              <div className="mb-2">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
                 </div>
-                <div className="border border-t-0 border-slate-300 p-2 print:p-1.5 text-[10px] min-h-[36px] print:min-h-0 text-slate-800 leading-normal">
-                  {c.notes ? <p className="mb-1">{c.notes}</p> : null}
+                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[30px] print:min-h-0 text-slate-800 leading-normal">
+                  {c.notes ? <p className="mb-0.5">{c.notes}</p> : null}
                   <p>{footerNote}</p>
                 </div>
               </div>
 
               {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
-              <div className="mt-4 print:mt-3 pt-1 break-inside-avoid print:break-inside-avoid">
+              <div className="mt-3 print:mt-2 pt-1 break-inside-avoid print:break-inside-avoid">
                 <div className="grid grid-cols-2 gap-16 px-12">
                   {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">
-                    <div className="border-t border-slate-400 pt-1.5">
-                      <p className="font-semibold text-[10.5px] text-slate-600">Educadora Responsable</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{cell(c.educator_name || c.assigned_educator_name, "Firma y fecha")}</p>
+                    <div className="border-t border-slate-400 pt-1">
+                      <p className="font-semibold text-[10px] text-slate-600">Educadora Responsable</p>
+                      <p className="text-[9.5px] text-slate-500 mt-0.5">{cell(c.educator_name || c.assigned_educator_name, "Firma y fecha")}</p>
                     </div>
                   </div>
 
                   {/* Firma 2: Coordinadora del Centro */}
                   <div className="text-center">
-                    <div className="border-t border-slate-400 pt-1.5">
-                      <p className="font-semibold text-[10.5px] text-slate-600">Coordinadora del Centro</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Firma, sello y fecha</p>
+                    <div className="border-t border-slate-400 pt-1">
+                      <p className="font-semibold text-[10px] text-slate-600">Coordinadora del Centro</p>
+                      <p className="text-[9.5px] text-slate-500 mt-0.5">Firma, sello y fecha</p>
                     </div>
                   </div>
                 </div>
@@ -650,7 +652,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
             </div>
 
             {/* Pie de página 2 */}
-            <div className="pt-2 text-slate-400 flex justify-between items-center text-[9px]">
+            <div className="pt-1.5 text-slate-400 flex justify-between items-center text-[9px]">
               <span>Expediente {activeConfig.license_name} · Código {id} · C.I. {cell(c.cedula, "S/C")}</span>
               <span>Página 2</span>
             </div>

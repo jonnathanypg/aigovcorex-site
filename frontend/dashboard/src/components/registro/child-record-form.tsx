@@ -276,9 +276,27 @@ export function ChildRecordForm({ form, onSubmit, onCancel, isEditing, effective
               </div>
             )}
 
-            {/* Educadora asignada: solo coordinador o license_admin */}
-            {canAssignEducator && (tenantIdForEducators || !isLicenseAdmin) && (
-              <div className="space-y-2">
+            {/* Asignación institucional: Grupo y Educadora */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="assigned_group"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Grupo / Sala asignada</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ej. Sala 1, Lactantes, 1 a 2 años..."
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {canAssignEducator && (tenantIdForEducators || !isLicenseAdmin) ? (
                 <FormField
                   control={form.control}
                   name="assigned_educator_id"
@@ -311,8 +329,10 @@ export function ChildRecordForm({ form, onSubmit, onCancel, isEditing, effective
                     </FormItem>
                   )}
                 />
-              </div>
-            )}
+              ) : (
+                <div></div>
+              )}
+            </div>
 
           </TabsContent>
 

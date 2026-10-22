@@ -134,7 +134,7 @@ class WHOStandardsService:
     def calculate_weight_zscore(cls, weight_kg: float, age_months: int, gender: str) -> Optional[float]:
         if weight_kg is None or weight_kg <= 0:
             return None
-        age = max(0, min(60, int(age_months)))
+        age = max(0, min(60, int(age_months or 0)))
         gender_code = 'M' if str(gender).upper().startswith(('M', 'H', 'B', 'N', 'V')) else 'F'
         table = WFA_BOYS if gender_code == 'M' else WFA_GIRLS
         params = table.get(age)
@@ -143,11 +143,14 @@ class WHOStandardsService:
         l, m, s = params
         return cls._calc_lms_zscore(weight_kg, l, m, s)
 
+    # Alias backwards-compatibility
+    calculate_weight_for_age = calculate_weight_zscore
+
     @classmethod
     def calculate_height_zscore(cls, height_cm: float, age_months: int, gender: str) -> Optional[float]:
         if height_cm is None or height_cm <= 0:
             return None
-        age = max(0, min(60, int(age_months)))
+        age = max(0, min(60, int(age_months or 0)))
         gender_code = 'M' if str(gender).upper().startswith(('M', 'H', 'B', 'N', 'V')) else 'F'
         table = LHFA_BOYS if gender_code == 'M' else LHFA_GIRLS
         params = table.get(age)
@@ -155,6 +158,9 @@ class WHOStandardsService:
             return None
         l, m, s = params
         return cls._calc_lms_zscore(height_cm, l, m, s)
+
+    # Alias backwards-compatibility
+    calculate_height_for_age = calculate_height_zscore
 
     @classmethod
     def classify_weight_status(cls, z_score: Optional[float]) -> str:

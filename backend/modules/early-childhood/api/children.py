@@ -396,21 +396,27 @@ def get_child(child_id):
         # Datos del centro, educadora y coordinadora
         try:
             from models.user import User
+            educator = None
             if child.assigned_educator_id:
                 educator = User.query.get(child.assigned_educator_id)
                 if educator:
                     response['child']['educator_name'] = educator.full_name
-                    response['child']['educator_cedula'] = educator.cedula if hasattr(educator, 'cedula') else None
+                    response['child']['educator_cedula'] = getattr(educator, 'cedula', None)
             
             # Buscar coordinador del centro
             if child.tenant_id:
                 from models.user import Role
                 coord_role_ids = [r.id for r in Role.query.filter(Role.name.in_(['coordinator', 'center_coordinator', 'coordinador'])).all()]
-                coord_user = User.query.filter(
+                coord_query = User.query.filter(
                     User.tenant_id == child.tenant_id,
                     User.role_id.in_(coord_role_ids),
                     User.is_active == True
-                ).first()
+                )
+                if educator:
+                    coord_user = coord_query.filter(User.id != educator.id).first() or coord_query.first()
+                else:
+                    coord_user = coord_query.first()
+
                 if coord_user:
                     response['child']['coordinator_name'] = coord_user.full_name
         except Exception:

@@ -971,13 +971,18 @@ def create_nutritional_assessment():
         if weight_kg <= 0 or height_cm <= 0:
             return jsonify({'error': 'Peso y talla deben ser mayores a cero'}), 400
             
-        # Calculate age in months
-        age_months = child.age_months
+        # Calculate age in months at assessment date
+        if child.birth_date:
+            from dateutil.relativedelta import relativedelta
+            delta = relativedelta(assess_date, child.birth_date)
+            age_months = max(0, delta.years * 12 + delta.months)
+        else:
+            age_months = child.age_months or 24
         gender = child.gender or 'M'
         
         # Calculate Z-scores via WHOStandardsService
-        z_w = WHOStandardsService.calculate_weight_for_age(weight_kg, age_months, gender)
-        z_h = WHOStandardsService.calculate_height_for_age(height_cm, age_months, gender)
+        z_w = WHOStandardsService.calculate_weight_zscore(weight_kg, age_months, gender)
+        z_h = WHOStandardsService.calculate_height_zscore(height_cm, age_months, gender)
         
         diag_w = WHOStandardsService.classify_weight_status(z_w)
         diag_h = WHOStandardsService.classify_height_status(z_h)

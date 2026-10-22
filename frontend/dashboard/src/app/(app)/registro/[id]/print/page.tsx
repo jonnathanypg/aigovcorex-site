@@ -177,7 +177,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   const effectiveAssignedGroup = resolveAssignedGroup();
 
   return (
-    <div className="bg-slate-100 min-h-screen py-6 print:bg-white print:py-0 print:p-0">
+    <div className="print-sheet print-page bg-slate-100 min-h-screen py-6 print:bg-white print:py-0 print:p-0">
       <div className="print:hidden max-w-[210mm] mx-auto mb-4 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-slate-200">
         <div>
           <h2 className="font-bold text-sm text-slate-800">Vista Previa de Impresión Oficial</h2>
@@ -195,12 +195,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 1
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:p-6 print:py-4 min-h-[297mm] print:min-h-0 print:h-[285mm] flex flex-col justify-between print:break-after-page overflow-hidden">
+          <div className="relative p-8 print:px-8 print:py-4 min-h-[297mm] print:min-h-0 print:max-h-[287mm] flex flex-col justify-between print:break-after-page overflow-hidden">
             {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
             {footerBannerUrl && (
               <div 
-                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-90 overflow-hidden flex items-end justify-center"
-                style={{ height: '140mm' }}
+                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-80 overflow-hidden flex items-end justify-center"
+                style={{ height: '65mm' }}
               >
                 <img
                   src={footerBannerUrl}
@@ -442,12 +442,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 2
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:p-6 print:py-4 min-h-[297mm] print:min-h-0 print:h-[285mm] flex flex-col justify-between border-t print:border-none overflow-hidden">
+          <div className="relative p-8 print:px-8 print:py-4 min-h-[297mm] print:min-h-0 flex flex-col justify-between border-t print:border-none overflow-hidden">
             {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
             {footerBannerUrl && (
               <div 
-                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-90 overflow-hidden flex items-end justify-center"
-                style={{ height: '140mm' }}
+                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-80 overflow-hidden flex items-end justify-center"
+                style={{ height: '65mm' }}
               >
                 <img
                   src={footerBannerUrl}
@@ -557,7 +557,9 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                           <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "adquirido" || lvl === "consolidado" ? "☑" : "☐"}</td>
                           <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "en_proceso" ? "☑" : "☐"}</td>
                           <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "no_iniciado" ? "☑" : "☐"}</td>
-                          <td className="text-left py-1 px-2 text-[9px] text-slate-600">{domainObservations(dom.prefix) || "—"}</td>
+                          <td className="text-left py-0.5 px-2 text-[8.5px] leading-tight text-slate-600">
+                            <span className="line-clamp-2">{domainObservations(dom.prefix) || "Logro alcanzado"}</span>
+                          </td>
                         </tr>
                       );
                     })}
@@ -628,7 +630,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
-              <div className="mt-6 print:mt-4 pt-2">
+              <div className="mt-4 print:mt-3 pt-1 break-inside-avoid print:break-inside-avoid">
                 <div className="grid grid-cols-2 gap-16 px-12">
                   {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">

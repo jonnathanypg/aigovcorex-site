@@ -468,10 +468,13 @@ textarea:focus {
   .os-shell-root > div:first-child, header.app-header,
   #kindicore-chat-open-btn, audio { display: none !important; }
   
-  /* Hide any open modal overlays, backdrop, dialogs during print, except print-sheet */
-  [role="dialog"]:not(:has(.print-sheet)),
-  [data-state="open"]:not(:has(.print-sheet)),
-  [data-radix-popper-content-wrapper] { display: none !important; }
+  /* Eliminar COMPLETAMENTE cualquier overlay, backdrop, modal o cortina oscura al imprimir */
+  [data-radix-portal],
+  [data-radix-overlay],
+  .fixed.inset-0,
+  [data-state="open"]:not(:has(.print-sheet)):not(:has(.print-page)),
+  [role="dialog"]:not(:has(.print-sheet)):not(:has(.print-page)),
+  [data-radix-popper-content-wrapper] { display: none !important; opacity: 0 !important; background: transparent !important; }
 
   body * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .print-sheet { 
@@ -487,8 +490,8 @@ textarea:focus {
   table { page-break-inside: auto; }
   tr { page-break-inside: avoid; }
   .print-row-alt { background: #f3f4f6 !important; }
-  @page { size: A4 portrait; margin: 12mm 10mm 15mm 10mm; }
+  @page { size: A4 portrait; margin: 0; }
   .print-landscape { page: landscape-sheet; }
-  @page landscape-sheet { size: A4 landscape; margin: 10mm; }
+  @page landscape-sheet { size: A4 landscape; margin: 0; }
 }
 

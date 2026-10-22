@@ -79,6 +79,7 @@ export interface LicenseUser {
     first_name: string;
     last_name: string;
     email: string;
+    cedula?: string;
     phone?: string;
     role: string;
     center_name?: string;

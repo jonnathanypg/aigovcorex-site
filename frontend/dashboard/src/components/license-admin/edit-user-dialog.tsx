@@ -48,6 +48,7 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
     const [formData, setFormData] = useState({
         first_name: "",
         last_name: "",
+        cedula: "",
         email: "",
         role: "",
         center_id: "",
@@ -61,6 +62,7 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
                 setFormData({
                     first_name: user.first_name,
                     last_name: user.last_name,
+                    cedula: user.cedula || "",
                     email: user.email,
                     role: user.role,
                     center_id: user.tenant_id ? user.tenant_id.toString() : "unassigned",
@@ -160,15 +162,28 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-phone">Teléfono / WhatsApp</Label>
-                        <Input
-                            id="edit-phone"
-                            name="phone"
-                            placeholder="+593..."
-                            value={formData.phone}
-                            onChange={handleChange}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-cedula">Cédula de Identidad</Label>
+                            <Input
+                                id="edit-cedula"
+                                name="cedula"
+                                placeholder="10 dígitos"
+                                maxLength={10}
+                                value={formData.cedula}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-phone">Teléfono / WhatsApp</Label>
+                            <Input
+                                id="edit-phone"
+                                name="phone"
+                                placeholder="+593..."
+                                value={formData.phone}
+                                onChange={handleChange}
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

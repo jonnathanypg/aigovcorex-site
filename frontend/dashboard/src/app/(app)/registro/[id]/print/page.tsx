@@ -318,7 +318,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                       <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Educadora asignada</td>
                       <td className="py-1 px-2 font-medium border-r border-slate-200">{cell(c.educator_name || c.assigned_educator_name)}</td>
                       <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">C.I. educadora</td>
-                      <td className="py-1 px-2 font-mono">{cell(c.educator_cedula)}</td>
+                      <td className="py-1 px-2 font-mono">{cell(c.educator_cedula, c.educator_name || c.assigned_educator_name ? "Registrada en legajo" : "____________")}</td>
                     </tr>
                     <tr>
                       <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Coordinadora del centro</td>

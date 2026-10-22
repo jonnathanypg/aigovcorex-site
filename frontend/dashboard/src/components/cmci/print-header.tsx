@@ -185,8 +185,8 @@ export function PrintFooterBanner() {
 
   return (
     <div
-      className="pointer-events-none select-none overflow-hidden flex items-end justify-center mt-8 print:fixed print:inset-x-0 print:bottom-0 print:m-0 z-0 opacity-40 print:opacity-95"
-      style={{ maxHeight: "90mm" }}
+      className="pointer-events-none select-none overflow-hidden flex items-end justify-center mt-8 print:mt-4 print:relative z-0 opacity-40 print:opacity-95"
+      style={{ maxHeight: "70mm" }}
     >
       <img
         src={footerBannerUrl}

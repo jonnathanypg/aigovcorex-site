@@ -47,6 +47,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     const [formData, setFormData] = useState({
         first_name: "",
         last_name: "",
+        cedula: "",
         email: "",
         password: "",
         role: "",
@@ -98,6 +99,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
             setFormData({
                 first_name: "",
                 last_name: "",
+                cedula: "",
                 email: "",
                 password: "",
                 role: "",
@@ -163,15 +165,28 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Teléfono / WhatsApp</Label>
-                        <Input
-                            id="phone"
-                            name="phone"
-                            placeholder="+593..."
-                            value={formData.phone}
-                            onChange={handleChange}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="cedula">Cédula de Identidad</Label>
+                            <Input
+                                id="cedula"
+                                name="cedula"
+                                placeholder="10 dígitos"
+                                maxLength={10}
+                                value={formData.cedula}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Teléfono / WhatsApp</Label>
+                            <Input
+                                id="phone"
+                                name="phone"
+                                placeholder="+593..."
+                                value={formData.phone}
+                                onChange={handleChange}
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2">

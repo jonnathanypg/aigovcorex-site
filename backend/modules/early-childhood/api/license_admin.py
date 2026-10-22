@@ -885,6 +885,7 @@ def create_user(license_admin):
             email=data['email'].lower().strip(),
             first_name=data['first_name'],
             last_name=data['last_name'],
+            cedula=data.get('cedula'),
             phone=data.get('phone'),
             is_active=True
         )
@@ -997,7 +998,7 @@ def update_user(license_admin, user_id):
             
         data = request.get_json()
         
-        allowed_fields = ['first_name', 'last_name', 'email', 'phone', 'is_active']
+        allowed_fields = ['first_name', 'last_name', 'email', 'phone', 'cedula', 'is_active']
         
         for field in allowed_fields:
             if field in data:

@@ -160,6 +160,22 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
   const childFullNameUpper = (c.full_name || `${c.last_name || ""}, ${c.first_name || ""}`).toUpperCase();
 
+  // Helper para inferir grupo de edad automáticamente si no está asignado
+  const resolveAssignedGroup = () => {
+    if (c.assigned_group && String(c.assigned_group).trim()) return c.assigned_group;
+    const months = c.age_months != null ? Number(c.age_months) : null;
+    if (months != null) {
+      if (months < 12) return "Lactantes (0 a 11m)";
+      if (months <= 18) return "12 a 18 meses";
+      if (months <= 24) return "19 a 24 meses";
+      if (months <= 30) return "25 a 30 meses";
+      if (months <= 36) return "31 a 36 meses";
+      return "37 a 42 meses";
+    }
+    return null;
+  };
+  const effectiveAssignedGroup = resolveAssignedGroup();
+
   return (
     <div className="bg-slate-100 min-h-screen py-6 print:bg-white print:py-0 print:p-0">
       <div className="print:hidden max-w-[210mm] mx-auto mb-4 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-slate-200">
@@ -179,7 +195,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 1
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:p-8 min-h-[297mm] flex flex-col justify-between print:break-after-page overflow-hidden">
+          <div className="relative p-8 print:p-6 print:py-4 min-h-[297mm] print:min-h-0 print:h-[285mm] flex flex-col justify-between print:break-after-page overflow-hidden">
             {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
             {footerBannerUrl && (
               <div 
@@ -296,7 +312,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                       <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Centro</td>
                       <td className="w-1/4 py-1 px-2 font-semibold border-r border-slate-200">{cell(c.tenant_name || c.center_name)}</td>
                       <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Grupo asignado</td>
-                      <td className="w-1/4 py-1 px-2">{cell(c.assigned_group)}</td>
+                      <td className="w-1/4 py-1 px-2 font-medium">{cell(effectiveAssignedGroup)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Educadora asignada</td>
@@ -426,7 +442,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 2
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:p-8 min-h-[297mm] flex flex-col justify-between border-t print:border-none overflow-hidden">
+          <div className="relative p-8 print:p-6 print:py-4 min-h-[297mm] print:min-h-0 print:h-[285mm] flex flex-col justify-between border-t print:border-none overflow-hidden">
             {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
             {footerBannerUrl && (
               <div 
@@ -605,14 +621,14 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2.5 py-1 font-bold uppercase text-[10px] tracking-wide">
                   8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
                 </div>
-                <div className="border border-t-0 border-slate-300 p-2.5 text-[10px] min-h-[50px] text-slate-800 leading-normal">
+                <div className="border border-t-0 border-slate-300 p-2 print:p-1.5 text-[10px] min-h-[36px] print:min-h-0 text-slate-800 leading-normal">
                   {c.notes ? <p className="mb-1">{c.notes}</p> : null}
                   <p>{footerNote}</p>
                 </div>
               </div>
 
               {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
-              <div className="mt-14 pt-4">
+              <div className="mt-6 print:mt-4 pt-2">
                 <div className="grid grid-cols-2 gap-16 px-12">
                   {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">

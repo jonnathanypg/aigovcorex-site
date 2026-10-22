@@ -267,7 +267,7 @@ export default function InformeActividadesPrintPage({
       )}
 
       {/* 6. Firmas Físicas en Papel */}
-      <section className="mt-8 pt-4">
+      <section className="mt-8 pt-4 break-inside-avoid print:break-inside-avoid">
         <div className="grid grid-cols-2 gap-12 text-center text-xs">
           <div className="pt-8 border-t border-black">
             <p className="font-bold">{pv.autora || "Educadora / Responsable"}</p>
@@ -286,7 +286,9 @@ export default function InformeActividadesPrintPage({
       </section>
 
       {/* Pie de membrete institucional no invasivo */}
-      <PrintFooterBanner />
+      <div className="break-inside-avoid print:break-inside-avoid">
+        <PrintFooterBanner />
+      </div>
     </div>
   );
 }

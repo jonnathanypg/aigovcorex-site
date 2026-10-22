@@ -195,7 +195,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 1
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:px-6 print:py-3 min-h-[297mm] print:min-h-0 flex flex-col justify-between page-break-after break-after-page">
+          <div className="relative p-8 print:px-6 print:py-3 min-h-[297mm] print:min-h-0 print:h-auto flex flex-col justify-between page-break-after break-after-page">
             {/* Pie de membrete en el fondo detrás del contenido (Watermark sutil) */}
             {footerBannerUrl && (
               <div 
@@ -442,7 +442,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 2
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:px-6 print:py-3 min-h-[297mm] print:min-h-0 flex flex-col justify-between border-t print:border-none page-break-after break-after-page">
+          <div className="relative p-8 print:px-6 print:py-3 min-h-[297mm] print:min-h-0 print:h-auto flex flex-col justify-between border-t print:border-none">
             {/* Pie de membrete en el fondo detrás del contenido (Watermark sutil) */}
             {footerBannerUrl && (
               <div 
@@ -457,7 +457,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
             )}
 
-            <div className="relative z-10 pb-8 print:pb-6">
+            <div className="relative z-10 pb-4 print:pb-2">
               {/* Cabecera Gráfica de Membrete Oficial (Ancho total pegada al borde superior sin espaciado) */}
               {headerBannerUrl && (
                 <div className="-mx-8 -mt-8 print:-mx-6 print:-mt-3 mb-2 w-[calc(100%+4rem)] print:w-[calc(100%+3rem)]">
@@ -558,7 +558,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                           <td className="py-0.5 px-2 font-bold border-r border-slate-200">{lvl === "en_proceso" ? "☑" : "☐"}</td>
                           <td className="py-0.5 px-2 font-bold border-r border-slate-200">{lvl === "no_iniciado" ? "☑" : "☐"}</td>
                           <td className="text-left py-0.5 px-2 text-[8.5px] text-slate-600 leading-tight">
-                            <span className="line-clamp-1">{domainObservations(dom.prefix) || "Logro alcanzado"}</span>
+                            <span>{domainObservations(dom.prefix) || "Logro alcanzado"}</span>
                           </td>
                         </tr>
                       );

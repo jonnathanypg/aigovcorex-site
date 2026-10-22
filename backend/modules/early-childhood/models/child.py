@@ -179,13 +179,18 @@ class Child(db.Model, BaseModel):
     def to_dict(self):
         """Convert to dictionary"""
         educator_name = None
-        if self.assigned_educator and self.assigned_educator.full_name:
-            educator_name = self.assigned_educator.full_name.strip()
+        educator_cedula = None
+        if self.assigned_educator:
+            if self.assigned_educator.full_name:
+                educator_name = self.assigned_educator.full_name.strip()
+            educator_cedula = getattr(self.assigned_educator, 'cedula', None)
         elif self.assigned_educator_id:
             from models.user import User
             edu = User.query.get(self.assigned_educator_id)
-            if edu and edu.full_name:
-                educator_name = edu.full_name.strip()
+            if edu:
+                if edu.full_name:
+                    educator_name = edu.full_name.strip()
+                educator_cedula = getattr(edu, 'cedula', None)
 
         return {
             'id': self.id,
@@ -209,6 +214,7 @@ class Child(db.Model, BaseModel):
             'assigned_educator_id': self.assigned_educator_id,
             'assigned_educator_name': educator_name,
             'educator_name': educator_name,
+            'educator_cedula': educator_cedula,
             'birth_weight': float(self.birth_weight) if self.birth_weight else None,
             'birth_height': float(self.birth_height) if self.birth_height else None,
             'allergies': self.allergies,

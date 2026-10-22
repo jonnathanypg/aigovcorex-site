@@ -490,6 +490,10 @@ textarea:focus {
     break-after: page !important;
     page-break-after: always !important;
   }
+  .page-break-before, .break-before-page {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
   .page-break-inside-avoid, .break-inside-avoid {
     break-inside: avoid !important;
     page-break-inside: avoid !important;

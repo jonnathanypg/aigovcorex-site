@@ -1,7 +1,7 @@
 "use client";
 /** Print ficha vulnerabilidad: bloques A-F idénticos al Excel + semáforo + firmas físicas. */
 import { useEffect, useState } from "react";
-import { PrintHeader, PrintButton } from "@/components/cmci/print-header";
+import { PrintHeader, PrintLetterheadAuto, PrintButton } from "@/components/cmci/print-header";
 import { VULN_INDICATORS, VULN_DIMS } from "@/lib/cmci/params";
 import { computeVulnerability } from "@/lib/cmci/engine";
 import { cmciService, type VulnRecord } from "@/services/cmci.service";
@@ -13,9 +13,10 @@ export default function AdmisionPrintPage({ params }: { params: { id: string } }
   if (!rec) return <div className="p-6"><p>No encontrado.</p><PrintButton /></div>;
   const res = computeVulnerability(rec.scores, rec.hogar);
   return (
-    <div className="print-sheet bg-white text-black p-6 max-w-[210mm] mx-auto">
+    <div className="print-sheet bg-white text-black p-6 print:p-0 max-w-[210mm] mx-auto">
+      <PrintLetterheadAuto>
       <div className="print:hidden mb-4"><PrintButton /></div>
-      <PrintHeader title="Matriz de valoración de vulnerabilidad familiar — CMCI" codigo={rec.codigo} fecha={rec.fecha} />
+      <PrintHeader showHeaderBanner={false} title="Matriz de valoración de vulnerabilidad familiar — CMCI" codigo={rec.codigo} fecha={rec.fecha} />
       <section className="mt-3 text-sm">
         <h2 className="font-bold uppercase text-xs mb-1">A · Identificación</h2>
         <div className="grid grid-cols-3 gap-1">
@@ -59,6 +60,7 @@ export default function AdmisionPrintPage({ params }: { params: { id: string } }
         <div className="border-t border-black pt-1 text-center">Coordinadora · fecha</div>
       </div>
       <p className="text-[10px] mt-2 text-center print-only">Firma física en papel fuera del sistema (sin firma electrónica).</p>
+      </PrintLetterheadAuto>
     </div>
   );
 }

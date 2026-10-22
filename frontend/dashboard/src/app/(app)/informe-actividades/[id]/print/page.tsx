@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { PrintHeader, PrintButton, PrintFooterBanner } from "@/components/cmci/print-header";
+import { PrintHeader, PrintButton, PrintLetterheadAuto } from "@/components/cmci/print-header";
 import { cmciService, type MonthlyReportDetail } from "@/services/cmci.service";
 import { Loader2, ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,7 @@ export default function InformeActividadesPrintPage({
 
   return (
     <div className="print-sheet bg-white text-black p-8 print:p-0 max-w-[210mm] print:max-w-none mx-auto min-h-screen print:min-h-0 text-xs leading-normal">
+      <PrintLetterheadAuto>
       {/* Non-printed action bar */}
       <div className="print:hidden mb-6 flex items-center justify-between border-b pb-3">
         <Link href="/informe-actividades">
@@ -79,6 +80,7 @@ export default function InformeActividadesPrintPage({
 
       {/* Official Header */}
       <PrintHeader
+        showHeaderBanner={false}
         title={pv.titulo || "INFORME MENSUAL DE ACTIVIDADES — EDUCADORA"}
         codigo={`INF-MENSUAL-${report.id}`}
         fecha={report.period_end || new Date().toISOString().slice(0, 10)}
@@ -87,7 +89,7 @@ export default function InformeActividadesPrintPage({
       />
 
       {/* 1. Datos de Identificación y Centro */}
-      <section className="mt-4 border border-black p-3 rounded-none">
+      <section className="mt-4 border border-black p-3 rounded-none break-inside-avoid">
         <h2 className="font-bold uppercase text-[11px] border-b border-black pb-1 mb-2">
           1 · Datos Generales del Servicio
         </h2>
@@ -108,7 +110,7 @@ export default function InformeActividadesPrintPage({
       </section>
 
       {/* 2. Cuadro Resumen de Cobertura y Operatividad */}
-      <section className="mt-3 border border-black p-3 rounded-none">
+      <section className="mt-3 border border-black p-3 rounded-none break-inside-avoid">
         <h2 className="font-bold uppercase text-[11px] border-b border-black pb-1 mb-2">
           2 · Resumen Operativo y Cobertura del Período
         </h2>
@@ -245,7 +247,7 @@ export default function InformeActividadesPrintPage({
       </section>
 
       {/* 4. Conclusiones y Logros del Período (Automático / LLM) */}
-      <section className="mt-4 border border-black p-3 rounded-none">
+      <section className="mt-4 border border-black p-3 rounded-none break-inside-avoid">
         <h2 className="font-bold uppercase text-[11px] border-b border-black pb-1 mb-1.5">
           4 · Conclusiones, Logros y Desarrollo Integral (Generación Asistida)
         </h2>
@@ -256,7 +258,7 @@ export default function InformeActividadesPrintPage({
 
       {/* 5. Observaciones de la Educadora */}
       {report.educator_notes && (
-        <section className="mt-3 border border-black p-3 rounded-none">
+        <section className="mt-3 border border-black p-3 rounded-none break-inside-avoid">
           <h2 className="font-bold uppercase text-[11px] border-b border-black pb-1 mb-1.5">
             5 · Observaciones y Novedades de la Educadora
           </h2>
@@ -285,10 +287,7 @@ export default function InformeActividadesPrintPage({
         </p>
       </section>
 
-      {/* Pie de membrete institucional no invasivo */}
-      <div className="break-inside-avoid print:break-inside-avoid">
-        <PrintFooterBanner />
-      </div>
+      </PrintLetterheadAuto>
     </div>
   );
 }

@@ -10,7 +10,7 @@
  * - Sin firma de la representante legal (solo Educadora Responsable y Coordinadora del Centro).
  */
 import { useEffect, useState } from "react";
-import { PrintButton, semaforoBg, CMCI_CONVENIO_DEFAULTS } from "@/components/cmci/print-header";
+import { PrintButton, PrintLetterheadFrame, semaforoBg, CMCI_CONVENIO_DEFAULTS } from "@/components/cmci/print-header";
 import { childrenService } from "@/services/children.service";
 import { licenseAdminService } from "@/services/license-admin.service";
 
@@ -192,35 +192,13 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
         </div>
       ) : (
         <div className="max-w-[210mm] mx-auto bg-white text-black text-[11px] leading-tight print:max-w-none print:m-0 print:shadow-none shadow-md">
+          <PrintLetterheadFrame headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 1
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:px-6 print:py-3 min-h-[297mm] print:min-h-0 print:h-auto flex flex-col justify-between page-break-after break-after-page">
-            {/* Pie de membrete en el fondo detrás del contenido (Watermark sutil) */}
-            {footerBannerUrl && (
-              <div 
-                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-25 print:opacity-20 overflow-hidden flex items-end justify-center"
-                style={{ height: '42mm' }}
-              >
-                <img
-                  src={footerBannerUrl}
-                  alt="Pie de membrete"
-                  className="w-full h-auto object-contain object-bottom"
-                />
-              </div>
-            )}
+          <div>
 
             <div className="relative z-10">
-              {/* Cabecera Gráfica de Membrete Oficial (Ancho total pegada al borde superior sin espaciado) */}
-              {headerBannerUrl && (
-                <div className="-mx-8 -mt-8 print:-mx-6 print:-mt-3 mb-2 w-[calc(100%+4rem)] print:w-[calc(100%+3rem)]">
-                  <img
-                    src={headerBannerUrl}
-                    alt="Cabecera Membrete"
-                    className="w-full h-auto block m-0 p-0"
-                  />
-                </div>
-              )}
 
               {/* Encabezado Superior: Instituciones Cooperantes Dinámicas */}
               <div className="border-b-2 border-black pb-1 mb-1.5">
@@ -231,7 +209,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 )}
                 <div className="flex justify-between items-center text-[10px] text-slate-600 mt-0.5">
                   <span>Expediente {activeConfig.license_name} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
-                  <span className="font-semibold">Página 1</span>
+                  
                 </div>
               </div>
 
@@ -267,7 +245,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 1. IDENTIFICACIÓN DEL NIÑO / NIÑA */}
-              <div className="mb-2">
+              <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   1. IDENTIFICACIÓN DEL NIÑO / NIÑA
                 </div>
@@ -302,7 +280,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 2. ASIGNACIÓN EN EL CENTRO */}
-              <div className="mb-2">
+              <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   2. ASIGNACIÓN EN EL CENTRO
                 </div>
@@ -336,7 +314,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 3. DATOS FAMILIARES Y REPRESENTANTE LEGAL */}
-              <div className="mb-2">
+              <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   3. DATOS FAMILIARES Y REPRESENTANTE LEGAL
                 </div>
@@ -363,7 +341,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 4. VALORACIÓN INICIAL — NUTRICIÓN Y CRECIMIENTO */}
-              <div className="mb-2">
+              <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   4. VALORACIÓN INICIAL — NUTRICIÓN Y CRECIMIENTO
                 </div>
@@ -433,57 +411,18 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
             </div>
 
-            {/* Pie de página 1 */}
-            <div className="pt-1.5 border-t border-slate-200 text-center text-[9px] text-slate-500">
-              Expediente físico confidencial · Constancia Oficial de Inscripción · Continúa en Página 2
-            </div>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 2
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:px-6 print:py-3 min-h-[297mm] print:min-h-0 print:h-auto flex flex-col justify-between border-t print:border-none">
-            {/* Pie de membrete en el fondo detrás del contenido (Watermark sutil) */}
-            {footerBannerUrl && (
-              <div 
-                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-25 print:opacity-20 overflow-hidden flex items-end justify-center"
-                style={{ height: '42mm' }}
-              >
-                <img
-                  src={footerBannerUrl}
-                  alt="Pie de membrete"
-                  className="w-full h-auto object-contain object-bottom"
-                />
-              </div>
-            )}
+          <div>
 
-            <div className="relative z-10 pb-4 print:pb-2">
-              {/* Cabecera Gráfica de Membrete Oficial (Ancho total pegada al borde superior sin espaciado) */}
-              {headerBannerUrl && (
-                <div className="-mx-8 -mt-8 print:-mx-6 print:-mt-3 mb-2 w-[calc(100%+4rem)] print:w-[calc(100%+3rem)]">
-                  <img
-                    src={headerBannerUrl}
-                    alt="Cabecera Membrete"
-                    className="w-full h-auto block m-0 p-0"
-                  />
-                </div>
-              )}
+            <div className="relative z-10">
 
-              {/* Encabezado Superior Página 2 */}
-              <div className="border-b-2 border-black pb-1 mb-2">
-                {institutionsHeader && (
-                  <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
-                    {institutionsHeader}
-                  </div>
-                )}
-                <div className="flex justify-between items-center text-[10px] text-slate-600 mt-0.5">
-                  <span>Expediente {activeConfig.license_name} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
-                  <span className="font-semibold">Página 2</span>
-                </div>
-              </div>
 
               {/* 5. VALORACIÓN INICIAL — SALUD */}
-              <div className="mb-2">
+              <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   5. VALORACIÓN INICIAL — SALUD
                 </div>
@@ -534,7 +473,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII) */}
-              <div className="mb-2">
+              <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII)
                 </div>
@@ -580,7 +519,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE */}
-              <div className="mb-2">
+              <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE
                 </div>
@@ -619,7 +558,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
 
               {/* 8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO */}
-              <div className="mb-2">
+              <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
                 </div>
@@ -651,12 +590,8 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
               </div>
             </div>
 
-            {/* Pie de página 2 */}
-            <div className="pt-1.5 text-slate-400 flex justify-between items-center text-[9px]">
-              <span>Expediente {activeConfig.license_name} · Código {id} · C.I. {cell(c.cedula, "S/C")}</span>
-              <span>Página 2</span>
-            </div>
           </div>
+          </PrintLetterheadFrame>
         </div>
       )}
     </div>

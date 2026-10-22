@@ -442,6 +442,22 @@ textarea:focus {
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
+/* ── Papel membretado (cabecera repetida, pie fijo con espacio reservado) ── */
+.letterhead-frame { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.letterhead-frame .lh-head, .letterhead-frame .lh-foot { padding: 0; }
+.letterhead-frame .lh-head img, .letterhead-frame .lh-foot-img { display: block; width: 100%; height: auto; }
+.letterhead-frame .lh-body { padding: 8px 24px; vertical-align: top; }
+@media print {
+  .print-sheet table.letterhead-frame { page-break-inside: auto !important; break-inside: auto !important; }
+  .letterhead-frame > tbody > tr, .letterhead-frame > thead > tr, .letterhead-frame > tfoot > tr { page-break-inside: auto !important; break-inside: auto !important; }
+  .letterhead-frame > thead { display: table-header-group; }
+  .letterhead-frame > tfoot { display: table-footer-group; }
+  .letterhead-frame .lh-body { padding: 4mm 8mm 2mm 8mm; }
+  /* Reserva ~ altura del pie (proporción 2172x642 sobre 210mm = 62mm) + holgura */
+  .letterhead-frame .lh-foot-spacer { height: 66mm; position: relative; }
+  .letterhead-frame .lh-foot-img { position: fixed; left: 0; right: 0; bottom: 0; width: 210mm; opacity: 1; z-index: 0; }
+}
+
 /* ════════════════════════════════════
    🖨️ F3 CMCI — Impresión oficial A4
    Fichas portrait · matrices landscape · sin firma electrónica

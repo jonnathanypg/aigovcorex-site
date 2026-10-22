@@ -81,6 +81,7 @@ interface PrintHeaderProps extends ConvenioInfo {
   showConvenio?: boolean;
   showSemaforo?: boolean;
   showFooterBanner?: boolean;
+  showHeaderBanner?: boolean;
 }
 
 export function PrintHeader({
@@ -98,6 +99,7 @@ export function PrintHeader({
   showConvenio = true,
   showSemaforo = true,
   showFooterBanner = false,
+  showHeaderBanner = true,
 }: PrintHeaderProps) {
   const [orgConfig, setOrgConfig] = useState<any>(null);
 
@@ -131,7 +133,7 @@ export function PrintHeader({
           />
         </div>
       )}
-      {headerBannerUrl && (
+      {showHeaderBanner && headerBannerUrl && (
         <div className="-mx-6 -mt-6 print:-mx-6 print:-mt-6 mb-3 w-[calc(100%+3rem)]">
           <img
             src={headerBannerUrl}
@@ -202,5 +204,65 @@ export function PrintButton() {
     <Button onClick={() => window.print()}>
       <Printer className="mr-2 h-4 w-4" /> Imprimir / Guardar PDF
     </Button>
+  );
+}
+
+
+/**
+ * Marco de papel membretado para impresión/PDF.
+ * - Cabecera: se repite en cada hoja (thead).
+ * - Pie: fijo al borde inferior de cada hoja; un espaciador (tfoot) reserva su altura,
+ *   por lo que NINGÚN contenido (texto, tablas, firmas) puede quedar debajo o encima del pie.
+ * - El contenido fluye como en un documento normal y salta de hoja entre bloques.
+ */
+export function PrintLetterheadFrame({
+  headerUrl,
+  footerUrl,
+  children,
+}: {
+  headerUrl?: string | null;
+  footerUrl?: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <table className="letterhead-frame">
+      <thead>
+        <tr>
+          <td className="lh-head">
+            {headerUrl && <img src={headerUrl} alt="Cabecera Membrete" />}
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td className="lh-body">{children}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td className="lh-foot">
+            <div className="lh-foot-spacer">
+              {footerUrl && <img className="lh-foot-img" src={footerUrl} alt="Pie de membrete" />}
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
+/** Igual que PrintLetterheadFrame pero obtiene los membretes de la configuración pública de la organización. */
+export function PrintLetterheadAuto({ children }: { children: React.ReactNode }) {
+  const [orgConfig, setOrgConfig] = useState<any>(null);
+  useEffect(() => {
+    licenseAdminService.getPublicConfig().then(setOrgConfig).catch(() => setOrgConfig(null));
+  }, []);
+  return (
+    <PrintLetterheadFrame
+      headerUrl={resolvePrintBannerUrl(orgConfig?.header_banner_path)}
+      footerUrl={resolvePrintBannerUrl(orgConfig?.footer_banner_path)}
+    >
+      {children}
+    </PrintLetterheadFrame>
   );
 }

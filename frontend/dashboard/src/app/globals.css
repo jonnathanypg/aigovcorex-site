@@ -486,6 +486,14 @@ textarea:focus {
     height: auto !important;
   }
   .print-only { display: block !important; }
+  .page-break-after, .break-after-page {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+  .page-break-inside-avoid, .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
   thead { display: table-header-group; }
   table { page-break-inside: auto; }
   tr { page-break-inside: avoid; }

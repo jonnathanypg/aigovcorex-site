@@ -195,17 +195,17 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 1
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:px-8 print:py-4 min-h-[297mm] print:min-h-0 print:max-h-[287mm] flex flex-col justify-between print:break-after-page overflow-hidden">
+          <div className="relative p-8 print:p-6 min-h-[297mm] print:min-h-[297mm] flex flex-col justify-between page-break-after break-after-page">
             {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
             {footerBannerUrl && (
               <div 
-                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-80 overflow-hidden flex items-end justify-center"
-                style={{ height: '65mm' }}
+                className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 opacity-35 print:opacity-30 overflow-hidden flex items-end justify-center"
+                style={{ height: '55mm' }}
               >
                 <img
                   src={footerBannerUrl}
                   alt="Pie de membrete"
-                  className="w-full h-auto object-contain object-bottom opacity-95"
+                  className="w-full h-auto object-contain object-bottom"
                 />
               </div>
             )}
@@ -442,7 +442,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 2
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="relative p-8 print:px-8 print:py-4 min-h-[297mm] print:min-h-0 flex flex-col justify-between border-t print:border-none overflow-hidden">
+          <div className="relative p-8 print:p-6 min-h-[297mm] print:min-h-[297mm] flex flex-col justify-between border-t print:border-none">
             {/* Pie de membrete en el fondo detrás del contenido (Watermark) */}
             {footerBannerUrl && (
               <div 
@@ -557,9 +557,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                           <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "adquirido" || lvl === "consolidado" ? "☑" : "☐"}</td>
                           <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "en_proceso" ? "☑" : "☐"}</td>
                           <td className="py-1 px-2 font-bold border-r border-slate-200">{lvl === "no_iniciado" ? "☑" : "☐"}</td>
-                          <td className="text-left py-0.5 px-2 text-[8.5px] leading-tight text-slate-600">
-                            <span className="line-clamp-2">{domainObservations(dom.prefix) || "Logro alcanzado"}</span>
-                          </td>
+                          <td className="text-left py-1 px-2 text-[9px] text-slate-600 leading-tight">{domainObservations(dom.prefix) || "—"}</td>
                         </tr>
                       );
                     })}

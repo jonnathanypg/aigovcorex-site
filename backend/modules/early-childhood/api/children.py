@@ -14,6 +14,126 @@ from sqlalchemy.orm import joinedload
 children_bp = Blueprint('children', __name__, url_prefix='/children')
 
 
+IDII_DOMAIN_LABELS = {
+    'vinculacion_emocional': 'Vinculación emocional y social',
+    'expresion_corporal': 'Exploración del cuerpo y motricidad',
+    'lenguaje': 'Lenguaje verbal y no verbal',
+    'descubrimiento_natural_cultural': 'Descubrimiento del medio natural y cultural',
+}
+
+IDII_DOMAIN_ORDER = [
+    'vinculacion_emocional',
+    'expresion_corporal',
+    'lenguaje',
+    'descubrimiento_natural_cultural',
+]
+
+
+def _aggregate_idii(milestones):
+    """Resume los hitos por dominio usando la última evaluación de cada ámbito.
+
+    La tabla `milestones` guarda un registro por indicador. La ficha oficial
+    necesita un solo nivel por ámbito, por eso se agrupa por dominio y se toma
+    la fecha de evaluación más reciente de ese dominio.
+    """
+    if not milestones:
+        return None
+
+    grouped = {}
+    for m in milestones:
+        domain = getattr(m, 'domain', None)
+        record_date = getattr(m, 'record_date', None)
+        if not domain or not record_date:
+            continue
+        grouped.setdefault(domain, []).append(m)
+
+    domains = []
+    dates = []
+    for domain, items in grouped.items():
+        latest_date = max((getattr(m, 'record_date') for m in items), default=None)
+        if not latest_date:
+            continue
+        batch = [m for m in items if getattr(m, 'record_date', None) == latest_date]
+        if not batch:
+            continue
+
+        counts = {'no_iniciado': 0, 'en_proceso': 0, 'adquirido': 0, 'consolidado': 0}
+        for m in batch:
+            level = getattr(m, 'achievement_level', None)
+            if level in counts:
+                counts[level] += 1
+
+        total = len(batch)
+        if total == 0:
+            continue
+
+        score = counts['en_proceso'] * 50 + (counts['adquirido'] + counts['consolidado']) * 100
+        percentage = round(score / total)
+        if percentage >= 80:
+            level = 'adquirido'
+        elif percentage >= 40:
+            level = 'en_proceso'
+        else:
+            level = 'no_iniciado'
+
+        notes = []
+        for m in batch:
+            note = (getattr(m, 'notes', None) or '').strip()
+            if note and note not in notes:
+                notes.append(note)
+
+        domains.append({
+            'key': domain,
+            'label': IDII_DOMAIN_LABELS.get(domain, domain),
+            'level': level,
+            'percentage': percentage,
+            'counts': counts,
+            'total': total,
+            'record_date': latest_date.isoformat(),
+            'notes': '; '.join(notes),
+        })
+        dates.append(latest_date)
+
+    if not domains:
+        return None
+
+    domains.sort(key=lambda d: IDII_DOMAIN_ORDER.index(d['key']) if d['key'] in IDII_DOMAIN_ORDER else 99)
+    average = round(sum(d['percentage'] for d in domains) / len(domains))
+
+    if any(d['level'] == 'no_iniciado' for d in domains):
+        overall = 'requiere_derivacion'
+    elif average >= 80:
+        overall = 'acorde'
+    else:
+        overall = 'en_riesgo'
+
+    latest_date = max(dates) if dates else None
+    return {
+        'domains': domains,
+        'percentage': average,
+        'level': overall,
+        'record_date': latest_date.isoformat() if latest_date else None,
+    }
+
+
+def _vaccine_summary(vaccines):
+    """Resumen vacunal; None cuando no hay ningún registro (no equivale a 'completo')."""
+    if not vaccines:
+        return None
+    applied = sum(1 for v in vaccines if getattr(v, 'status', None) == 'aplicada')
+    pending = sum(1 for v in vaccines if getattr(v, 'status', None) == 'pendiente')
+    omitted = sum(1 for v in vaccines if getattr(v, 'status', None) == 'omitida')
+    overdue = sum(1 for v in vaccines if getattr(v, 'is_overdue', False))
+    return {
+        'total': len(vaccines),
+        'applied': applied,
+        'pending': pending,
+        'omitted': omitted,
+        'overdue': overdue,
+        'complete': pending == 0 and omitted == 0 and overdue == 0,
+    }
+
+
 def _can_assign_educator(user):
     """Solo roles multicentro y coordinadoras pueden asignar educadora a un niño."""
     from utils.role_helpers import is_multi_center_role
@@ -420,18 +540,6 @@ def get_child(child_id):
                 if coord_user:
                     response['child']['coordinator_name'] = coord_user.full_name
                     response['child']['coordinator_cedula'] = getattr(coord_user, 'cedula', None)
-                
-                # Si el niño no tiene educadora explícita asignada pero hay una educadora activa en el centro (o registrada en su último control), usarla como respaldo
-                if not educator:
-                    edu_role_ids = [r.id for r in Role.query.filter(Role.name.in_(['educadora', 'educator', 'educador', 'teacher'])).all()]
-                    edu_fallback = User.query.filter(
-                        User.tenant_id == child.tenant_id,
-                        User.role_id.in_(edu_role_ids),
-                        User.is_active == True
-                    ).first()
-                    if edu_fallback:
-                        response['child']['educator_name_fallback'] = edu_fallback.full_name
-                        response['child']['educator_cedula_fallback'] = getattr(edu_fallback, 'cedula', None)
         except Exception:
             pass
 
@@ -484,15 +592,25 @@ def get_child(child_id):
                            .order_by(HealthRecord.record_date.desc(), HealthRecord.id.desc()).first())
             response['last_health'] = last_health.to_dict() if last_health else None
 
+            # Registro con medidas antropométricas reales (no usar uno sin peso/talla)
+            last_growth = (HealthRecord.query
+                           .filter_by(child_id=child.id)
+                           .filter((HealthRecord.weight.isnot(None)) | (HealthRecord.height.isnot(None)))
+                           .order_by(HealthRecord.record_date.desc(), HealthRecord.id.desc()).first())
+            response['last_growth'] = last_growth.to_dict() if last_growth else None
+
             med_profile = MedicalProfile.query.filter_by(child_id=child.id).first()
             response['medical_profile'] = med_profile.to_dict() if med_profile else None
 
-            vaccines = Vaccine.query.filter_by(child_id=child.id).order_by(Vaccine.date_applied.desc().nullslast()).all()
+            vaccines = Vaccine.query.filter_by(child_id=child.id).order_by(Vaccine.date_applied.desc()).all()
             response['vaccines'] = [v.to_dict() for v in vaccines]
+            response['vaccine_summary'] = _vaccine_summary(vaccines)
         except Exception:
             response['last_health'] = None
+            response['last_growth'] = None
             response['medical_profile'] = None
             response['vaccines'] = []
+            response['vaccine_summary'] = None
 
         # Últimos hitos / evaluación IDII
         try:
@@ -500,7 +618,7 @@ def get_child(child_id):
             milestones = (Milestone.query
                           .filter_by(child_id=child.id)
                           .order_by(Milestone.record_date.desc(), Milestone.id.desc())
-                          .limit(20).all())
+                          .limit(60).all())
             response['milestones'] = [m.to_dict() for m in milestones] if hasattr(Milestone, 'to_dict') else [
                 {
                     'id': m.id,
@@ -513,8 +631,15 @@ def get_child(child_id):
                     'notes': getattr(m, 'notes', None)
                 } for m in milestones
             ]
+
+            # Para el resumen se usan todos los hitos del niño, no solo los 60 últimos.
+            all_milestones = (Milestone.query
+                              .filter_by(child_id=child.id)
+                              .order_by(Milestone.record_date.desc(), Milestone.id.desc()).all())
+            response['idii_summary'] = _aggregate_idii(all_milestones)
         except Exception:
             response['milestones'] = []
+            response['idii_summary'] = None
 
         # Configuración institucional de la licencia asociada al centro del niño
         try:

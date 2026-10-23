@@ -256,6 +256,37 @@ export function PrintLetterheadFrame({
   );
 }
 
+/**
+ * Página A4 explícita para documentos con membrete.
+ * Cabecera, contenido y pie van en flujo normal (flex): el pie nunca se
+ * superpone al contenido, a diferencia del pie fixed del marco anterior.
+ */
+export function PrintA4Page({
+  headerUrl,
+  footerUrl,
+  children,
+}: {
+  headerUrl?: string | null;
+  footerUrl?: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="print-a4-page">
+      {headerUrl ? (
+        <div className="print-a4-header">
+          <img src={headerUrl} alt="Cabecera Membrete" />
+        </div>
+      ) : null}
+      <div className="print-a4-body">{children}</div>
+      {footerUrl ? (
+        <div className="print-a4-footer">
+          <img src={footerUrl} alt="Pie de membrete" />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 /** Igual que PrintLetterheadFrame pero obtiene los membretes de la configuración pública de la organización. */
 export function PrintLetterheadAuto({ children }: { children: React.ReactNode }) {
   const [orgConfig, setOrgConfig] = useState<any>(null);

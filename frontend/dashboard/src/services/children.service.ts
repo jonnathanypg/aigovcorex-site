@@ -54,7 +54,21 @@ export const childrenService = {
         return data.children;
     },
 
-    async getById(id: number): Promise<{ child: Child; family: any; representatives: any[]; last_vulnerability?: any; last_socioeconomic?: any }> {
+    async getById(id: number): Promise<{
+        child: Child;
+        family: any;
+        representatives: any[];
+        last_vulnerability?: any;
+        last_socioeconomic?: any;
+        last_health?: any;
+        last_growth?: any;
+        medical_profile?: any;
+        vaccines?: any[];
+        vaccine_summary?: any;
+        milestones?: any[];
+        idii_summary?: any;
+        license?: any;
+    }> {
         const { data } = await api.get(`/api/children/${id}`);
         return data;
     },

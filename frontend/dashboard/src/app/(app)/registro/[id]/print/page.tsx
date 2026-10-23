@@ -1,16 +1,15 @@
 "use client";
 /**
  * Constancia de Inscripción y Valoración Inicial — Ficha Oficial para Expediente Físico.
- * Réplica idéntica en estructura, tablas y diseño del formato oficial:
- * Constancia_Expediente_DASE_CMCI_0967553801.pdf
+ * Formato en 2 páginas A4 con membrete (cabecera y pie en flujo normal).
  *
- * Características:
- * - Datos dinámicos de licencia (cooperantes, proyecto, convenio) tomados de configuración pública de la organización.
- * - Formato en 2 páginas con tablas numeradas del 1 al 8.
- * - Sin firma de la representante legal (solo Educadora Responsable y Coordinadora del Centro).
+ * Reglas de datos:
+ * - Solo se imprime información que existe en la base de datos.
+ * - Los campos sin dato quedan vacíos; no se usan guiones ni afirmaciones clínicas
+ *   por defecto (vacunas completas, control al día, anemia negativa, IDII acorde, etc.).
  */
 import { useEffect, useState } from "react";
-import { PrintButton, PrintLetterheadPage, semaforoBg, CMCI_CONVENIO_DEFAULTS } from "@/components/cmci/print-header";
+import { PrintButton, PrintA4Page, semaforoBg } from "@/components/cmci/print-header";
 import { childrenService } from "@/services/children.service";
 import { licenseAdminService } from "@/services/license-admin.service";
 
@@ -27,29 +26,68 @@ interface RepRec {
   is_primary?: boolean;
 }
 
-function cell(v: unknown, fallback: string = "____________"): string {
-  if (v === null || v === undefined || v === "" || v === "—") return fallback;
-  return String(v);
+interface IdiiDomain {
+  key: string;
+  label: string;
+  level: string;
+  percentage: number;
+  counts?: Record<string, number>;
+  total?: number;
+  record_date?: string | null;
+  notes?: string;
 }
 
-function formatDE(val: number | null | undefined): string {
-  if (val === null || val === undefined) return "____________";
+interface IdiiSummary {
+  domains: IdiiDomain[];
+  percentage: number;
+  level: string;
+  record_date?: string | null;
+}
+
+interface VaccineSummary {
+  total: number;
+  applied: number;
+  pending: number;
+  omitted: number;
+  overdue: number;
+  complete: boolean;
+}
+
+function text(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v).trim();
+  if (!s || s === "—" || s.toLowerCase() === "n/a") return "";
+  return s;
+}
+
+function joinList(v: unknown): string {
+  if (Array.isArray(v)) return v.map((x) => text(x)).filter(Boolean).join(", ");
+  return text(v);
+}
+
+function formatDE(val: unknown): string {
+  if (val === null || val === undefined || val === "") return "";
   const n = Number(val);
+  if (Number.isNaN(n)) return "";
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)} DE`;
+}
+
+function formatDate(val: unknown): string {
+  const s = text(val);
+  if (!s) return "";
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return s;
+}
+
+function measurement(val: unknown, unit: string): string {
+  const s = text(val);
+  return s ? `${s} ${unit}` : "";
 }
 
 export default function RegistroPrintPage({ params }: { params: { id: string } }) {
   const { id } = params;
-  const [data, setData] = useState<{
-    child: unknown;
-    family: unknown;
-    representatives: unknown[];
-    last_vulnerability?: any;
-    last_socioeconomic?: any;
-    last_health?: any;
-    milestones?: any[];
-  } | null>(null);
-
+  const [data, setData] = useState<any>(null);
   const [orgConfig, setOrgConfig] = useState<any>(null);
 
   useEffect(() => {
@@ -63,17 +101,19 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   const primaryRep = reps.find((r) => r.is_primary) || reps[0] || {};
   const lastVuln = data?.last_vulnerability;
   const lastHealth = data?.last_health;
+  const growth = data?.last_growth;
+  const medProfile = data?.medical_profile ?? {};
+  const vaccineSummary = (data?.vaccine_summary ?? null) as VaccineSummary | null;
+  const idii = (data?.idii_summary ?? null) as IdiiSummary | null;
   const milestones = data?.milestones ?? [];
-  const vaccines = (data as any)?.vaccines ?? [];
-  const medProfile = (data as any)?.medical_profile ?? {};
 
-  // Educadora y coordinadora efectivas (con fallbacks si no están explícitamente en el niño)
-  const effectiveEducatorName = c.educator_name || c.assigned_educator_name || c.educator_name_fallback || null;
-  const effectiveEducatorCedula = c.educator_cedula || c.educator_cedula_fallback || null;
-  const effectiveCoordinatorName = c.coordinator_name || null;
+  // Educadora y coordinadora: solo datos realmente asignados/registrados.
+  const educatorName = text(c.educator_name || c.assigned_educator_name);
+  const educatorCedula = text(c.educator_cedula);
+  const coordinatorName = text(c.coordinator_name);
 
-  // Metadatos institucionales y de proyecto (dinámicos por la licencia específica del centro del niño)
-  const childLicense = (data as any)?.license || {};
+  // Metadatos institucionales y de proyecto (dinámicos por la licencia del centro del niño)
+  const childLicense = data?.license ?? {};
   const activeConfig = {
     institutions_header: childLicense.institutions_header ?? orgConfig?.institutions_header ?? null,
     project_name: childLicense.project_name ?? orgConfig?.project_name ?? null,
@@ -112,7 +152,14 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   const headerBannerUrl = resolveBannerUrl(activeConfig.header_banner_path);
   const footerBannerUrl = resolveBannerUrl(activeConfig.footer_banner_path);
 
-  // Semáforo de completitud de expediente
+  const childName = text(c.full_name) || `${text(c.last_name)}, ${text(c.first_name)}`.replace(/^,\s*/, "");
+  const childFullNameUpper = childName.toUpperCase();
+  const centerName = text(c.tenant_name || c.center_name);
+  const childCedula = text(c.cedula);
+  const childStatus = text(c.status);
+  const enrollmentDate = formatDate(c.enrollment_date);
+
+  // Semáforo de completitud de expediente (solo para el indicador interno de la ficha)
   const checks: Array<[string, unknown]> = [
     ["Nombre", c.full_name],
     ["Cédula", c.cedula],
@@ -122,79 +169,54 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
     ["Representante", primaryRep.first_name || primaryRep.full_name],
     ["Alergias", c.allergies],
     ["Condiciones médicas", c.medical_conditions],
-    ["Familia", f.address ?? f.phone_primary ?? f.name],
+    ["Familia", f.address ?? f.phone_primary],
   ];
-  const filled = checks.filter(([, v]) => v !== undefined && v !== null && v !== "").length;
+  const filled = checks.filter(([, v]) => text(v)).length;
   const pct = Math.round((filled / checks.length) * 100);
   const sem = pct >= 80 ? "VERDE" : pct >= 50 ? "AMARILLO" : "ROJO";
 
-  // Fecha actual formateada
   const todayStr = new Date().toLocaleDateString("es-EC", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 
-  // Antropometría calculada
-  const pesoKg = lastHealth?.weight ?? c.birth_weight;
-  const tallaCm = lastHealth?.height ?? c.birth_height;
-  const perimetroCefalico = lastHealth?.head_circumference;
-  const imc = pesoKg && tallaCm ? (pesoKg / Math.pow(tallaCm / 100, 2)).toFixed(2) : null;
-  const bloodType = c.blood_type || medProfile.blood_type || null;
+  // Antropometría: solo del último registro con medidas reales. Nunca del peso/talla al nacer.
+  const weight = growth?.weight ?? null;
+  const height = growth?.height ?? null;
+  const headCircumference = growth?.head_circumference ?? null;
+  const imc = weight != null && height != null && Number(height) > 0
+    ? (Number(weight) / Math.pow(Number(height) / 100, 2)).toFixed(2)
+    : null;
+  const birthWeight = c.birth_weight ?? null;
+  const birthHeight = c.birth_height ?? null;
+  const zWeight = growth?.z_score_weight ?? null;
+  const zHeight = growth?.z_score_height ?? null;
+  const bloodType = text(c.blood_type) || text(medProfile.blood_type);
 
-  // Estado vacunal inferido si hay registros de vacunas
-  const hasVaccines = vaccines && vaccines.length > 0;
-  const pendingVaccines = vaccines.filter((v: any) => v.status === 'pendiente' || v.is_overdue);
-  const isVaccineComplete = hasVaccines ? pendingVaccines.length === 0 : true;
+  // Salud: datos del niño + perfil médico (si existe).
+  const allergies = text(c.allergies) || joinList(medProfile.allergies);
+  const medicalConditions = text(c.medical_conditions) || joinList(medProfile.chronic_conditions);
+  const currentMedications = joinList(medProfile.current_medications);
+  const healthNotes = text(lastHealth?.notes);
+  const healthResponsible = text(lastHealth?.registered_by || lastHealth?.medical_professional);
+  const hospital = text(medProfile.hospital_preference);
+  const hasDisability = f.has_disability === true || f.has_disability === false ? f.has_disability : null;
 
-  // Diagnóstico nutricional por Z-Score
-  const zWeight = lastHealth?.z_score_weight;
-  const zHeight = lastHealth?.z_score_height;
+  const hasVaccineData = Boolean(vaccineSummary && vaccineSummary.total > 0);
+  const vaccineComplete = hasVaccineData ? Boolean(vaccineSummary?.complete) : null;
 
-  // IDII Ámbitos por dominio
-  const getDomainLevel = (domainPrefix: string) => {
-    const m = milestones.find((x: any) => x.domain?.toLowerCase().includes(domainPrefix.toLowerCase()));
-    return m?.achievement_level;
-  };
-
-  const domainObservations = (domainPrefix: string) => {
-    const m = milestones.find((x: any) => x.domain?.toLowerCase().includes(domainPrefix.toLowerCase()));
-    return m?.notes || "";
-  };
-
-  const idiiDomains = [
-    { key: "motricidad_gruesa", label: "Motricidad gruesa", prefix: "corporal" },
-    { key: "motricidad_fina", label: "Motricidad fina", prefix: "corporal" },
-    { key: "lenguaje", label: "Lenguaje y comunicación", prefix: "lenguaje" },
-    { key: "cognitivo", label: "Cognitivo / exploración del entorno", prefix: "descubrimiento" },
-    { key: "socio_afectivo", label: "Socio-afectivo / vínculo", prefix: "vinculacion" },
-    { key: "autonomia", label: "Autonomía y hábitos", prefix: "vinculacion" },
-  ];
-
-  const childFullNameUpper = (c.full_name || `${c.last_name || ""}, ${c.first_name || ""}`).toUpperCase();
-
-  // Helper para inferir grupo de edad automáticamente si no está asignado
-  const resolveAssignedGroup = () => {
-    if (c.assigned_group && String(c.assigned_group).trim()) return c.assigned_group;
-    const months = c.age_months != null ? Number(c.age_months) : null;
-    if (months != null) {
-      if (months < 12) return "Lactantes (0 a 11m)";
-      if (months <= 18) return "12 a 18 meses";
-      if (months <= 24) return "19 a 24 meses";
-      if (months <= 30) return "25 a 30 meses";
-      if (months <= 36) return "31 a 36 meses";
-      return "37 a 42 meses";
-    }
-    return null;
-  };
-  const effectiveAssignedGroup = resolveAssignedGroup();
+  const hasNutritionData = zWeight !== null || zHeight !== null;
+  const vulnerabilityTotal = lastVuln?.total != null ? Number(lastVuln.total) : null;
+  const vulnerabilitySem = text(lastVuln?.semaphore).toUpperCase();
+  const vulnerabilityPriority = text(lastVuln?.priority);
 
   return (
     <div className="print-sheet print-page bg-slate-100 min-h-screen py-6 print:bg-white print:py-0 print:p-0">
       <div className="print:hidden max-w-[210mm] mx-auto mb-4 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-slate-200">
         <div>
           <h2 className="font-bold text-sm text-slate-800">Vista Previa de Impresión Oficial</h2>
-          <p className="text-xs text-slate-500">Documento de 2 páginas con diseño fiel a la Constancia de Expediente.</p>
+          <p className="text-xs text-slate-500">Documento de 2 páginas A4. Los campos sin dato se imprimen vacíos.</p>
         </div>
         <PrintButton />
       </div>
@@ -204,15 +226,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
           <p className="text-sm text-slate-500">Cargando constancia de expediente…</p>
         </div>
       ) : (
-        <div className="max-w-[210mm] mx-auto bg-white text-black text-[11px] leading-tight print:max-w-none print:m-0 print:shadow-none shadow-md">
-          <PrintLetterheadPage headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
+        <div className="max-w-[210mm] mx-auto text-black text-[11px] leading-tight print:max-w-none print:m-0">
           {/* ═══════════════════════════════════════════════════════════════
-              PÁGINA 1
+              PÁGINA 1 — Identificación, centro, familia y nutrición
               ═══════════════════════════════════════════════════════════════ */}
-          <div>
-
+          <PrintA4Page headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
             <div className="relative z-10">
-
               {/* Encabezado Superior: Instituciones Cooperantes Dinámicas */}
               <div className="border-b-2 border-black pb-1 mb-1.5">
                 {institutionsHeader && (
@@ -221,8 +240,10 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                   </div>
                 )}
                 <div className="flex justify-between items-center text-[10px] text-slate-600 mt-0.5">
-                  <span>Expediente {activeConfig.license_name} · Código <b>{id}</b> · C.I. <b>{cell(c.cedula, "S/C")}</b></span>
-                  
+                  <span>
+                    Expediente {activeConfig.license_name} · Código <b>{id}</b>
+                    {childCedula ? <> · C.I. <b>{childCedula}</b></> : null}
+                  </span>
                 </div>
               </div>
 
@@ -254,7 +275,13 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
               {/* Párrafo Formal de Certificación */}
               <div className="border-l-4 border-slate-900 bg-slate-50 p-2 mb-2 text-[10px] leading-relaxed text-slate-800">
-                Por medio del presente se hace constar que el niño/a <b>{childFullNameUpper}</b>, con cédula de identidad N.° <b>{cell(c.cedula, "S/C")}</b>, se encuentra inscrito/a y en estado <b className="uppercase">{cell(c.status, "ACTIVO")}</b>{projectName ? <> en el <b>{projectName}</b></> : null}, asignado al centro <b>{cell(c.tenant_name || c.center_name, "Centro")}</b> desde el {cell(c.enrollment_date, "____________")}.
+                Por medio del presente se hace constar que el niño/a <b>{childFullNameUpper}</b>
+                {childCedula ? <>, con cédula de identidad N.° <b>{childCedula}</b></> : null}
+                , se encuentra inscrito/a
+                {childStatus ? <> y en estado <b className="uppercase">{childStatus}</b></> : null}
+                {projectName ? <> en el <b>{projectName}</b></> : null}
+                {centerName ? <>, asignado al centro <b>{centerName}</b></> : null}
+                {enrollmentDate ? <> desde el {enrollmentDate}</> : null}.
               </div>
 
               {/* 1. IDENTIFICACIÓN DEL NIÑO / NIÑA */}
@@ -266,27 +293,27 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nombres y apellidos</td>
-                      <td className="w-1/4 py-0.5 px-2 font-bold border-r border-slate-200">{cell(c.full_name)}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-bold border-r border-slate-200">{text(c.full_name)}</td>
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Cédula de identidad</td>
-                      <td className="w-1/4 py-0.5 px-2 font-mono font-medium">{cell(c.cedula, "S/C")}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-mono font-medium">{childCedula}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de nacimiento</td>
-                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(c.birth_date)}</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{formatDate(c.birth_date)}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Edad actual</td>
-                      <td className="py-0.5 px-2 font-semibold">{cell(c.age_display)}</td>
+                      <td className="py-0.5 px-2 font-semibold">{text(c.age_display)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Género</td>
-                      <td className="py-0.5 px-2 capitalize border-r border-slate-200">{cell(c.gender)}</td>
+                      <td className="py-0.5 px-2 capitalize border-r border-slate-200">{text(c.gender)}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tipo de sangre</td>
-                      <td className="py-0.5 px-2">{cell(bloodType)}</td>
+                      <td className="py-0.5 px-2">{bloodType}</td>
                     </tr>
                     <tr>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de ingreso</td>
-                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(c.enrollment_date)}</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{enrollmentDate}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Estado en programa</td>
-                      <td className="py-0.5 px-2 uppercase font-bold text-slate-900">{cell(c.status, "ACTIVO")}</td>
+                      <td className="py-0.5 px-2 uppercase font-bold text-slate-900">{childStatus}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -301,26 +328,21 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Centro</td>
-                      <td className="w-1/4 py-0.5 px-2 font-semibold border-r border-slate-200">{cell(c.tenant_name || c.center_name)}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-semibold border-r border-slate-200">{centerName}</td>
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Grupo asignado</td>
-                      <td className="w-1/4 py-0.5 px-2 font-medium">{cell(effectiveAssignedGroup)}</td>
+                      <td className="w-1/4 py-0.5 px-2 font-medium">{text(c.assigned_group)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Educadora asignada</td>
-                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{cell(effectiveEducatorName)}</td>
+                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{educatorName}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">C.I. educadora</td>
-                      <td className="py-0.5 px-2 font-mono">{cell(effectiveEducatorCedula, effectiveEducatorName ? "Registrada en legajo" : "____________")}</td>
+                      <td className="py-0.5 px-2 font-mono">{educatorCedula}</td>
                     </tr>
                     <tr>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Coordinadora del centro</td>
-                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{cell(effectiveCoordinatorName)}</td>
+                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{coordinatorName}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Jornada</td>
-                      <td className="py-0.5 px-2">
-                        <span className="inline-flex items-center gap-3">
-                          <span>☐ Matutina</span>
-                          <span>☑ Completa</span>
-                        </span>
-                      </td>
+                      <td className="py-0.5 px-2"></td>
                     </tr>
                   </tbody>
                 </table>
@@ -335,19 +357,21 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Domicilio</td>
-                      <td colSpan={3} className="py-0.5 px-2">{cell(f.address)}</td>
+                      <td colSpan={3} className="py-0.5 px-2">{text(f.address)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Sector / Parroquia</td>
-                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(f.sector || f.neighborhood || f.city)}</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{text(f.sector || f.neighborhood || f.city)}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Representante</td>
-                      <td className="py-0.5 px-2 font-semibold">{cell(primaryRep.full_name || `${primaryRep.first_name || ""} ${primaryRep.last_name || ""}`.trim())}</td>
+                      <td className="py-0.5 px-2 font-semibold">
+                        {text(primaryRep.full_name) || `${text(primaryRep.first_name)} ${text(primaryRep.last_name)}`.trim()}
+                      </td>
                     </tr>
                     <tr>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Parentesco</td>
-                      <td className="py-0.5 px-2 capitalize border-r border-slate-200">{cell(primaryRep.relationship, "Madre")}</td>
+                      <td className="py-0.5 px-2 capitalize border-r border-slate-200">{text(primaryRep.relationship)}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Teléfono / Emergencia</td>
-                      <td className="py-0.5 px-2 font-mono">{cell(primaryRep.phone || f.phone_primary || f.emergency_contact_phone)}</td>
+                      <td className="py-0.5 px-2 font-mono">{text(primaryRep.phone || f.phone_primary || f.emergency_contact_phone)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -362,27 +386,27 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                   <tbody>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de valoración</td>
-                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(lastHealth?.record_date)}</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{formatDate(lastHealth?.record_date)}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Responsable</td>
-                      <td className="py-0.5 px-2">{cell(lastHealth?.registered_by || lastHealth?.medical_professional || c.educator_name)}</td>
+                      <td className="py-0.5 px-2">{healthResponsible}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso (kg)</td>
-                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{pesoKg ? `${pesoKg} kg` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{measurement(weight, "kg")}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla / Longitud (cm)</td>
-                      <td className="py-0.5 px-2 font-mono">{tallaCm ? `${tallaCm} cm` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-mono">{measurement(height, "cm")}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Perímetro cefálico (cm)</td>
-                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{perimetroCefalico ? `${perimetroCefalico} cm` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{measurement(headCircumference, "cm")}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">IMC (kg/m²)</td>
-                      <td className="py-0.5 px-2 font-mono">{imc ? `${imc} kg/m²` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-mono">{imc ? `${imc} kg/m²` : ""}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
-                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso al nacer (g)</td>
-                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{c.birth_weight ? `${c.birth_weight} kg` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso al nacer (kg)</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{measurement(birthWeight, "kg")}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Talla al nacer (cm)</td>
-                      <td className="py-0.5 px-2 font-mono">{c.birth_height ? `${c.birth_height} cm` : "____________"}</td>
+                      <td className="py-0.5 px-2 font-mono">{measurement(birthHeight, "cm")}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso / Edad (DE)</td>
@@ -392,44 +416,39 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Peso / Talla (DE)</td>
-                      <td className="py-0.5 px-2 font-mono border-r border-slate-200">{formatDE(zWeight)}</td>
+                      <td className="py-0.5 px-2 font-mono border-r border-slate-200"></td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Hemoglobina (g/dL)</td>
-                      <td className="py-0.5 px-2 font-mono">____________</td>
+                      <td className="py-0.5 px-2 font-mono"></td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Diagnóstico nutricional</td>
                       <td colSpan={3} className="py-0.5 px-2">
-                        <span className="inline-flex flex-wrap gap-x-4 gap-y-0.5">
-                          <span>{zWeight !== undefined && zWeight !== null && zWeight >= -2 && zWeight <= 2 ? "☑" : "☐"} Normal</span>
-                          <span>{zWeight !== undefined && zWeight !== null && zWeight < -2 ? "☑" : "☐"} Desnutrición aguda</span>
-                          <span>{zHeight !== undefined && zHeight !== null && zHeight < -2 ? "☑" : "☐"} Desnutrición crónica</span>
-                          <span>{zWeight !== undefined && zWeight !== null && zWeight > 2 && zWeight <= 3 ? "☑" : "☐"} Sobrepeso</span>
-                          <span>{zWeight !== undefined && zWeight !== null && zWeight > 3 ? "☑" : "☐"} Obesidad</span>
-                        </span>
+                        {hasNutritionData ? (
+                          <span className="inline-flex flex-wrap gap-x-4 gap-y-0.5">
+                            <span>{zWeight !== null && zWeight >= -2 && zWeight <= 2 ? "☑" : "☐"} Normal</span>
+                            <span>{zWeight !== null && zWeight < -2 ? "☑" : "☐"} Desnutrición aguda</span>
+                            <span>{zHeight !== null && zHeight < -2 ? "☑" : "☐"} Desnutrición crónica</span>
+                            <span>{zWeight !== null && zWeight > 2 && zWeight <= 3 ? "☑" : "☐"} Sobrepeso</span>
+                            <span>{zWeight !== null && zWeight > 3 ? "☑" : "☐"} Obesidad</span>
+                          </span>
+                        ) : null}
                       </td>
                     </tr>
                     <tr>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Anemia</td>
-                      <td colSpan={3} className="py-0.5 px-2">
-                        <span className="inline-flex gap-4">
-                          <span>☑ No</span>
-                          <span>☐ Leve</span>
-                          <span>☐ Moderada</span>
-                          <span>☐ Severa</span>
-                        </span>
-                      </td>
+                      <td colSpan={3} className="py-0.5 px-2"></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-
+            </div>
+          </PrintA4Page>
 
           {/* ═══════════════════════════════════════════════════════════════
-              PÁGINA 2
+              PÁGINA 2 — Salud, IDII, vulnerabilidad, observaciones y firmas
               ═══════════════════════════════════════════════════════════════ */}
-
-
-
+          <PrintA4Page headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
+            <div className="relative z-10">
               {/* 5. VALORACIÓN INICIAL — SALUD */}
               <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
@@ -440,42 +459,41 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                     <tr className="border-b border-slate-300">
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Esquema de vacunación</td>
                       <td className="w-1/4 py-0.5 px-2 border-r border-slate-200">
-                        <span className="inline-flex gap-3">
-                          <span>{isVaccineComplete ? "☑" : "☐"} Completo</span>
-                          <span>{!isVaccineComplete ? "☑" : "☐"} Incompleto</span>
-                        </span>
+                        {hasVaccineData ? (
+                          <span className="inline-flex gap-3">
+                            <span>{vaccineComplete ? "☑" : "☐"} Completo</span>
+                            <span>{!vaccineComplete ? "☑" : "☐"} Incompleto</span>
+                          </span>
+                        ) : null}
                       </td>
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Control niño sano</td>
-                      <td className="w-1/4 py-0.5 px-2">
-                        <span className="inline-flex gap-3">
-                          <span>☑ Al día</span>
-                          <span>☐ Pendiente</span>
-                        </span>
-                      </td>
+                      <td className="w-1/4 py-0.5 px-2"></td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Alergias</td>
-                      <td className="py-0.5 px-2 border-r border-slate-200">{cell(c.allergies, "Ninguna registrada")}</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{allergies}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Condiciones médicas</td>
-                      <td className="py-0.5 px-2">{cell(c.medical_conditions, "Ninguna registrada")}</td>
+                      <td className="py-0.5 px-2">{medicalConditions}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Discapacidad registrada</td>
-                      <td className="py-0.5 px-2 border-r border-slate-200 font-semibold">{f.has_disability ? `SÍ (${cell(f.disability_detail)})` : "NO"}</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200 font-semibold">
+                        {hasDisability === null ? "" : hasDisability ? `SÍ${text(f.disability_detail) ? ` (${text(f.disability_detail)})` : ""}` : "NO"}
+                      </td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Necesidades especiales</td>
-                      <td className="py-0.5 px-2">{cell(c.special_needs, "Ninguna registrada")}</td>
+                      <td className="py-0.5 px-2">{text(c.special_needs)}</td>
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Desparasitación</td>
-                      <td className="py-0.5 px-2 border-r border-slate-200">☐ Sí ☐ No Fecha: ______</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200"></td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Suplementación (Fe / Vit. A)</td>
-                      <td className="py-0.5 px-2">☐ Sí ☐ No</td>
+                      <td className="py-0.5 px-2"></td>
                     </tr>
                     <tr>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Establecimiento de salud</td>
-                      <td className="py-0.5 px-2 border-r border-slate-200">____________</td>
+                      <td className="py-0.5 px-2 border-r border-slate-200">{hospital}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Observaciones</td>
-                      <td className="py-0.5 px-2">____________</td>
+                      <td className="py-0.5 px-2 whitespace-pre-wrap">{healthNotes}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -489,39 +507,40 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
                   <thead>
                     <tr className="border-b border-slate-300 bg-slate-100 font-bold text-center">
-                      <th className="text-left py-0.5 px-2 w-[26%] border-r border-slate-300">Ámbito de desarrollo</th>
-                      <th className="py-0.5 px-1 w-[11%] border-r border-slate-300">Adquirido (A)</th>
-                      <th className="py-0.5 px-1 w-[11%] border-r border-slate-300">En proceso (EP)</th>
-                      <th className="py-0.5 px-1 w-[11%] border-r border-slate-300">Inicio (I)</th>
-                      <th className="text-left py-0.5 px-2 w-[41%]">Observaciones</th>
+                      <th className="text-left py-0.5 px-2 w-[30%] border-r border-slate-300">Ámbito de desarrollo</th>
+                      <th className="py-0.5 px-1 w-[10%] border-r border-slate-300">Adquirido (A)</th>
+                      <th className="py-0.5 px-1 w-[10%] border-r border-slate-300">En proceso (EP)</th>
+                      <th className="py-0.5 px-1 w-[10%] border-r border-slate-300">Inicio (I)</th>
+                      <th className="text-left py-0.5 px-2 w-[40%]">Observaciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {idiiDomains.map((dom) => {
-                      const lvl = getDomainLevel(dom.prefix);
-                      return (
-                        <tr key={dom.key} className="border-b border-slate-200 text-center">
-                          <td className="text-left py-0.5 px-2 font-medium bg-slate-50 border-r border-slate-200">{dom.label}</td>
-                          <td className="py-0.5 px-2 font-bold border-r border-slate-200">{lvl === "adquirido" || lvl === "consolidado" ? "☑" : "☐"}</td>
-                          <td className="py-0.5 px-2 font-bold border-r border-slate-200">{lvl === "en_proceso" ? "☑" : "☐"}</td>
-                          <td className="py-0.5 px-2 font-bold border-r border-slate-200">{lvl === "no_iniciado" ? "☑" : "☐"}</td>
-                          <td className="text-left py-0.5 px-2 text-[8.5px] text-slate-600 leading-tight">
-                            <span>{domainObservations(dom.prefix) || "Logro alcanzado"}</span>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {idii?.domains?.map((dom) => (
+                      <tr key={dom.key} className="border-b border-slate-200 text-center">
+                        <td className="text-left py-0.5 px-2 font-medium bg-slate-50 border-r border-slate-200">{dom.label}</td>
+                        <td className="py-0.5 px-2 font-bold border-r border-slate-200">{dom.level === "adquirido" ? "☑" : "☐"}</td>
+                        <td className="py-0.5 px-2 font-bold border-r border-slate-200">{dom.level === "en_proceso" ? "☑" : "☐"}</td>
+                        <td className="py-0.5 px-2 font-bold border-r border-slate-200">{dom.level === "no_iniciado" ? "☑" : "☐"}</td>
+                        <td className="text-left py-0.5 px-2 text-[8.5px] text-slate-600 leading-tight">
+                          {text(dom.notes) ? <span>{text(dom.notes)} · </span> : null}
+                          <span>{dom.percentage}% ({dom.counts?.adquirido ?? 0}/{dom.total ?? 0})</span>
+                        </td>
+                      </tr>
+                    ))}
                     <tr className="bg-slate-50">
                       <td className="py-1 px-2 font-semibold text-left border-r border-slate-200">Resultado global IDII</td>
                       <td colSpan={2} className="py-1 px-2 text-left border-r border-slate-200">
-                        <span className="inline-flex gap-3">
-                          <span>☑ Acorde a la edad</span>
-                          <span>☐ En riesgo</span>
-                          <span>☐ Requiere derivación</span>
-                        </span>
+                        {idii ? (
+                          <span className="inline-flex flex-wrap gap-3">
+                            <span>{idii.level === "acorde" ? "☑" : "☐"} Acorde a la edad</span>
+                            <span>{idii.level === "en_riesgo" ? "☑" : "☐"} En riesgo</span>
+                            <span>{idii.level === "requiere_derivacion" ? "☑" : "☐"} Requiere derivación</span>
+                            <span className="text-[8.5px] text-slate-600">({idii.percentage}%)</span>
+                          </span>
+                        ) : null}
                       </td>
                       <td className="py-1 px-2 font-semibold border-r border-slate-200">Fecha de aplicación</td>
-                      <td className="py-1 px-2 font-mono text-left">{cell(milestones[0]?.record_date)}</td>
+                      <td className="py-1 px-2 font-mono text-left">{formatDate(idii?.record_date ?? milestones[0]?.record_date)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -541,25 +560,28 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                       </td>
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Puntaje vulnerabilidad</td>
                       <td className="w-1/4 py-0.5 px-2 font-bold font-mono">
-                        {lastVuln ? `${lastVuln.total}/100` : "____________"}
+                        {vulnerabilityTotal !== null ? `${vulnerabilityTotal}/100` : ""}
                       </td>
                     </tr>
                     <tr>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nivel de semáforo</td>
                       <td className="py-0.5 px-2 border-r border-slate-200">
-                        <span className="inline-flex flex-wrap gap-2 text-[9px]">
-                          <span>{lastVuln?.semaphore?.toUpperCase().includes("VERDE") || (lastVuln?.total && lastVuln.total <= 40) ? "☑" : "☐"} Verde (0–40)</span>
-                          <span>{lastVuln?.semaphore?.toUpperCase().includes("AMARILLO") || (lastVuln?.total && lastVuln.total > 40 && lastVuln.total <= 60) ? "☑" : "☐"} Amarillo (40–60)</span>
-                          <span>{lastVuln?.semaphore?.toUpperCase().includes("NARANJA") || (lastVuln?.total && lastVuln.total > 60 && lastVuln.total <= 80) ? "☑" : "☐"} Naranja (60–80)</span>
-                          <span>{lastVuln?.semaphore?.toUpperCase().includes("ROJO") || (lastVuln?.total && lastVuln.total > 80) ? "☑" : "☐"} Rojo (80–100)</span>
-                        </span>
+                        {vulnerabilityTotal !== null || vulnerabilitySem ? (
+                          <span className="inline-flex flex-wrap gap-2 text-[9px]">
+                            <span>{vulnerabilitySem.includes("VERDE") || (vulnerabilityTotal !== null && vulnerabilityTotal <= 40) ? "☑" : "☐"} Verde (0–40)</span>
+                            <span>{vulnerabilitySem.includes("AMARILLO") || (vulnerabilityTotal !== null && vulnerabilityTotal > 40 && vulnerabilityTotal <= 60) ? "☑" : "☐"} Amarillo (40–60)</span>
+                            <span>{vulnerabilitySem.includes("NARANJA") || (vulnerabilityTotal !== null && vulnerabilityTotal > 60 && vulnerabilityTotal <= 80) ? "☑" : "☐"} Naranja (60–80)</span>
+                            <span>{vulnerabilitySem.includes("ROJO") || (vulnerabilityTotal !== null && vulnerabilityTotal > 80) ? "☑" : "☐"} Rojo (80–100)</span>
+                          </span>
+                        ) : null}
                       </td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Priorización</td>
                       <td className="py-0.5 px-2">
-                        <span className="inline-flex gap-3">
-                          <span>{lastVuln?.priority ? "☑ Sí" : "☐ Sí"}</span>
-                          <span>{!lastVuln?.priority ? "☑ No" : "☐ No"}</span>
-                        </span>
+                        {vulnerabilityPriority ? (
+                          <span className="inline-flex gap-3">
+                            <span>☑ {vulnerabilityPriority}</span>
+                          </span>
+                        ) : null}
                       </td>
                     </tr>
                   </tbody>
@@ -571,35 +593,32 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
                 </div>
-                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[40px] text-slate-800 leading-normal">
-                  {c.notes ? <p className="mb-0.5">{c.notes}</p> : null}
+                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[36px] text-slate-800 leading-normal">
+                  {text(c.notes) ? <p className="mb-0.5 whitespace-pre-wrap">{text(c.notes)}</p> : null}
                   <p>{footerNote}</p>
                 </div>
               </div>
 
               {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
-              <div className="mt-8 pt-3 break-inside-avoid print:break-inside-avoid">
+              <div className="mt-4 pt-2 mb-2 break-inside-avoid print:break-inside-avoid">
                 <div className="grid grid-cols-2 gap-16 px-12">
-                  {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">
                     <div className="border-t border-slate-400 pt-1">
                       <p className="font-semibold text-[10px] text-slate-600">Educadora Responsable</p>
-                      <p className="text-[9.5px] text-slate-500 mt-0.5">{cell(effectiveEducatorName, "Firma y fecha")}</p>
+                      <p className="text-[9.5px] text-slate-500 mt-0.5">{educatorName}</p>
                     </div>
                   </div>
 
-                  {/* Firma 2: Coordinadora del Centro */}
                   <div className="text-center">
                     <div className="border-t border-slate-400 pt-1">
                       <p className="font-semibold text-[10px] text-slate-600">Coordinadora del Centro</p>
-                      <p className="text-[9.5px] text-slate-500 mt-0.5">{cell(effectiveCoordinatorName, "Firma, sello y fecha")}</p>
+                      <p className="text-[9.5px] text-slate-500 mt-0.5">{coordinatorName}</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          </PrintLetterheadPage>
+          </PrintA4Page>
         </div>
       )}
     </div>

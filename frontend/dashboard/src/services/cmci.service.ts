@@ -145,6 +145,13 @@ function mapSocioBackendToFront(b: BackendSocioRecord): SocioRecord {
   const res = (b.result ?? {}) as Record<string, unknown>;
   const data = (b.data ?? {}) as Record<string, unknown>;
   const total = Number(res.total ?? 0);
+  // Unificar subscores y sub para compatibilidad bidireccional online (backend)/offline (localStorage)
+  const rawSubscores = (res.subscores ?? res.sub ?? {}) as Record<string, number>;
+  const normalizedResultado = {
+    ...res,
+    subscores: rawSubscores,
+    sub: rawSubscores,
+  };
   return {
     id: String(b.id), codigo: String(b.code ?? ""), fecha: String(b.assessed_at ?? "").slice(0, 10),
     nino: String(b.child_name ?? ""), nacimiento: String(data.nacimiento ?? ""),
@@ -152,7 +159,7 @@ function mapSocioBackendToFront(b: BackendSocioRecord): SocioRecord {
     telefono: String(data.telefono ?? ""), total,
     clasificacion: String(res.classification ?? res.clasificacion ?? ""),
     perCapita: Number(res.per_capita ?? res.perCapita ?? 0),
-    payload: { ...data, resultado: res }, createdAt: String(b.assessed_at ?? ""),
+    payload: { ...data, resultado: normalizedResultado }, createdAt: String(b.assessed_at ?? ""),
   };
 }
 

@@ -15,6 +15,7 @@ echo "════════════════════════�
 # 0. Asegurar Variables de Entorno y Node.js (NVM)
 export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 export NVM_DIR="$HOME/.nvm"
+export NODE_OPTIONS="--max-old-space-size=4096"
 
 set +e
 if [ -s "$NVM_DIR/nvm.sh" ]; then

@@ -60,6 +60,8 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD || secrets.MAIN_SERVER_PASSWORD || secrets.CONTABO_PASSWORD || secrets.SSH_PASSWORD }}
           key: ${{ secrets.SSH_PRIVATE_KEY || secrets.SERVER_KEY || '' }}
           port: ${{ secrets.SERVER_PORT || secrets.MAIN_SERVER_PORT || secrets.CONTABO_PORT || secrets.SSH_PORT || 22 }}
+          command_timeout: 30m
+          timeout: 60s
           script: |
             echo '📂 Preparando directorio de despliegue en VPS (~/aigovcorex)...'
             mkdir -p ~/aigovcorex

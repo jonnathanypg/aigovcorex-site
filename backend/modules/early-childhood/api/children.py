@@ -419,6 +419,19 @@ def get_child(child_id):
 
                 if coord_user:
                     response['child']['coordinator_name'] = coord_user.full_name
+                    response['child']['coordinator_cedula'] = getattr(coord_user, 'cedula', None)
+                
+                # Si el niño no tiene educadora explícita asignada pero hay una educadora activa en el centro (o registrada en su último control), usarla como respaldo
+                if not educator:
+                    edu_role_ids = [r.id for r in Role.query.filter(Role.name.in_(['educadora', 'educator', 'educador', 'teacher'])).all()]
+                    edu_fallback = User.query.filter(
+                        User.tenant_id == child.tenant_id,
+                        User.role_id.in_(edu_role_ids),
+                        User.is_active == True
+                    ).first()
+                    if edu_fallback:
+                        response['child']['educator_name_fallback'] = edu_fallback.full_name
+                        response['child']['educator_cedula_fallback'] = getattr(edu_fallback, 'cedula', None)
         except Exception:
             pass
 
@@ -463,18 +476,23 @@ def get_child(child_id):
             response['last_vulnerability'] = None
             response['last_socioeconomic'] = None
 
-        # Último registro de salud / crecimiento antropométrico
+        # Último registro de salud / crecimiento antropométrico, vacunas y perfil médico
         try:
-            from models.health import HealthRecord
+            from models.health import HealthRecord, MedicalProfile, Vaccine
             last_health = (HealthRecord.query
                            .filter_by(child_id=child.id)
                            .order_by(HealthRecord.record_date.desc(), HealthRecord.id.desc()).first())
-            if last_health:
-                response['last_health'] = last_health.to_dict()
-            else:
-                response['last_health'] = None
+            response['last_health'] = last_health.to_dict() if last_health else None
+
+            med_profile = MedicalProfile.query.filter_by(child_id=child.id).first()
+            response['medical_profile'] = med_profile.to_dict() if med_profile else None
+
+            vaccines = Vaccine.query.filter_by(child_id=child.id).order_by(Vaccine.date_applied.desc().nullslast()).all()
+            response['vaccines'] = [v.to_dict() for v in vaccines]
         except Exception:
             response['last_health'] = None
+            response['medical_profile'] = None
+            response['vaccines'] = []
 
         # Últimos hitos / evaluación IDII
         try:

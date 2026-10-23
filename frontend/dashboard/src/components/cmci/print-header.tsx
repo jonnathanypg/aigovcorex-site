@@ -209,11 +209,11 @@ export function PrintButton() {
 
 
 /**
- * Marco de papel membretado para impresión/PDF.
+ * Marco de papel membretado para impresión/PDF multipágina dinámico.
  * - Cabecera: se repite en cada hoja (thead).
- * - Pie: fijo al borde inferior de cada hoja; un espaciador (tfoot) reserva su altura,
- *   por lo que NINGÚN contenido (texto, tablas, firmas) puede quedar debajo o encima del pie.
- * - El contenido fluye como en un documento normal y salta de hoja entre bloques.
+ * - Pie: fijo al borde inferior de cada hoja (.letterhead-fixed-footer); un espaciador (tfoot) reserva 44mm
+ *   en cada hoja para que NINGÚN contenido (texto, tablas, firmas) quede debajo o encima del pie.
+ * - Sin table-layout: fixed, garantizando que el contenido fluya naturalmente en 2, 3 o N páginas según su tamaño real.
  */
 export function PrintLetterheadFrame({
   headerUrl,
@@ -225,29 +225,34 @@ export function PrintLetterheadFrame({
   children: React.ReactNode;
 }) {
   return (
-    <table className="letterhead-frame">
-      <thead>
-        <tr>
-          <td className="lh-head">
-            {headerUrl && <img src={headerUrl} alt="Cabecera Membrete" />}
-          </td>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td className="lh-body">{children}</td>
-        </tr>
-      </tbody>
-      <tfoot>
-        <tr>
-          <td className="lh-foot">
-            <div className="lh-foot-spacer">
-              {footerUrl && <img className="lh-foot-img" src={footerUrl} alt="Pie de membrete" />}
-            </div>
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+    <div className="relative">
+      <table className="letterhead-frame">
+        <thead>
+          <tr>
+            <td className="lh-head">
+              {headerUrl && <img src={headerUrl} alt="Cabecera Membrete" />}
+            </td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="lh-body">{children}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td className="lh-foot">
+              <div className="lh-foot-spacer" />
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+      {footerUrl && (
+        <div className="letterhead-fixed-footer">
+          <img src={footerUrl} alt="Pie de membrete" />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -267,21 +272,5 @@ export function PrintLetterheadAuto({ children }: { children: React.ReactNode })
   );
 }
 
-/** Hoja A4 independiente con membrete: cabecera arriba, pie abajo (reservado), contenido en medio. */
-export function PrintLetterheadPage({
-  headerUrl,
-  footerUrl,
-  children,
-}: {
-  headerUrl?: string | null;
-  footerUrl?: string | null;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="lh-page">
-      {headerUrl && <img className="lh-page-head" src={headerUrl} alt="Cabecera Membrete" />}
-      <div className="lh-page-body">{children}</div>
-      {footerUrl && <img className="lh-page-foot" src={footerUrl} alt="Pie de membrete" />}
-    </div>
-  );
-}
+/** Alias de compatibilidad que delega al marco dinámico multipágina. */
+export const PrintLetterheadPage = PrintLetterheadFrame;

@@ -64,6 +64,13 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   const lastVuln = data?.last_vulnerability;
   const lastHealth = data?.last_health;
   const milestones = data?.milestones ?? [];
+  const vaccines = (data as any)?.vaccines ?? [];
+  const medProfile = (data as any)?.medical_profile ?? {};
+
+  // Educadora y coordinadora efectivas (con fallbacks si no están explícitamente en el niño)
+  const effectiveEducatorName = c.educator_name || c.assigned_educator_name || c.educator_name_fallback || null;
+  const effectiveEducatorCedula = c.educator_cedula || c.educator_cedula_fallback || null;
+  const effectiveCoordinatorName = c.coordinator_name || null;
 
   // Metadatos institucionales y de proyecto (dinámicos por la licencia específica del centro del niño)
   const childLicense = (data as any)?.license || {};
@@ -133,6 +140,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
   const tallaCm = lastHealth?.height ?? c.birth_height;
   const perimetroCefalico = lastHealth?.head_circumference;
   const imc = pesoKg && tallaCm ? (pesoKg / Math.pow(tallaCm / 100, 2)).toFixed(2) : null;
+  const bloodType = c.blood_type || medProfile.blood_type || null;
+
+  // Estado vacunal inferido si hay registros de vacunas
+  const hasVaccines = vaccines && vaccines.length > 0;
+  const pendingVaccines = vaccines.filter((v: any) => v.status === 'pendiente' || v.is_overdue);
+  const isVaccineComplete = hasVaccines ? pendingVaccines.length === 0 : true;
 
   // Diagnóstico nutricional por Z-Score
   const zWeight = lastHealth?.z_score_weight;
@@ -267,7 +280,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Género</td>
                       <td className="py-0.5 px-2 capitalize border-r border-slate-200">{cell(c.gender)}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tipo de sangre</td>
-                      <td className="py-0.5 px-2">{cell(c.blood_type)}</td>
+                      <td className="py-0.5 px-2">{cell(bloodType)}</td>
                     </tr>
                     <tr>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha de ingreso</td>
@@ -294,13 +307,13 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                     </tr>
                     <tr className="border-b border-slate-300">
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Educadora asignada</td>
-                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{cell(c.educator_name || c.assigned_educator_name)}</td>
+                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{cell(effectiveEducatorName)}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">C.I. educadora</td>
-                      <td className="py-0.5 px-2 font-mono">{cell(c.educator_cedula, c.educator_name || c.assigned_educator_name ? "Registrada en legajo" : "____________")}</td>
+                      <td className="py-0.5 px-2 font-mono">{cell(effectiveEducatorCedula, effectiveEducatorName ? "Registrada en legajo" : "____________")}</td>
                     </tr>
                     <tr>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Coordinadora del centro</td>
-                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{cell(c.coordinator_name)}</td>
+                      <td className="py-0.5 px-2 font-medium border-r border-slate-200">{cell(effectiveCoordinatorName)}</td>
                       <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Jornada</td>
                       <td className="py-0.5 px-2">
                         <span className="inline-flex items-center gap-3">
@@ -428,8 +441,8 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Esquema de vacunación</td>
                       <td className="w-1/4 py-0.5 px-2 border-r border-slate-200">
                         <span className="inline-flex gap-3">
-                          <span>☑ Completo</span>
-                          <span>☐ Incompleto</span>
+                          <span>{isVaccineComplete ? "☑" : "☐"} Completo</span>
+                          <span>{!isVaccineComplete ? "☑" : "☐"} Incompleto</span>
                         </span>
                       </td>
                       <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Control niño sano</td>
@@ -468,12 +481,6 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 </table>
               </div>
 
-            </div>
-          </div>
-          </PrintLetterheadPage>
-          <PrintLetterheadPage headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
-          <div>
-            <div className="relative z-10">
               {/* 6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII) */}
               <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
@@ -520,12 +527,6 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 </table>
               </div>
 
-            </div>
-          </div>
-          </PrintLetterheadPage>
-          <PrintLetterheadPage headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
-          <div>
-            <div className="relative z-10">
               {/* 7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE */}
               <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
@@ -570,20 +571,20 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
                 </div>
-                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[60px] text-slate-800 leading-normal">
+                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[40px] text-slate-800 leading-normal">
                   {c.notes ? <p className="mb-0.5">{c.notes}</p> : null}
                   <p>{footerNote}</p>
                 </div>
               </div>
 
               {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
-              <div className="mt-24 pt-1 break-inside-avoid print:break-inside-avoid">
+              <div className="mt-8 pt-3 break-inside-avoid print:break-inside-avoid">
                 <div className="grid grid-cols-2 gap-16 px-12">
                   {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">
                     <div className="border-t border-slate-400 pt-1">
                       <p className="font-semibold text-[10px] text-slate-600">Educadora Responsable</p>
-                      <p className="text-[9.5px] text-slate-500 mt-0.5">{cell(c.educator_name || c.assigned_educator_name, "Firma y fecha")}</p>
+                      <p className="text-[9.5px] text-slate-500 mt-0.5">{cell(effectiveEducatorName, "Firma y fecha")}</p>
                     </div>
                   </div>
 
@@ -591,13 +592,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                   <div className="text-center">
                     <div className="border-t border-slate-400 pt-1">
                       <p className="font-semibold text-[10px] text-slate-600">Coordinadora del Centro</p>
-                      <p className="text-[9.5px] text-slate-500 mt-0.5">Firma, sello y fecha</p>
+                      <p className="text-[9.5px] text-slate-500 mt-0.5">{cell(effectiveCoordinatorName, "Firma, sello y fecha")}</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
           </PrintLetterheadPage>
         </div>

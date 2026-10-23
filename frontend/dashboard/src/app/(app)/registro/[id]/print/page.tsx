@@ -159,7 +159,32 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
 
   const domainObservations = (domainPrefix: string) => {
     const m = milestones.find((x: any) => x.domain?.toLowerCase().includes(domainPrefix.toLowerCase()));
-    return m?.notes || "";
+    const rawNote = m?.notes?.trim();
+    if (!rawNote) return "Logro alcanzado";
+    // Si la nota guardada contiene un concatenado global de todos los dominios, extraer solo el resultado de este ámbito
+    const lower = rawNote.toLowerCase();
+    const countHits = (lower.includes("vinculaci") ? 1 : 0) +
+      (lower.includes("corporal") || lower.includes("cuerpo") ? 1 : 0) +
+      (lower.includes("lenguaje") ? 1 : 0) +
+      (lower.includes("descubrimiento") ? 1 : 0);
+    if (countHits >= 2) {
+      const patterns: Record<string, RegExp> = {
+        corporal: /exploraci[óo]n\s+del\s+cuerpo[^\-–:]*[\-–:]\s*([^\-–\n]+)/i,
+        lenguaje: /lenguaje[^\-–:]*[\-–:]\s*([^\-–\n]+)/i,
+        descubrimiento: /descubrimiento[^\-–:]*[\-–:]\s*([^\-–\n]+)/i,
+        vinculacion: /vinculaci[óo]n[^\-–:]*[\-–:]\s*([^\-–\n]+)/i,
+      };
+      const regex = patterns[domainPrefix.toLowerCase()];
+      if (regex) {
+        const match = rawNote.match(regex);
+        if (match && match[1]) {
+          const clean = match[1].split(/Exploración|Lenguaje|Descubrimiento|Vinculación/i)[0].trim();
+          if (clean) return clean;
+        }
+      }
+      return "Logro alcanzado";
+    }
+    return rawNote.length > 100 ? `${rawNote.slice(0, 97)}…` : rawNote;
   };
 
   const idiiDomains = [
@@ -571,14 +596,14 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
                 </div>
-                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[40px] text-slate-800 leading-normal">
+                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[35px] text-slate-800 leading-normal">
                   {c.notes ? <p className="mb-0.5">{c.notes}</p> : null}
                   <p>{footerNote}</p>
                 </div>
               </div>
 
               {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
-              <div className="mt-8 pt-3 break-inside-avoid print:break-inside-avoid">
+              <div className="mt-4 pt-2 break-inside-avoid print:break-inside-avoid">
                 <div className="grid grid-cols-2 gap-16 px-12">
                   {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">

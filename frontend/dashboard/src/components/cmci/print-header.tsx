@@ -266,3 +266,22 @@ export function PrintLetterheadAuto({ children }: { children: React.ReactNode })
     </PrintLetterheadFrame>
   );
 }
+
+/** Hoja A4 independiente con membrete: cabecera arriba, pie abajo (reservado), contenido en medio. */
+export function PrintLetterheadPage({
+  headerUrl,
+  footerUrl,
+  children,
+}: {
+  headerUrl?: string | null;
+  footerUrl?: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="lh-page">
+      {headerUrl && <img className="lh-page-head" src={headerUrl} alt="Cabecera Membrete" />}
+      <div className="lh-page-body">{children}</div>
+      {footerUrl && <img className="lh-page-foot" src={footerUrl} alt="Pie de membrete" />}
+    </div>
+  );
+}

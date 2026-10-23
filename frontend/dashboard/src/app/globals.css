@@ -442,6 +442,16 @@ textarea:focus {
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
+/* ── Hoja A4 membretada (una por bloque de contenido) ── */
+.lh-page { position: relative; width: 210mm; height: 296mm; margin: 0 auto 8mm; background: #fff; overflow: hidden; }
+.lh-page-head { display: block; width: 100%; height: auto; }
+.lh-page-body { padding: 2mm 8mm 0 8mm; height: calc(296mm - 29mm - 44mm); }
+.lh-page-foot { position: absolute; left: 0; bottom: 0; width: 100%; height: 40mm; object-fit: cover; object-position: bottom; }
+@media print {
+  .lh-page { margin: 0; break-after: page; page-break-after: always; }
+  .lh-page:last-child { break-after: auto; page-break-after: auto; }
+}
+
 /* ── Papel membretado (cabecera repetida, pie fijo con espacio reservado) ── */
 .letterhead-frame { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .letterhead-frame .lh-head, .letterhead-frame .lh-foot { padding: 0; }

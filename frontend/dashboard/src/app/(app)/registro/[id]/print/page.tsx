@@ -10,7 +10,7 @@
  * - Sin firma de la representante legal (solo Educadora Responsable y Coordinadora del Centro).
  */
 import { useEffect, useState } from "react";
-import { PrintButton, PrintLetterheadFrame, semaforoBg, CMCI_CONVENIO_DEFAULTS } from "@/components/cmci/print-header";
+import { PrintButton, PrintLetterheadPage, semaforoBg, CMCI_CONVENIO_DEFAULTS } from "@/components/cmci/print-header";
 import { childrenService } from "@/services/children.service";
 import { licenseAdminService } from "@/services/license-admin.service";
 
@@ -192,7 +192,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
         </div>
       ) : (
         <div className="max-w-[210mm] mx-auto bg-white text-black text-[11px] leading-tight print:max-w-none print:m-0 print:shadow-none shadow-md">
-          <PrintLetterheadFrame headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
+          <PrintLetterheadPage headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 1
               ═══════════════════════════════════════════════════════════════ */}
@@ -409,16 +409,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                   </tbody>
                 </table>
               </div>
-            </div>
 
-          </div>
 
           {/* ═══════════════════════════════════════════════════════════════
               PÁGINA 2
               ═══════════════════════════════════════════════════════════════ */}
-          <div>
 
-            <div className="relative z-10">
 
 
               {/* 5. VALORACIÓN INICIAL — SALUD */}
@@ -472,6 +468,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 </table>
               </div>
 
+            </div>
+          </div>
+          </PrintLetterheadPage>
+          <PrintLetterheadPage headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
+          <div>
+            <div className="relative z-10">
               {/* 6. VALORACIÓN INICIAL — INDICADORES DE DESARROLLO INFANTIL INTEGRAL (IDII) */}
               <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
@@ -480,11 +482,11 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
                   <thead>
                     <tr className="border-b border-slate-300 bg-slate-100 font-bold text-center">
-                      <th className="text-left py-0.5 px-2 w-2/5 border-r border-slate-300">Ámbito de desarrollo</th>
-                      <th className="py-0.5 px-2 w-[15%] border-r border-slate-300">Adquirido (A)</th>
-                      <th className="py-0.5 px-2 w-[15%] border-r border-slate-300">En proceso (EP)</th>
-                      <th className="py-0.5 px-2 w-[15%] border-r border-slate-300">Inicio (I)</th>
-                      <th className="text-left py-0.5 px-2 w-[15%]">Observaciones</th>
+                      <th className="text-left py-0.5 px-2 w-[26%] border-r border-slate-300">Ámbito de desarrollo</th>
+                      <th className="py-0.5 px-1 w-[11%] border-r border-slate-300">Adquirido (A)</th>
+                      <th className="py-0.5 px-1 w-[11%] border-r border-slate-300">En proceso (EP)</th>
+                      <th className="py-0.5 px-1 w-[11%] border-r border-slate-300">Inicio (I)</th>
+                      <th className="text-left py-0.5 px-2 w-[41%]">Observaciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -518,6 +520,12 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 </table>
               </div>
 
+            </div>
+          </div>
+          </PrintLetterheadPage>
+          <PrintLetterheadPage headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
+          <div>
+            <div className="relative z-10">
               {/* 7. SEMÁFORO DE VULNERABILIDAD Y COMPLETITUD DEL EXPEDIENTE */}
               <div className="mb-2 break-inside-avoid">
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
@@ -562,14 +570,14 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                   8. OBSERVACIONES Y NOTAS DE SEGUIMIENTO
                 </div>
-                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[30px] print:min-h-0 text-slate-800 leading-normal">
+                <div className="border border-t-0 border-slate-300 p-1.5 text-[9.5px] min-h-[60px] text-slate-800 leading-normal">
                   {c.notes ? <p className="mb-0.5">{c.notes}</p> : null}
                   <p>{footerNote}</p>
                 </div>
               </div>
 
               {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
-              <div className="mt-3 print:mt-2 pt-1 break-inside-avoid print:break-inside-avoid">
+              <div className="mt-24 pt-1 break-inside-avoid print:break-inside-avoid">
                 <div className="grid grid-cols-2 gap-16 px-12">
                   {/* Firma 1: Educadora Responsable */}
                   <div className="text-center">
@@ -591,7 +599,7 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
             </div>
 
           </div>
-          </PrintLetterheadFrame>
+          </PrintLetterheadPage>
         </div>
       )}
     </div>

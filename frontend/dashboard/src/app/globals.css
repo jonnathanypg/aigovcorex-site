@@ -716,6 +716,18 @@ textarea:focus {
     animation: none !important;
   }
 
+  /* El shell (flex + h-screen + overflow-hidden) recorta el documento al paginar: lo forzamos a flujo de bloque
+     para que TODAS las páginas (secciones finales y firmas incluidas) se impriman completas. */
+  .os-shell-root { display: block !important; width: 100% !important; }
+  .os-canvas, .os-main, .os-main > div {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
+  }
+
   .os-module-rail, .os-subnav-panel, .os-bottom-nav, .app-header,
   .os-shell-root > div:first-child, header.app-header,
   #kindicore-chat-open-btn, audio { display: none !important; }

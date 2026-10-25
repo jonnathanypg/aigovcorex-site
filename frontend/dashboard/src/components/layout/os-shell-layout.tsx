@@ -109,7 +109,7 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
       />
 
       {/* ── Level 3: Main Canvas ── */}
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+      <div className="os-canvas flex flex-col flex-1 overflow-hidden min-w-0">
         {/* Module accent top line */}
         {currentMod && (
           <div
@@ -126,7 +126,7 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
         {/* Content Canvas */}
         <main
           className={cn(
-            'flex-1 overflow-y-auto print:overflow-visible',
+            'os-main flex-1 overflow-y-auto print:overflow-visible',
             'pb-4 md:pb-0 mb-16 md:mb-0 print:mb-0 print:pb-0',
           )}
         >

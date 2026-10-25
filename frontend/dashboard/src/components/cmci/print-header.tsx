@@ -328,7 +328,23 @@ export function PrintLetterheadDocument({
           <img src={headerUrl} alt="" />
         </div>
       )}
-      <div className="print-letterhead-flow">{children}</div>
+      <table className="print-letterhead-table">
+        <thead>
+          <tr>
+            <td className="print-letterhead-top-spacer" />
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="print-letterhead-content">{children}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td className="print-letterhead-bottom-spacer" />
+          </tr>
+        </tfoot>
+      </table>
       {footerUrl && (
         <div className="print-letterhead-footer" aria-hidden="true">
           <img src={footerUrl} alt="" />

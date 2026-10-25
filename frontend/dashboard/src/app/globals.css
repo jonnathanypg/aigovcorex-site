@@ -529,10 +529,22 @@ textarea:focus {
   object-fit: cover;
   object-position: bottom;
 }
-.print-letterhead-flow {
+.print-letterhead-table {
+  width: 100%;
+  border-collapse: collapse;
+  flex: 1 1 auto;
+}
+.print-letterhead-top-spacer,
+.print-letterhead-bottom-spacer {
+  padding: 0;
+  border: none !important;
+  height: 0;
+}
+.print-letterhead-content {
   padding: 6mm 14mm 8mm 14mm;
   box-sizing: border-box;
-  flex: 1 1 auto;
+  vertical-align: top;
+  border: none !important;
 }
 
 @page {
@@ -546,15 +558,29 @@ textarea:focus {
     min-height: auto !important;
     box-shadow: none !important;
     background: transparent !important;
-    /* Clave para Chromium/Skia PDF: box-decoration-break: clone repite el padding-top (33mm)
-       y padding-bottom (44mm) en CADA página generada, funcionando como zona segura tipo Google Docs
-       sin truncar el documento como ocurre cuando se anidan tablas dentro de un <tbody>. */
-    padding: 33mm 12mm 44mm 12mm !important;
-    -webkit-box-decoration-break: clone !important;
-    box-decoration-break: clone !important;
   }
-  .print-letterhead-flow {
-    padding: 0 !important;
+  .print-letterhead-table {
+    width: 100% !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  .print-letterhead-table > thead {
+    display: table-header-group !important;
+  }
+  .print-letterhead-table > tfoot {
+    display: table-footer-group !important;
+  }
+  .print-letterhead-table > tbody > tr,
+  .print-letterhead-table > thead > tr,
+  .print-letterhead-table > tfoot > tr {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  .print-letterhead-top-spacer {
+    height: 33mm !important;
+  }
+  .print-letterhead-bottom-spacer {
+    height: 46mm !important;
   }
   .print-letterhead-header,
   .print-letterhead-footer {
@@ -579,6 +605,12 @@ textarea:focus {
   }
   .print-letterhead-footer img {
     height: 100% !important;
+  }
+  .print-letterhead-content {
+    padding-top: 2mm !important;
+    padding-bottom: 2mm !important;
+    padding-left: 12mm !important;
+    padding-right: 12mm !important;
   }
 }
 

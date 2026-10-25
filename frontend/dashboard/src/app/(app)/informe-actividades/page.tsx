@@ -493,7 +493,7 @@ export default function InformeActividadesPage() {
                         <Eye className="mr-1.5 h-3.5 w-3.5" />
                         Ver Resumen
                       </Button>
-                      <Link href={`/informe-actividades/${r.id}/print`} target="_blank">
+                      <Link href={`/informe-actividades/${r.id}/print`}>
                         <Button
                           size="sm"
                           variant="outline"
@@ -665,7 +665,7 @@ export default function InformeActividadesPage() {
                 <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
                   Cerrar
                 </Button>
-                <Link href={`/informe-actividades/${previewReport.id}/print`} target="_blank">
+                <Link href={`/informe-actividades/${previewReport.id}/print`}>
                   <Button className="bg-amber-600 hover:bg-amber-700 text-white">
                     <Printer className="mr-2 h-4 w-4" />
                     Abrir Formato para Imprimir (A4)

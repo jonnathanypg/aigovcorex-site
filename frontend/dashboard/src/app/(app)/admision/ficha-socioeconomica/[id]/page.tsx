@@ -165,7 +165,6 @@ export default function FichaSocioeconomicaDetailPage({ params }: { params?: { i
               Vista Impresión / PDF Oficial
             </Button>
           </Link>
-          <PrintButton />
         </div>
       </div>
 
@@ -378,7 +377,7 @@ export default function FichaSocioeconomicaDetailPage({ params }: { params?: { i
             <Link href={`/admision/ficha-socioeconomica/${id}/print`}>
               <Button className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
                 <Printer className="h-4 w-4" />
-                Imprimir Documento Oficial A4
+                Vista Impresión / PDF Oficial
               </Button>
             </Link>
             <Link href="/admision">

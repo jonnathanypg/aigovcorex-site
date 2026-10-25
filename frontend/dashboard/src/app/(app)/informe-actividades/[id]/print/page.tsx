@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { PrintHeader, PrintButton, PrintLetterheadAuto } from "@/components/cmci/print-header";
+import { PrintHeader, PrintButton, PrintLetterheadDocumentAuto } from "@/components/cmci/print-header";
 import { cmciService, type MonthlyReportDetail } from "@/services/cmci.service";
 import { Loader2, ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,29 +64,35 @@ export default function InformeActividadesPrintPage({
   };
 
   return (
-    <div className="print-sheet bg-white text-black p-8 print:p-0 max-w-[210mm] print:max-w-none mx-auto min-h-screen print:min-h-0 text-xs leading-normal">
-      <PrintLetterheadAuto>
-      {/* Non-printed action bar */}
-      <div className="print:hidden mb-6 flex items-center justify-between border-b pb-3">
-        <Link href="/informe-actividades">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Informes
-          </Button>
-        </Link>
-        <div className="flex items-center gap-2">
-          <PrintButton />
+    <div className="print-sheet print-page bg-slate-100 min-h-screen py-6 print:bg-white print:py-0 print:p-0">
+      {/* Barra de utilidades fuera de impresión */}
+      <div className="print:hidden max-w-[210mm] mx-auto mb-4 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+        <div className="flex items-center gap-3">
+          <Link href="/informe-actividades">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Volver a Informes
+            </Button>
+          </Link>
+          <div>
+            <h2 className="font-bold text-sm text-slate-800">Vista de Impresión — Informe Mensual de Actividades</h2>
+            <p className="text-xs text-slate-500">Expediente Oficial A4 · INF-MENSUAL-{report.id}</p>
+          </div>
         </div>
+        <PrintButton />
       </div>
 
-      {/* Official Header */}
-      <PrintHeader
-        showHeaderBanner={false}
-        title={pv.titulo || "INFORME MENSUAL DE ACTIVIDADES — EDUCADORA"}
-        codigo={`INF-MENSUAL-${report.id}`}
-        fecha={report.period_end || new Date().toISOString().slice(0, 10)}
-        periodo={periodo}
-        showSemaforo={false}
-      />
+      <div className="max-w-[210mm] mx-auto text-black text-xs leading-normal print:max-w-none print:m-0">
+        <PrintLetterheadDocumentAuto>
+          {/* Official Header */}
+          <PrintHeader
+            showHeaderBanner={false}
+            title={pv.titulo || "INFORME MENSUAL DE ACTIVIDADES — EDUCADORA"}
+            codigo={`INF-MENSUAL-${report.id}`}
+            fecha={report.period_end || new Date().toISOString().slice(0, 10)}
+            periodo={periodo}
+            showSemaforo={false}
+          />
 
       {/* 1. Datos de Identificación y Centro */}
       <section className="mt-4 border border-black p-3 rounded-none break-inside-avoid">
@@ -287,7 +293,8 @@ export default function InformeActividadesPrintPage({
         </p>
       </section>
 
-      </PrintLetterheadAuto>
+        </PrintLetterheadDocumentAuto>
+      </div>
     </div>
   );
 }

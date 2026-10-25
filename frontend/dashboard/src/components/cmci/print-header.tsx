@@ -305,3 +305,53 @@ export function PrintLetterheadAuto({ children }: { children: React.ReactNode })
 
 /** Alias de compatibilidad que delega al marco dinámico multipágina. */
 export const PrintLetterheadPage = PrintLetterheadFrame;
+
+/**
+ * Documento membretado robusto para impresión/PDF multipágina.
+ * Usa @page margins + position:fixed header/footer que se repiten en cada página.
+ * El contenido fluye naturalmente sin solaparse con cabecera/pie.
+ * - Cabecera: imagen full-width a 29.3mm (ratio original 2172x303 @ 210mm)
+ * - Pie: imagen full-width a 40mm con object-fit:cover object-position:bottom (recorta espacio blanco superior)
+ * - Márgenes @page: top 32mm, bottom 48mm, left/right 10mm
+ */
+export function PrintLetterheadDocument({
+  headerUrl,
+  footerUrl,
+  children,
+}: {
+  headerUrl?: string | null;
+  footerUrl?: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="print-letterhead-document">
+      {headerUrl && (
+        <div className="print-letterhead-header" aria-hidden="true">
+          <img src={headerUrl} alt="" />
+        </div>
+      )}
+      {footerUrl && (
+        <div className="print-letterhead-footer" aria-hidden="true">
+          <img src={footerUrl} alt="" />
+        </div>
+      )}
+      <div className="print-letterhead-content">{children}</div>
+    </div>
+  );
+}
+
+/** Versión que obtiene los membretes de la configuración pública de la organización. */
+export function PrintLetterheadDocumentAuto({ children }: { children: React.ReactNode }) {
+  const [orgConfig, setOrgConfig] = useState<any>(null);
+  useEffect(() => {
+    licenseAdminService.getPublicConfig().then(setOrgConfig).catch(() => setOrgConfig(null));
+  }, []);
+  return (
+    <PrintLetterheadDocument
+      headerUrl={resolvePrintBannerUrl(orgConfig?.header_banner_path)}
+      footerUrl={resolvePrintBannerUrl(orgConfig?.footer_banner_path)}
+    >
+      {children}
+    </PrintLetterheadDocument>
+  );
+}

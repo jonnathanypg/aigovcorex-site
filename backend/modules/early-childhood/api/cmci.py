@@ -54,22 +54,54 @@ def _tenant():
 
 
 def _allowed_tenant_ids():
-    """Retorna lista de tenant_ids accesibles por el usuario actual (soporta license_admin y multi-centro)."""
-    tid = _tenant()
-    if tid is not None:
-        return [int(tid)]
+    """Retorna lista de tenant_ids accesibles por el usuario actual (soporta license_admin, super_admin y multi-centro)."""
     user = getattr(g, "current_user", None)
     if not user:
-        return []
+        tid = _tenant()
+        return [int(tid)] if tid is not None else []
+
     try:
         from models.tenant import Tenant
-        if getattr(user, "license_id", None):
-            return [t.id for t in Tenant.query.filter_by(license_id=user.license_id).all()]
-        role = getattr(getattr(user, "role", None), "name", None)
-        if role == "super_admin":
+        from models.license import LicenseAdmin
+        from utils.role_helpers import is_central_global, is_admin_override
+
+        role_name = getattr(getattr(user, "role", None), "name", None)
+        if role_name == "super_admin":
             return [t.id for t in Tenant.query.all()]
-    except Exception:
-        pass
+
+        if is_central_global(user) or is_admin_override(user):
+            t_ids = set()
+            tid = _tenant()
+            if tid is not None:
+                t_ids.add(int(tid))
+            if getattr(user, "tenant_id", None):
+                t_ids.add(int(user.tenant_id))
+
+            las = LicenseAdmin.query.filter_by(user_id=user.id, is_active=True).all()
+            lic_ids = [la.license_id for la in las]
+
+            if getattr(user, "tenant_id", None):
+                t = Tenant.query.get(user.tenant_id)
+                if t and t.license_id:
+                    lic_ids.append(t.license_id)
+            if getattr(user, "license_id", None):
+                lic_ids.append(user.license_id)
+
+            if lic_ids:
+                for t in Tenant.query.filter(Tenant.license_id.in_(lic_ids)).all():
+                    t_ids.add(t.id)
+
+            if t_ids:
+                return list(t_ids)
+
+        tid = _tenant()
+        if tid is not None:
+            return [int(tid)]
+        if getattr(user, "tenant_id", None):
+            return [int(user.tenant_id)]
+    except Exception as exc:
+        logger.warning("_allowed_tenant_ids fallo: %s", exc)
+
     return []
 
 

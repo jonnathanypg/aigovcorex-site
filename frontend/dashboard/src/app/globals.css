@@ -489,17 +489,20 @@ textarea:focus {
   .print-landscape .letterhead-fixed-footer img { height: 28mm !important; max-height: 28mm !important; }
 }
 
-/* ── Documento membretado robusto: En pantalla fluye dentro de la hoja; en impresión se fija con @page margins ── */
+/* ── Documento membretado robusto: En pantalla fluye dentro de la hoja; en impresión repite membretes y respeta márgenes ── */
 .print-letterhead-document {
   position: relative;
-  min-height: 100%;
+  min-height: 296mm;
   background: #fff;
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
 }
 .print-letterhead-header,
 .print-letterhead-footer {
   width: 100%;
   pointer-events: none;
+  flex: 0 0 auto;
 }
 .print-letterhead-header {
   height: auto;
@@ -526,23 +529,53 @@ textarea:focus {
   object-fit: cover;
   object-position: bottom;
 }
-.print-letterhead-content {
-  padding-top: 12px;
-  padding-bottom: 24px;
-  padding-left: 16mm;
-  padding-right: 16mm;
-  box-sizing: border-box;
+.print-letterhead-table {
+  width: 100%;
+  border-collapse: collapse;
+  flex: 1 1 auto;
 }
-
-@page {
-  size: A4 portrait;
-  margin: 32mm 10mm 48mm;
+.print-letterhead-top-spacer,
+.print-letterhead-bottom-spacer {
+  padding: 0;
+  border: none !important;
+  height: 0;
+}
+.print-letterhead-content {
+  padding: 6mm 14mm 8mm 14mm;
+  box-sizing: border-box;
+  vertical-align: top;
+  border: none !important;
 }
 
 @media print {
   .print-letterhead-document {
+    display: block !important;
+    min-height: auto !important;
     box-shadow: none !important;
     background: transparent !important;
+  }
+  .print-letterhead-table {
+    width: 100% !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  .print-letterhead-table > thead {
+    display: table-header-group !important;
+  }
+  .print-letterhead-table > tfoot {
+    display: table-footer-group !important;
+  }
+  .print-letterhead-table > tbody > tr,
+  .print-letterhead-table > thead > tr,
+  .print-letterhead-table > tfoot > tr {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  .print-letterhead-top-spacer {
+    height: 33mm !important;
+  }
+  .print-letterhead-bottom-spacer {
+    height: 44mm !important;
   }
   .print-letterhead-header,
   .print-letterhead-footer {
@@ -569,10 +602,10 @@ textarea:focus {
     height: 100% !important;
   }
   .print-letterhead-content {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding-top: 2mm !important;
+    padding-bottom: 2mm !important;
+    padding-left: 12mm !important;
+    padding-right: 12mm !important;
   }
 }
 

@@ -308,11 +308,9 @@ export const PrintLetterheadPage = PrintLetterheadFrame;
 
 /**
  * Documento membretado robusto para impresión/PDF multipágina.
- * Usa @page margins + position:fixed header/footer que se repiten en cada página.
- * El contenido fluye naturalmente sin solaparse con cabecera/pie.
- * - Cabecera: imagen full-width a 29.3mm (ratio original 2172x303 @ 210mm)
- * - Pie: imagen full-width a 40mm con object-fit:cover object-position:bottom (recorta espacio blanco superior)
- * - Márgenes @page: top 32mm, bottom 48mm, left/right 10mm
+ * - En pantalla: Cabecera arriba, contenido en el medio y pie al final de la hoja A4.
+ * - En impresión (@media print): Usa tabla semántica (thead/tfoot) para reservar 32mm arriba y 44mm abajo
+ *   en cada página, más cabecera/pie fijos y 12mm de margen lateral en el cuerpo.
  */
 export function PrintLetterheadDocument({
   headerUrl,
@@ -330,12 +328,28 @@ export function PrintLetterheadDocument({
           <img src={headerUrl} alt="" />
         </div>
       )}
+      <table className="print-letterhead-table">
+        <thead>
+          <tr>
+            <td className="print-letterhead-top-spacer" />
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="print-letterhead-content">{children}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td className="print-letterhead-bottom-spacer" />
+          </tr>
+        </tfoot>
+      </table>
       {footerUrl && (
         <div className="print-letterhead-footer" aria-hidden="true">
           <img src={footerUrl} alt="" />
         </div>
       )}
-      <div className="print-letterhead-content">{children}</div>
     </div>
   );
 }

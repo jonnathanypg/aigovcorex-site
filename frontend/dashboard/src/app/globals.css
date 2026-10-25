@@ -547,6 +547,11 @@ textarea:focus {
   border: none !important;
 }
 
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
 @media print {
   .print-letterhead-document {
     display: block !important;

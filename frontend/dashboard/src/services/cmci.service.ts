@@ -455,6 +455,11 @@ export interface MonthlyReportPrintView {
     planificaciones: number;
     tasa_asistencia: number;
     casos_riesgo: number;
+    detalle_casos_riesgo?: Array<{
+      origen: string;
+      referencia: string;
+      motivo: string;
+    }>;
   };
   conclusions_auto: string;
   educator_notes: string;

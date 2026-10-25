@@ -146,22 +146,29 @@ class MonthlyReportService:
             risk_families = Family.query.filter(
                 Family.tenant_id == center_id).all()
             
-            # Recolectar detalle transparente de cada caso de riesgo
+            # Recolectar detalle transparente de cada caso de riesgo (ignorando "ninguno")
+            _ignore_risks = {'ninguno', 'ninguna', 'no', 'n/a', 'sin riesgo', 'sin riesgos', '-', ''}
             for f in risk_families:
-                if f.social_risks and isinstance(f.social_risks, list) and len(f.social_risks) > 0:
-                    risk_cases += 1
-                    detalle_riesgo.append({
-                        'origen': 'Riesgo Social Familiar',
-                        'referencia': f"Familia {getattr(f, 'address', '') or f'ID #{f.id}'}",
-                        'motivo': ", ".join(str(r) for r in f.social_risks)
-                    })
+                if f.social_risks and isinstance(f.social_risks, list):
+                    valid_risks = [
+                        str(r).strip() for r in f.social_risks
+                        if str(r).strip() and str(r).strip().lower() not in _ignore_risks
+                    ]
+                    if valid_risks:
+                        risk_cases += 1
+                        detalle_riesgo.append({
+                            'origen': 'Riesgo Social Familiar',
+                            'referencia': f"Familia {getattr(f, 'address', '') or f'ID #{f.id}'}",
+                            'motivo': ", ".join(valid_risks)
+                        })
             for i in interventions:
-                if (i.reason or '').strip():
+                reason_str = (i.reason or '').strip()
+                if reason_str and reason_str.lower() not in _ignore_risks:
                     risk_cases += 1
                     detalle_riesgo.append({
                         'origen': 'Intervención Familiar',
                         'referencia': f"Fecha {i.date.strftime('%Y-%m-%d') if hasattr(i.date, 'strftime') else i.date}",
-                        'motivo': i.reason.strip()
+                        'motivo': reason_str
                     })
 
         # 5. Hitos IDII + salud + nutrición del periodo (agregados para conclusiones)

@@ -122,6 +122,19 @@ def test_compose_educadora():
                 period_start=date(2026, 5, 1), period_end=date(2026, 5, 31),
                 tenant_id=tenant.id, redact_with_llm=False)
             assert b['payload']['report_type'] == rt
+
+        # familias con social_risks=["ninguno"] NO se cuentan como casos de riesgo
+        from models.child import Family
+        fam_none = Family(tenant_id=tenant.id, address='COOP MIRAMAR', social_risks=['ninguno'])
+        fam_real = Family(tenant_id=tenant.id, address='COOP CASTRO', social_risks=['ninguno', 'hacinamiento crítico'])
+        db.session.add_all([fam_none, fam_real])
+        db.session.commit()
+        b_risk = MonthlyReportService.compose(
+            educator_id=edu.id, report_type='educadora',
+            period_start=date(2026, 5, 1), period_end=date(2026, 5, 31),
+            tenant_id=tenant.id, redact_with_llm=False)
+        assert b_risk['payload']['casos_riesgo'] == 1, b_risk['payload']['detalle_casos_riesgo']
+        assert b_risk['payload']['detalle_casos_riesgo'][0]['motivo'] == 'hacinamiento crítico'
     print('test_compose_educadora OK')
 
 

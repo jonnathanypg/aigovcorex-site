@@ -56,9 +56,21 @@ function ReportesPrintInner() {
           </tr>
         ))}</tbody>
       </table>
-      <div className="grid grid-cols-2 gap-8 mt-8 text-sm">
-        <div className="border-t border-black pt-1 text-center">Educadora · fecha</div>
-        <div className="border-t border-black pt-1 text-center">Coordinadora · fecha</div>
+      <div className="grid grid-cols-2 gap-16 mt-8 text-sm break-inside-avoid print:break-inside-avoid">
+        <div className="text-center">
+          <div className="h-16" />
+          <div className="border-t border-black pt-1.5">
+            <p className="font-bold text-xs uppercase">Educadora Responsable</p>
+            <p className="text-[10px] text-gray-600 mt-0.5">Firma y Fecha</p>
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="h-16" />
+          <div className="border-t border-black pt-1.5">
+            <p className="font-bold text-xs uppercase">Coordinadora del Centro</p>
+            <p className="text-[10px] text-gray-600 mt-0.5">Firma, Sello y Fecha</p>
+          </div>
+        </div>
       </div>
       <p className="text-[10px] mt-2 text-center print-only">Firma física en papel fuera del sistema (sin firma electrónica).</p>
     </div>

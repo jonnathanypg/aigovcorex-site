@@ -599,20 +599,24 @@ export default function RegistroPrintPage({ params }: { params: { id: string } }
                 </div>
               </div>
 
-              {/* SECCIÓN DE FIRMAS FÍSICAS (SOLO EDUCADORA Y COORDINADORA SEGÚN DIRECTIVA OFICIAL) */}
+              {/* SECCIÓN DE FIRMAS FÍSICAS REGLAMENTARIAS EN PAPEL (Con amplio espacio h-16) */}
               <div className="mt-4 pt-2 mb-2 break-inside-avoid print:break-inside-avoid">
                 <div className="grid grid-cols-2 gap-16 px-12">
                   <div className="text-center">
-                    <div className="border-t border-slate-400 pt-1">
-                      <p className="font-semibold text-[10px] text-slate-600">Educadora Responsable</p>
-                      <p className="text-[9.5px] text-slate-500 mt-0.5">{educatorName}</p>
+                    <div className="h-16" />
+                    <div className="border-t border-black pt-1.5">
+                      <p className="font-bold text-[10px] uppercase text-slate-800">Educadora Responsable</p>
+                      <p className="text-[9px] text-slate-600 mt-0.5">{educatorName}</p>
+                      <p className="text-[8px] text-slate-400 mt-0.5">Firma y Fecha</p>
                     </div>
                   </div>
 
                   <div className="text-center">
-                    <div className="border-t border-slate-400 pt-1">
-                      <p className="font-semibold text-[10px] text-slate-600">Coordinadora del Centro</p>
-                      <p className="text-[9.5px] text-slate-500 mt-0.5">{coordinatorName}</p>
+                    <div className="h-16" />
+                    <div className="border-t border-black pt-1.5">
+                      <p className="font-bold text-[10px] uppercase text-slate-800">Coordinadora del Centro</p>
+                      <p className="text-[9px] text-slate-600 mt-0.5">{coordinatorName}</p>
+                      <p className="text-[8px] text-slate-400 mt-0.5">Firma, Sello y Fecha</p>
                     </div>
                   </div>
                 </div>

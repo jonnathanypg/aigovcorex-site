@@ -1,15 +1,15 @@
 """
-LEM Guard (Latent Equilibrium Models Neurosymbolic Shield)
-Integración nativa para AI GovCoreX OS.
+LEM Architecture Guard (Latent Equilibrium Models Dual Engine: LEM-Ops & LEM-V4)
+Integración neurosimbólica unificada para AI GovCoreX OS.
 
-Garantiza invariantes matemáticas deterministas en la atención conversacional,
-triaje de admisiones, prevención de alucinaciones y registro de beneficiarios.
-
-Contrato Fail-Closed:
-- z ∈ ℝ¹⁶ representa el estado del flujo de admisión.
-- Si E(z, S) >= 0.20 -> La admisión entra en cuarentena (estado 'applicant' con flag de revisión)
-  y se bloquea la aprobación directa.
-- Inmunidad a inyecciones de prompt, cédulas inválidas y manipulación de subsidios.
+Diferenciación de Capas:
+- LEM-Ops (Capa L7 / Operaciones y Agentes):
+  Vigila flujos conversacionales, triaje, integridad de cédula, incoherencias de formulario,
+  detección de Prompt Injections (canal trampa m3=0) y reglas RBAC (z4 > z2).
+  
+- LEM-V4 (Capa L1-L4 / Silicio, Proceso e Infraestructura):
+  Vigila los recursos físicos de ejecución (latencia de reloj, tamaño de buffers de entrada de voz/archivos,
+  integridad de memoria y prevención de sobrecarga en el host).
 """
 
 import os
@@ -23,24 +23,21 @@ logger = logging.getLogger(__name__)
 class PureLEMInvarianceEngine:
     """
     Motor autónomo de invarianzas matemáticas basadas en Funciones de Lyapunov
-    y variedades de equilibrio (Zero-Dependency Python Pure Engine).
-    Compatible con C-ABI LEM-V4 / LEM-Ops.
+    y variedades de equilibrio continuo.
+    Soporta explícitamente modo 'ops' (L7 - Aplicación/Agente) y modo 'v4' (L1-L4 - Silicio/Infraestructura).
     """
     def __init__(self, mode: str = "ops"):
         self.mode = mode
         self.FAIL_CLOSED_THRESHOLD = 0.20
-        # Esquema S ∈ ℝ¹²⁸
-        # S[0..15] = Pesos lineales w
-        # S[16..31] = Máscaras de canal m (m=0.0 es trampa incondicional)
-        # S[32..47] = Cotas inferiores l
-        # S[48..63] = Cotas superiores u
-        # S[112] = Rigidez lineal GAIN_LIN
-        # S[113] = Rigidez de cotas GAIN_BND
         self.s = [0.0] * 128
-        self._init_admission_schema()
+        if mode == "ops":
+            self._init_ops_schema()
+        else:
+            self._init_v4_schema()
 
-    def _init_admission_schema(self):
-        # Axioma de balance de flujo z0 (ingreso datos) - z1 (comprobación datos)
+    def _init_ops_schema(self):
+        """Inicializa tensores para LEM-Ops: Operaciones, Agentes, RBAC y Admisiones."""
+        # Axioma de balance de flujo z0 (ingreso datos) - z1 (validación de datos)
         self.s[0] = 1.0
         self.s[1] = -1.0
 
@@ -49,20 +46,30 @@ class PureLEMInvarianceEngine:
             self.s[32 + i] = 0.0   # Cota inferior nominal
             self.s[48 + i] = 1.0   # Cota superior nominal
 
-        # Canal 3: Canal trampa durmiente (detección de inyecciones, jailbreaks o incoherencias)
+        # Canal 3: Canal trampa durmiente incondicional (Inyecciones, Jailbreaks, Cédula falsa)
         self.s[16 + 3] = 0.0
         self.s[48 + 3] = 0.0
-
-        # Cotas de admisibilidad
-        self.s[48 + 0] = 1.0   # Tasa de completitud del formulario [0..1]
-        self.s[48 + 1] = 1.0   # Consistencia de datos [0..1]
-        self.s[48 + 2] = 1.0   # Scoring de elegibilidad normalizado [0..1]
-        self.s[48 + 4] = 1.0   # Nivel socioeconómico [0..1]
-        self.s[48 + 5] = 1.0   # Dispersión / Entropía de respuestas [0..1]
 
         # Rigidez
         self.s[112] = 50.0  # GAIN_LIN
         self.s[113] = 10.0  # GAIN_BND
+
+    def _init_v4_schema(self):
+        """Inicializa tensores para LEM-V4: I/O de red, buffers de voz/archivos, estabilidad del servidor."""
+        self.s[0] = 1.0
+        self.s[1] = -1.0
+
+        for i in range(16):
+            self.s[16 + i] = 1.0
+            self.s[32 + i] = 0.0
+            self.s[48 + i] = 1.0
+
+        # Canal 3: Trampa de saturación o memory leak / hook anómalo
+        self.s[16 + 3] = 0.0
+        self.s[48 + 3] = 0.0
+
+        self.s[112] = 100.0  # Rigidez lineal de hardware
+        self.s[113] = 20.0   # Rigidez de límites físicos
 
     def evaluate(self, state_z: List[float]) -> Tuple[float, bool]:
         """
@@ -72,7 +79,7 @@ class PureLEMInvarianceEngine:
         z = state_z[:16] if len(state_z) >= 16 else (state_z + [0.0] * (16 - len(state_z)))
         s = self.s
 
-        # 1. Conservación de flujo
+        # 1. Conservación de flujo lineal: (sum(w_i * z_i))^2 * GAIN_LIN
         bal = sum(s[i] * z[i] for i in range(16))
         gain_lin = s[112] if s[112] > 0 else 50.0
         e_lin = (bal ** 2) * gain_lin
@@ -86,7 +93,7 @@ class PureLEMInvarianceEngine:
             u = s[48 + i]
             val = z[i]
 
-            # Canal trampa activado (m=0 y presencia de señal)
+            # Canal trampa durmiente activado (m=0 y presencia de señal)
             if m == 0.0 and abs(val) > 1e-5:
                 e_bnd += 5.0 + (val ** 2) * 50.0
             else:
@@ -95,24 +102,33 @@ class PureLEMInvarianceEngine:
                 elif val > u:
                     e_bnd += ((val - u) ** 2) * gain_bnd
 
-        total_energy = e_lin + e_bnd
+        # 3. Término RBAC en LEM-Ops: Si el impacto de la acción (z4) excede el privilegio del actor (z2)
+        e_rbac = 0.0
+        if self.mode == "ops" and len(z) > 4:
+            privilege = z[2]
+            action_impact = z[4]
+            if action_impact > privilege and privilege < 0.6:
+                e_rbac = ((action_impact - privilege) ** 2) * 15.0
+
+        total_energy = e_lin + e_bnd + e_rbac
         is_allowed = total_energy < self.FAIL_CLOSED_THRESHOLD
         return total_energy, is_allowed
 
 
-class LEMAdmissionGuard:
+class LEMUnifiedGuard:
     """
-    Guardián neurosimbólico para el flujo de admisión y registro conversacional.
+    Fachada unificada para la orquestación conjunta de LEM-Ops y LEM-V4.
     """
     _instance = None
 
     def __init__(self):
-        self.engine = PureLEMInvarianceEngine()
+        self.ops_engine = PureLEMInvarianceEngine(mode="ops")
+        self.v4_engine = PureLEMInvarianceEngine(mode="v4")
 
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
-            cls._instance = LEMAdmissionGuard()
+            cls._instance = LEMUnifiedGuard()
         return cls._instance
 
     def audit_intake_admission(
@@ -121,47 +137,81 @@ class LEMAdmissionGuard:
         eligibility_score: float,
         cedula_valid: bool,
         intake_channel: str,
+        caller_privilege: float = 0.3,
         suspected_injection: bool = False
     ) -> Dict[str, Any]:
         """
-        Mapea el estado de una postulación conversacional al vector z ∈ ℝ¹⁶:
-        z[0] = Ratio de campos completados [0..1]
-        z[1] = Calidad de datos (1.0 si cédula y datos obligatorios OK, 0.0 si inválidos)
-        z[2] = Score de elegibilidad normalizado (score / 100.0)
-        z[3] = Señal trampa (1.0 si hay intento de inyección o inconsistencia grave)
-        z[4] = Peso socioeconómico
+        Ejecuta la auditoría LEM-Ops para admisiones ciudadanas y flujos conversacionales.
+        z[0] = Ratio de completitud del formulario [0..1]
+        z[1] = Consistencia y veracidad de datos (1.0 si cédula y datos válidos, 0.0 si falla)
+        z[2] = Privilegio del solicitante (0.3 ciudadano público, 0.7 operador, 0.9 admin)
+        z[3] = Trampa durmiente (1.0 si hay inyección de prompt o manipulación de cédula)
+        z[4] = Impacto del beneficio asignado (según score de elegibilidad)
         z[5] = Integridad del canal
         """
-        # Calcular completitud
         total_keys = len(form_data) if form_data else 0
         completeness = min(1.0, max(0.1, total_keys / 6.0))
-
-        # Integridad del dato clave (cédula ecuatoriana válida)
         data_quality = 1.0 if cedula_valid else 0.0
-
-        # Normalizar score de elegibilidad [0.0 .. 1.0]
         norm_score = min(1.0, max(0.0, float(eligibility_score or 0) / 100.0))
 
-        # Trampa: Si hay sospecha de inyección o cédula flagrantemente inválida en registro
+        # El impacto de otorgar cupo directo (si score >= 70, impacto moderado-alto 0.65)
+        benefit_impact = 0.65 if norm_score >= 0.70 else 0.20
+
+        # Canal trampa ceba si no hay cédula válida o hay sospecha de inyección
         trap_signal = 1.0 if (suspected_injection or not cedula_valid) else 0.0
 
-        # Construcción del vector de estado continuo z ∈ ℝ¹⁶
-        z = [0.0] * 16
-        z[0] = completeness
-        z[1] = completeness if data_quality == 1.0 else 0.0  # Balance con z[0]
-        z[2] = norm_score
-        z[3] = trap_signal
-        z[4] = 0.5
-        z[5] = 0.8 if intake_channel in ('whatsapp', 'telegram') else 0.5
+        # Construcción vector z para LEM-Ops
+        z_ops = [0.0] * 16
+        z_ops[0] = completeness
+        z_ops[1] = completeness if data_quality == 1.0 else 0.0  # Balance de flujo
+        z_ops[2] = caller_privilege
+        z_ops[3] = trap_signal
+        z_ops[4] = benefit_impact
+        z_ops[5] = 0.8 if intake_channel in ('whatsapp', 'telegram') else 0.5
 
-        energy, is_allowed = self.engine.evaluate(z)
+        energy_ops, allowed_ops = self.ops_engine.evaluate(z_ops)
 
         return {
-            "allowed": is_allowed,
-            "energy": round(energy, 6),
-            "threshold": self.engine.FAIL_CLOSED_THRESHOLD,
+            "allowed": allowed_ops,
+            "engine": "LEM-Ops",
+            "energy": round(energy_ops, 6),
+            "threshold": self.ops_engine.FAIL_CLOSED_THRESHOLD,
             "trap_triggered": trap_signal > 0,
             "cedula_verified": cedula_valid,
             "score": eligibility_score,
-            "lem_status": "APPROVED" if is_allowed else "QUARANTINE_REVIEW"
+            "lem_status": "APPROVED" if allowed_ops else "QUARANTINE_REVIEW"
         }
+
+    def audit_system_io(
+        self,
+        payload_bytes: int,
+        processing_latency_ms: float,
+        is_voice_audio: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Ejecuta la auditoría LEM-V4 para vigilar la capa física y recursos del servidor.
+        """
+        # Normalizar tamaño de payload (max 15MB audio)
+        norm_bytes = min(1.0, payload_bytes / (15.0 * 1024 * 1024))
+        # Normalizar latencia (umbral alerta 10 segundos)
+        norm_latency = min(1.0, processing_latency_ms / 10000.0)
+
+        z_v4 = [0.0] * 16
+        z_v4[0] = norm_bytes
+        z_v4[1] = norm_bytes  # Balance nominal de I/O
+        z_v4[2] = norm_latency
+        z_v4[3] = 1.0 if norm_bytes > 0.95 or norm_latency > 0.95 else 0.0  # Trampa de saturación
+
+        energy_v4, allowed_v4 = self.v4_engine.evaluate(z_v4)
+
+        return {
+            "allowed": allowed_v4,
+            "engine": "LEM-V4",
+            "energy": round(energy_v4, 6),
+            "threshold": self.v4_engine.FAIL_CLOSED_THRESHOLD,
+            "status": "HEALTHY" if allowed_v4 else "RESOURCE_THROTTLED"
+        }
+
+
+# Alias de compatibilidad
+LEMAdmissionGuard = LEMUnifiedGuard

@@ -1602,6 +1602,28 @@ def conversational_step(program_id: int):
                         'collected_data': current_data
                     }), 200
 
+            # ── EVALUACIÓN DE INVARIANZA LEM-V4 (GUARDIA NEUROSIMBÓLICA) ──
+            lem_notes = notes or ""
+            initial_status = 'applicant'
+            try:
+                from services.lem_guard import LEMAdmissionGuard
+                ced_ok = _validate_ecuador_cedula(ced) if ced else True
+                lem_eval = LEMAdmissionGuard.get_instance().audit_intake_admission(
+                    form_data=current_data,
+                    eligibility_score=score,
+                    cedula_valid=ced_ok,
+                    intake_channel=data.get('channel', 'web_chat_conversational')
+                )
+                if lem_eval.get('allowed') and score >= 70:
+                    initial_status = 'approved'
+                    lem_notes = f"[LEM-V4: PASS E={lem_eval.get('energy')}] {lem_notes}".strip()
+                else:
+                    initial_status = 'applicant'
+                    lem_notes = f"[LEM-V4: REVIEW E={lem_eval.get('energy')}] {lem_notes}".strip()
+            except Exception as _e_lem:
+                logger.warning(f"[LEM-V4 Conversational Guard] Fallback safe: {_e_lem}")
+                initial_status = 'approved' if score >= 70 else 'applicant'
+
             beneficiary = ProgramBeneficiary(
                 program_id=program.id,
                 full_name=current_data.get('full_name') or data.get('user_name') or 'Postulante Conversacional',
@@ -1609,9 +1631,9 @@ def conversational_step(program_id: int):
                 phone=current_data.get('phone') or sender_phone,
                 intake_channel=data.get('channel', 'web_chat_conversational'),
                 form_data=current_data,
-                status='applicant' if score < 70 else 'approved',
+                status=initial_status,
                 eligibility_score=score,
-                eligibility_notes=notes,
+                eligibility_notes=lem_notes,
             )
             db.session.add(beneficiary)
             db.session.commit()

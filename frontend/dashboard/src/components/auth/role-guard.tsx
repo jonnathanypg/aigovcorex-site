@@ -87,11 +87,17 @@ export function RoleGuard({
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push('/dashboard')}
+                    onClick={() => {
+                        if (hasModule('social')) router.push('/social/dashboard');
+                        else if (hasModule('kindicore')) router.push('/dashboard');
+                        else if (hasModule('geo')) router.push('/geo/mapa');
+                        else if (hasModule('channels')) router.push('/canales/dashboard');
+                        else router.push('/dashboard');
+                    }}
                     className="gap-2"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Volver al Dashboard
+                    Volver al Inicio Habilitado
                 </Button>
             </div>
         );

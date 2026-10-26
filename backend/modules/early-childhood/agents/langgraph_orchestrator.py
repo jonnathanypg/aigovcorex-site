@@ -103,8 +103,9 @@ class LangGraphOrchestrator:
         # Initialize LLM
         self.llm = self._init_llm()
         
-        # Get tools (filtradas por rol: public_citizen/padre sin escritura)
-        self.tools = self._filter_tools_by_role(get_all_tools())
+        # Get tools (filtradas por rol y por módulos activos de la organización)
+        role_filtered_tools = self._filter_tools_by_role(get_all_tools())
+        self.tools = self._filter_tools_by_modules(role_filtered_tools)
 
         # Límite determinista de reintentos de tools (además del recursion_limit=15 del grafo)
         self.max_tool_retries = 2
@@ -283,6 +284,52 @@ class LangGraphOrchestrator:
         ]
         removed = len(tools) - len(filtered)
         self.logger.info(f"🔒 Tools filtradas por rol '{self.role}': {len(filtered)} activas ({removed} escritura bloqueadas)")
+        return filtered
+
+    def _filter_tools_by_modules(self, tools: list) -> list:
+        """
+        Filtra herramientas según los módulos contratados/habilitados para la organización.
+        Permite que fundaciones que SOLO tienen activo Social AI no vean ni invoquen herramientas
+        de centros infantiles (KindiCore), o viceversa.
+        """
+        enabled = set((m or '').lower() for m in (self.enabled_modules or []))
+        if not enabled:
+            return tools
+
+        # Herramientas del módulo KindiCore (primera infancia, centros, hitos, asistencia)
+        kindicore_exclusive_tools = {
+            'get_absent_children', 'get_attendance_today', 'record_attendance',
+            'log_nutrition', 'log_health', 'search_child', 'get_child_summary',
+            'delegate_child_profile', 'delegate_health_nutrition', 'delegate_development',
+            'delegate_cmci_admission', 'manage_cmci', 'manage_milestones',
+            'manage_health_vaccines', 'manage_rations', 'manage_weekly_menu',
+            'manage_child', 'manage_family'
+        }
+
+        # Herramientas exclusivas del módulo Social AI
+        social_exclusive_tools = {
+            'manage_social_programs', 'delegate_social'
+        }
+
+        # Herramientas exclusivas del módulo Geo
+        geo_exclusive_tools = {
+            'manage_geo_channels', 'delegate_operations_geo'
+        }
+
+        filtered = []
+        for t in tools:
+            t_name = (getattr(t, 'name', None) or '').lower()
+            if 'kindicore' not in enabled and t_name in kindicore_exclusive_tools:
+                continue
+            if 'social' not in enabled and t_name in social_exclusive_tools:
+                continue
+            if 'geo' not in enabled and t_name in geo_exclusive_tools:
+                continue
+            filtered.append(t)
+
+        self.logger.info(
+            f"🧩 Tools filtradas por módulos ({list(enabled)}): {len(filtered)} de {len(tools)} activas."
+        )
         return filtered
 
     @staticmethod

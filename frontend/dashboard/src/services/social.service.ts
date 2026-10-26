@@ -198,4 +198,13 @@ export const socialService = {
             total_approved: res.data.total_approved || 0,
         };
     },
+
+    async updateBeneficiaryStatus(id: number | string, status: string, notes?: string): Promise<{
+        success: boolean;
+        message: string;
+        data: ProgramBeneficiary;
+    }> {
+        const res = await api.patch(`/api/social/beneficiaries/${id}/status`, { status, notes });
+        return res.data;
+    },
 };

@@ -992,6 +992,59 @@ def list_program_beneficiaries(program_id: int):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@social_programs_bp.route('/beneficiaries/<int:beneficiary_id>/status', methods=['PATCH', 'PUT'])
+@jwt_required()
+def update_beneficiary_status(beneficiary_id: int):
+    """Actualiza el estado de una postulación o beneficiario (applicant, approved, rejected, active, graduated)"""
+    try:
+        user_id = int(get_jwt_identity())
+        beneficiary = ProgramBeneficiary.query.get_or_404(beneficiary_id)
+        data = request.get_json() or {}
+        new_status = data.get('status')
+
+        valid_statuses = {'applicant', 'approved', 'rejected', 'active', 'graduated', 'no_elegible'}
+        # Normalizar si viene en español o variantes
+        status_map = {
+            'aprobada': 'approved',
+            'aprobado': 'approved',
+            'rechazada': 'rejected',
+            'rechazado': 'rejected',
+            'no elegible': 'rejected',
+            'no_elegible': 'rejected',
+            'en evaluacion': 'applicant',
+            'en evaluación': 'applicant',
+            'postulado': 'applicant',
+            'activo': 'active',
+            'activa': 'active'
+        }
+        if new_status and new_status.lower() in status_map:
+            new_status = status_map[new_status.lower()]
+
+        if not new_status or new_status not in valid_statuses:
+            return jsonify({
+                'success': False,
+                'error': f"Estado inválido: '{new_status}'. Estados válidos: {list(valid_statuses)}"
+            }), 400
+
+        beneficiary.status = new_status
+        if new_status == 'approved':
+            beneficiary.approved_by_user_id = user_id
+            beneficiary.approved_at = datetime.utcnow()
+        if 'notes' in data or 'eligibility_notes' in data:
+            beneficiary.eligibility_notes = data.get('notes') or data.get('eligibility_notes')
+
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': f"Estado actualizado exitosamente a '{new_status}'",
+            'data': beneficiary.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error updating beneficiary status {beneficiary_id}: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @social_programs_bp.route('/programs', methods=['POST'])
 @jwt_required()
 def create_program():
@@ -1006,12 +1059,25 @@ def create_program():
         if not data.get('name'):
             return jsonify({'success': False, 'error': 'El nombre del programa es obligatorio'}), 400
 
-        # Auto-generate short code if missing
-        short_code = data.get('short_code')
+        # Auto-generate short code if missing (accepts code or short_code)
+        short_code = data.get('short_code') or data.get('code')
         if not short_code:
             words = re.findall(r'\b[A-Za-z]', data['name'])
             prefix = ''.join(words[:4]).upper() or 'PROG'
             short_code = f"{prefix}-{datetime.utcnow().year}-{SocialProgram.query.count() + 1}"
+
+        # Combine description and target population if provided
+        description = data.get('description', '')
+        target_pop = data.get('target_population')
+        if target_pop:
+            description = f"{description}\n\nPoblación Objetivo: {target_pop}".strip()
+
+        # Handle budget
+        budget_val = data.get('total_budget') or data.get('budget')
+        try:
+            total_budget = float(budget_val) if budget_val else None
+        except (ValueError, TypeError):
+            total_budget = None
 
         program = SocialProgram(
             license_id=data.get('license_id'),
@@ -1020,9 +1086,10 @@ def create_program():
             name=data['name'],
             short_code=short_code,
             category=data.get('category', 'social'),
-            description=data.get('description'),
+            description=description or None,
             objectives=data.get('objectives'),
             status=data.get('status', 'active'),
+            total_budget=total_budget,
             max_beneficiaries=data.get('max_beneficiaries', 500),
             coverage_country=data.get('coverage_country', 'Ecuador'),
             coverage_regions=data.get('coverage_regions', []),

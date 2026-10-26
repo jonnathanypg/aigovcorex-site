@@ -158,11 +158,16 @@ export default function BeneficiariosSocialPage() {
     setDetailsOpen(true);
   };
 
-  const handleStatusChange = (id: number | string, newStatus: string) => {
-    setBeneficiaries((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
-    );
-    toast.success(`Estado del beneficiario #${id} actualizado a ${newStatus}`);
+  const handleStatusChange = async (id: number | string, newStatus: string) => {
+    try {
+      await socialService.updateBeneficiaryStatus(id, newStatus);
+      setBeneficiaries((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
+      );
+      toast.success(`Estado del beneficiario #${id} actualizado a ${newStatus}`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || `Error al actualizar estado del beneficiario #${id}`);
+    }
   };
 
   const filtered = beneficiaries.filter((b) => {

@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ClipboardList, Plus, Building2, Calendar, Target, Users, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import api from '@/services/api';
+import { socialService } from '@/services/social.service';
 
 export default function NuevoProgramaPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
@@ -26,20 +28,21 @@ export default function NuevoProgramaPage() {
 
     try {
       setIsSubmitting(true);
-      await api.post('/api/social/programs', {
+      await socialService.createProgram({
         name,
-        code,
+        short_code: code.trim().toUpperCase(),
         description,
-        target_population: targetPopulation,
-        budget: parseFloat(budget) || 0,
+        objectives: targetPopulation ? `Población Objetivo: ${targetPopulation}` : undefined,
+        total_budget: parseFloat(budget) || undefined,
         inherit_org_channels: inheritChannels
-      });
+      } as any);
       toast.success('Programa social creado exitosamente');
       setName('');
       setCode('');
       setDescription('');
       setTargetPopulation('');
       setBudget('');
+      router.push('/social/dashboard');
     } catch (err: any) {
       toast.error(err?.response?.data?.error || 'Error al crear programa social');
     } finally {

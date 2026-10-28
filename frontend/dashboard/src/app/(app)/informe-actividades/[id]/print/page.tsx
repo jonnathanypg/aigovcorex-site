@@ -578,17 +578,17 @@ export default function InformeActividadesPrintPage({
                           <td className="border border-slate-300 py-0.5 px-1 text-center font-bold text-slate-700">
                             {idx + 1}
                           </td>
-                          <td className="border border-slate-300 py-0.5 px-1 font-mono whitespace-nowrap">
+                          <td className="border border-slate-300 py-0.5 px-1 font-mono whitespace-nowrap text-[8px]">
                             {p.planning_date}
                           </td>
-                          <td className="border border-slate-300 py-0.5 px-1 text-center font-mono">
+                          <td className="border border-slate-300 py-0.5 px-1 text-center font-mono text-[8px]">
                             #{p.week_number || "-"}
                           </td>
-                          <td className="border border-slate-300 py-0.5 px-1">
+                          <td className="border border-slate-300 py-0.5 px-1 text-[8px] leading-tight">
                             {p.age_group || "-"}
                           </td>
                           <td className="border border-slate-300 py-0.5 px-1.5">
-                            <div className="font-bold text-slate-900 leading-tight">
+                            <div className="font-bold text-slate-900 text-[8px] leading-tight">
                               {p.tema_integrador ||
                                 p.nombre_actividad ||
                                 p.tema ||
@@ -598,15 +598,15 @@ export default function InformeActividadesPrintPage({
                             {p.nombre_actividad &&
                               p.tema_integrador &&
                               p.nombre_actividad !== p.tema_integrador && (
-                                <div className="text-[7.8px] text-slate-700 leading-tight">
+                                <div className="text-[7.5px] text-slate-700 leading-tight">
                                   {p.nombre_actividad}
                                 </div>
                               )}
                           </td>
-                          <td className="border border-slate-300 py-0.5 px-1.5 text-slate-800 leading-tight">
+                          <td className="border border-slate-300 py-0.5 px-1.5 text-slate-800 text-[7.8px] leading-tight">
                             {p.objetivo || "-"}
                           </td>
-                          <td className="border border-slate-300 py-0.5 px-1.5 text-[7.8px] text-slate-700 leading-tight">
+                          <td className="border border-slate-300 py-0.5 px-1.5 text-[7.5px] text-slate-700 leading-tight">
                             {rawIndicador}
                           </td>
                         </tr>
@@ -622,7 +622,7 @@ export default function InformeActividadesPrintPage({
               <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9px] tracking-wide">
                 4 · CONCLUSIONES, LOGROS Y DESARROLLO INTEGRAL DEL PERÍODO
               </div>
-              <div className="border border-t-0 border-slate-300 p-2 text-[9.5px] text-justify leading-relaxed whitespace-pre-line bg-white text-slate-900">
+              <div className="border border-t-0 border-slate-300 p-1.5 text-[9px] text-justify leading-snug whitespace-pre-line bg-white text-slate-900">
                 {report.conclusions_auto ||
                   pv.conclusions_auto ||
                   "Sin conclusiones registradas para este período."}
@@ -634,47 +634,47 @@ export default function InformeActividadesPrintPage({
               <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9px] tracking-wide">
                 5 · OBSERVACIONES, NOVEDADES Y RECOMENDACIONES TÉCNICAS
               </div>
-              <div className="border border-t-0 border-slate-300 p-2 text-[9.5px] text-justify leading-relaxed whitespace-pre-line bg-white text-slate-900 min-h-[32px]">
+              <div className="border border-t-0 border-slate-300 p-1.5 text-[9px] text-justify leading-snug whitespace-pre-line bg-white text-slate-900 min-h-[26px]">
                 {report.educator_notes && report.educator_notes.trim()
                   ? report.educator_notes
                   : "Sin observaciones adicionales registradas por la responsable en el período."}
               </div>
             </div>
 
-            {/* 6. Firmas Físicas Reglamentarias en Papel (con espacio amplio para firma manuscrita y sello) */}
-            <div className="pt-4 mt-2 break-inside-avoid print:break-inside-avoid">
-              <div className="grid grid-cols-2 gap-16 px-10 text-center">
+            {/* 6. Firmas Físicas Reglamentarias en Papel (con espacio óptimo para firma manuscrita y sello) */}
+            <div className="pt-2 mt-1 break-inside-avoid print:break-inside-avoid">
+              <div className="grid grid-cols-2 gap-12 px-8 text-center">
                 <div>
-                  {/* Espacio en blanco de ~22mm sobre la línea para firma manuscrita cómoda */}
-                  <div className="h-20" />
-                  <div className="pt-2 border-t border-black">
-                    <p className="font-bold text-[10px] uppercase text-slate-950">
+                  {/* Espacio despejado de ~14mm (h-12) sobre la línea para firma manuscrita y sello */}
+                  <div className="h-12" />
+                  <div className="pt-1.5 border-t border-black">
+                    <p className="font-bold text-[9.5px] uppercase text-slate-950">
                       {pv.autora || "Educadora / Responsable"}
                     </p>
-                    <p className="text-[8.5px] text-slate-700 font-medium">
+                    <p className="text-[8px] text-slate-700 font-medium leading-tight">
                       Educadora de Atención / Cuidado Infantil
                     </p>
-                    <p className="text-[8px] text-slate-500 mt-0.5">
+                    <p className="text-[7.5px] text-slate-500 mt-0.5">
                       Elaboración · Firma y Fecha
                     </p>
                   </div>
                 </div>
                 <div>
-                  <div className="h-20" />
-                  <div className="pt-2 border-t border-black">
-                    <p className="font-bold text-[10px] uppercase text-slate-950">
+                  <div className="h-12" />
+                  <div className="pt-1.5 border-t border-black">
+                    <p className="font-bold text-[9.5px] uppercase text-slate-950">
                       Coordinación de Centro Infantil
                     </p>
-                    <p className="text-[8.5px] text-slate-700 font-medium">
+                    <p className="text-[8px] text-slate-700 font-medium leading-tight">
                       Revisión Técnica, Validación y Aprobación
                     </p>
-                    <p className="text-[8px] text-slate-500 mt-0.5">
+                    <p className="text-[7.5px] text-slate-500 mt-0.5">
                       Aprobación · Firma, Sello y Fecha
                     </p>
                   </div>
                 </div>
               </div>
-              <p className="text-[8px] text-center text-slate-500 mt-4">
+              <p className="text-[7.5px] text-center text-slate-500 mt-2">
                 {pv.nota ||
                   "Documento oficial CMCI firmable en papel fuera del sistema. Sin firma electrónica."}
               </p>

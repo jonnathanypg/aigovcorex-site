@@ -92,6 +92,15 @@ export default function InformeActividadesPrintPage({
     ? payload.planificaciones
     : [];
   const children: any[] = Array.isArray(payload.ninos) ? payload.ninos : [];
+  const egresados: any[] = Array.isArray(payload.egresados_periodo)
+    ? payload.egresados_periodo
+    : Array.isArray(pv.egresados_periodo)
+    ? pv.egresados_periodo
+    : [];
+
+  const nActivos = pv.resumen?.activos_al_corte ?? payload.n_activos ?? children.length;
+  const nEgresados = pv.resumen?.egresos_periodo ?? payload.n_egresados ?? egresados.length;
+  const nUsuarios = pv.resumen?.usuarios ?? payload.n_usuarios ?? (nActivos + nEgresados);
 
   // Filtrar casos de riesgo que digan "ninguno" (para informes antiguos ya guardados)
   const rawRiskDetails: any[] = Array.isArray(pv.resumen?.detalle_casos_riesgo)
@@ -269,36 +278,50 @@ export default function InformeActividadesPrintPage({
               <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9px] tracking-wide">
                 2 · RESUMEN OPERATIVO Y COBERTURA DEL PERÍODO
               </div>
-              <div className="grid grid-cols-4 gap-2 p-1.5 border border-t-0 border-slate-300 bg-slate-50/50 text-center">
-                <div className="border border-slate-300 bg-white py-1 px-1.5">
-                  <p className="text-[8px] text-slate-600 uppercase font-semibold">
+              <div className="grid grid-cols-5 gap-1.5 p-1.5 border border-t-0 border-slate-300 bg-slate-50/50 text-center">
+                <div className="border border-slate-300 bg-white py-1 px-1">
+                  <p className="text-[7.5px] text-slate-600 uppercase font-semibold leading-tight">
                     Usuarios Atendidos
                   </p>
-                  <p className="text-xs font-extrabold text-[#1e3a5f] font-mono">
-                    {pv.resumen?.usuarios ?? children.length ?? 0}
+                  <p className="text-xs font-extrabold text-[#1e3a5f] font-mono leading-none mt-0.5">
+                    {nUsuarios}
+                  </p>
+                  <p className="text-[6.8px] text-slate-500 font-medium leading-none mt-0.5">
+                    {nActivos} activos · {nEgresados} egresados
                   </p>
                 </div>
-                <div className="border border-slate-300 bg-white py-1 px-1.5">
-                  <p className="text-[8px] text-slate-600 uppercase font-semibold">
+                <div className="border border-slate-300 bg-white py-1 px-1">
+                  <p className="text-[7.5px] text-slate-600 uppercase font-semibold leading-tight">
                     Planificaciones Lúdicas
                   </p>
-                  <p className="text-xs font-extrabold text-[#1e3a5f] font-mono">
+                  <p className="text-xs font-extrabold text-[#1e3a5f] font-mono leading-none mt-0.5">
                     {pv.resumen?.planificaciones ?? plannings.length ?? 0}
                   </p>
                 </div>
-                <div className="border border-slate-300 bg-white py-1 px-1.5">
-                  <p className="text-[8px] text-slate-600 uppercase font-semibold">
+                <div className="border border-slate-300 bg-white py-1 px-1">
+                  <p className="text-[7.5px] text-slate-600 uppercase font-semibold leading-tight">
                     Tasa de Asistencia
                   </p>
-                  <p className="text-xs font-extrabold text-emerald-700 font-mono">
+                  <p className="text-xs font-extrabold text-emerald-700 font-mono leading-none mt-0.5">
                     {pv.resumen?.tasa_asistencia ?? 0}%
                   </p>
+                  <p className="text-[6.8px] text-slate-500 font-medium leading-none mt-0.5">
+                    egresados hasta su salida
+                  </p>
                 </div>
-                <div className="border border-slate-300 bg-white py-1 px-1.5">
-                  <p className="text-[8px] text-slate-600 uppercase font-semibold">
+                <div className="border border-slate-300 bg-white py-1 px-1">
+                  <p className="text-[7.5px] text-slate-600 uppercase font-semibold leading-tight">
+                    Egresos del Período
+                  </p>
+                  <p className="text-xs font-extrabold text-slate-800 font-mono leading-none mt-0.5">
+                    {nEgresados}
+                  </p>
+                </div>
+                <div className="border border-slate-300 bg-white py-1 px-1">
+                  <p className="text-[7.5px] text-slate-600 uppercase font-semibold leading-tight">
                     Alertas / Casos Riesgo
                   </p>
-                  <p className="text-xs font-extrabold text-amber-700 font-mono">
+                  <p className="text-xs font-extrabold text-amber-700 font-mono leading-none mt-0.5">
                     {effectiveRiskCount}
                   </p>
                 </div>
@@ -322,11 +345,11 @@ export default function InformeActividadesPrintPage({
               )}
             </div>
 
-            {/* Nómina Oficial de Niñas y Niños bajo Cobertura */}
+            {/* 2.1. Nómina Oficial de Niñas y Niños bajo Cobertura al Corte */}
             <div className="break-inside-avoid">
               <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9px] tracking-wide flex justify-between items-center">
                 <span>
-                  NÓMINA OFICIAL DE NIÑAS Y NIÑOS BAJO COBERTURA (
+                  2.1 · NÓMINA OFICIAL DE NIÑAS Y NIÑOS BAJO COBERTURA AL CORTE (
                   {children.length})
                 </span>
                 <span className="text-[7.5px] font-normal opacity-90">
@@ -399,6 +422,84 @@ export default function InformeActividadesPrintPage({
                   </tbody>
                 </table>
               )}
+            </div>
+
+            {/* 2.2. Niñas y Niños Egresados durante el Período */}
+            <div className="break-inside-avoid">
+              <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9px] tracking-wide flex justify-between items-center">
+                <span>
+                  2.2 · NIÑAS Y NIÑOS EGRESADOS DURANTE EL PERÍODO (
+                  {egresados.length})
+                </span>
+                <span className="text-[7.5px] font-normal opacity-90">
+                  1 REGISTRO POR FILA · ORDEN POR FECHA DE EGRESO
+                </span>
+              </div>
+              {egresados.length === 0 ? (
+                <div className="border border-t-0 border-slate-300 p-2 text-[8.5px] text-slate-600 italic bg-white">
+                  No se registraron egresos de niñas o niños durante el período.
+                </div>
+              ) : (
+                <table className="w-full text-[8.5px] border-collapse border border-slate-300">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-300 text-center font-bold text-slate-800">
+                      <th className="border border-slate-300 py-0.5 px-1 w-7">
+                        N°
+                      </th>
+                      <th className="border border-slate-300 py-0.5 px-1.5 text-left w-24">
+                        Cédula / ID
+                      </th>
+                      <th className="border border-slate-300 py-0.5 px-1.5 text-left">
+                        Apellidos y Nombres
+                      </th>
+                      <th className="border border-slate-300 py-0.5 px-1 w-20 text-center">
+                        F. Ingreso
+                      </th>
+                      <th className="border border-slate-300 py-0.5 px-1 w-20 text-center">
+                        F. Egreso
+                      </th>
+                      <th className="border border-slate-300 py-0.5 px-1.5 text-left">
+                        Motivo de egreso
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {egresados.map((eg: any, idx: number) => {
+                      const motivoTexto = eg.motivo_egreso === 'Otro' && eg.motivo_otro
+                        ? `Otro: ${eg.motivo_otro}`
+                        : eg.motivo_egreso || "Retiro voluntario de la familia";
+                      return (
+                        <tr
+                          key={eg.id || idx}
+                          className={idx % 2 === 1 ? "bg-slate-50/70" : "bg-white"}
+                        >
+                          <td className="border border-slate-300 py-0.5 px-1 text-center font-bold">
+                            {idx + 1}
+                          </td>
+                          <td className="border border-slate-300 py-0.5 px-1.5 font-mono">
+                            {eg.cedula || eg.codigo || "S/C"}
+                          </td>
+                          <td className="border border-slate-300 py-0.5 px-1.5 font-semibold uppercase">
+                            {eg.nombre || eg.nombres || "-"}
+                          </td>
+                          <td className="border border-slate-300 py-0.5 px-1 text-center font-mono whitespace-nowrap">
+                            {eg.fecha_ingreso || "-"}
+                          </td>
+                          <td className="border border-slate-300 py-0.5 px-1 text-center font-mono whitespace-nowrap font-bold text-slate-900">
+                            {eg.fecha_egreso || "-"}
+                          </td>
+                          <td className="border border-slate-300 py-0.5 px-1.5 text-slate-800">
+                            {motivoTexto}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+              <div className="border border-t-0 border-slate-300 px-2 py-1 bg-slate-50/80 text-[7.5px] text-slate-600 leading-tight">
+                Su asistencia se toma en cuenta solo hasta la fecha de egreso. Los egresados no aparecen en la nómina al corte (2.1), pero sí se suman en «Usuarios atendidos».
+              </div>
             </div>
 
             {/* 3. Experiencias de Aprendizaje y Planificaciones Lúdicas — Flujo Continuo Natural */}

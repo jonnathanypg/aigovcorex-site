@@ -928,7 +928,7 @@ def update_child(child_id):
         # 1. Update Child Fields
         for field in ['first_name', 'last_name', 'cedula', 'blood_type', 
                       'allergies', 'medical_conditions', 'special_needs', 
-                      'assigned_group', 'status', 'gender']:
+                      'assigned_group', 'status', 'gender', 'exit_reason', 'exit_notes']:
             if field in data:
                 val = data[field]
                 if field == 'cedula' and not val:
@@ -940,6 +940,15 @@ def update_child(child_id):
              
         if 'enrollment_date' in data and data['enrollment_date']:
              child.enrollment_date = datetime.strptime(data['enrollment_date'], '%Y-%m-%d').date()
+
+        if 'exit_date' in data:
+             if data['exit_date']:
+                 exit_d = datetime.strptime(data['exit_date'], '%Y-%m-%d').date()
+                 if child.enrollment_date and exit_d < child.enrollment_date:
+                     return jsonify({'error': 'La fecha de egreso no puede ser anterior a la fecha de ingreso'}), 400
+                 child.exit_date = exit_d
+             else:
+                 child.exit_date = None
 
         # 2. Update or Create Family Fields
         family = child.family

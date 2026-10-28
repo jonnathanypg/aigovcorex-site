@@ -113,6 +113,7 @@ class MonthlyReportService:
         ).order_by(LudicPlanning.planning_date.asc()).all()
 
         # 2. Niños asignados a la educadora (cobertura 9 niños/educadora, 72/centro)
+        # 2.1. Niños activos al corte
         children = Child.query.filter_by(
             assigned_educator_id=author_id, status='activo'
         ).all() if author_id else []
@@ -122,16 +123,50 @@ class MonthlyReportService:
             ).limit(9).all()
         child_ids = [c.id for c in children]
 
-        # 3. Asistencia del periodo (sus niños o su centro)
+        # 2.2. Niñas y niños egresados durante el período (del salón o del centro)
+        exit_q = Child.query.filter(
+            Child.status == 'egresado',
+            Child.exit_date >= period_start,
+            Child.exit_date <= period_end,
+        )
+        if author_id:
+            exit_q = exit_q.filter(
+                (Child.assigned_educator_id == author_id) |
+                ((Child.assigned_educator_id.is_(None)) & (Child.tenant_id == center_id))
+            )
+        elif center_id:
+            exit_q = exit_q.filter(Child.tenant_id == center_id)
+        
+        exited_children = exit_q.order_by(Child.exit_date.asc(), Child.last_name.asc()).all()
+        exited_child_ids = [c.id for c in exited_children]
+
+        # 3. Asistencia del periodo
+        # Regla CMCI: Los egresados solo cuentan asistencia hasta su fecha de egreso (no penaliza tasa)
+        all_eval_child_ids = list(set(child_ids + exited_child_ids))
         att_q = Attendance.query.filter(
             Attendance.date >= period_start, Attendance.date <= period_end)
-        if child_ids:
-            att_q = att_q.filter(Attendance.child_id.in_(child_ids))
+        if all_eval_child_ids:
+            att_q = att_q.filter(Attendance.child_id.in_(all_eval_child_ids))
         elif center_id:
             att_q = att_q.filter(Attendance.tenant_id == center_id)
-        attendances = att_q.all()
+        
+        raw_attendances = att_q.all()
+        # Filtrar asistencias de niños egresados que excedan su exit_date (si hubiera error de captura)
+        exit_date_map = {c.id: c.exit_date for c in exited_children if c.exit_date}
+        attendances = []
+        for a in raw_attendances:
+            if a.child_id in exit_date_map:
+                if a.date <= exit_date_map[a.child_id]:
+                    attendances.append(a)
+            else:
+                attendances.append(a)
+
         n_present = sum(1 for a in attendances if a.status == 'presente')
         att_rate = round(n_present / len(attendances) * 100, 1) if attendances else 0.0
+
+        n_activos = len(children)
+        n_egresados = len(exited_children)
+        n_usuarios_atendidos = n_activos + n_egresados
 
         # 4. Casos riesgo: intervenciones + familias con riesgos sociales
         interventions = []
@@ -222,7 +257,19 @@ class MonthlyReportService:
                 'edad': c.age_display,
                 'grupo_sala': c.assigned_group or 'General',
             } for c in children],
-            'n_usuarios': len(children),
+            'n_activos': n_activos,
+            'egresados_periodo': [{
+                'id': c.id,
+                'cedula': c.cedula or 'S/C',
+                'nombre': c.full_name,
+                'fecha_ingreso': c.enrollment_date.isoformat() if c.enrollment_date else '',
+                'fecha_egreso': c.exit_date.isoformat() if c.exit_date else '',
+                'motivo_egreso': c.exit_reason or 'Retiro voluntario de la familia',
+                'motivo_otro': c.exit_notes or '',
+                'grupo_sala': c.assigned_group or 'General',
+            } for c in exited_children],
+            'n_egresados': n_egresados,
+            'n_usuarios': n_usuarios_atendidos,
             'asistencia': {'registros': len(attendances),
                            'presentes': n_present,
                            'tasa': att_rate},
@@ -236,12 +283,13 @@ class MonthlyReportService:
         }
 
         # 6. conclusions_auto: template determinista con agregados
+        detalle_egresos_texto = f" ({n_activos} activos al corte y {n_egresados} egresados durante el período)" if n_egresados > 0 else f" ({n_activos} activos al corte)"
         template = (
-            f"Durante el periodo {period_start.isoformat()} al {period_end.isoformat()}, "
-            f"se atendió a {len(children)} usuarios con tasa de asistencia del {att_rate}% "
-            f"({n_present}/{len(attendances)} registros). Se ejecutaron {len(plannings)} "
-            f"planificaciones lúdicas, {len(interventions)} intervenciones familiares y se "
-            f"identificaron {risk_cases} casos de riesgo. Evaluaciones de desarrollo: "
+            f"Entre el {period_start.isoformat()} y el {period_end.isoformat()}, "
+            f"tuvimos el placer de atender a {n_usuarios_atendidos} usuarios{detalle_egresos_texto}, "
+            f"logrando una tasa de asistencia del {att_rate}%. Durante este mes, se llevaron a cabo "
+            f"{len(plannings)} planificaciones lúdicas, {len(interventions)} intervenciones familiares "
+            f"y se identificaron {risk_cases} casos de riesgo. Evaluaciones de desarrollo: "
             f"{len(milestones)} ({', '.join(f'{k}: {v}' for k, v in by_level.items()) or 'sin registros'}). "
             f"Salud: {health_n} registros. Nutrición: {nutrition_n} registros."
         )
@@ -293,11 +341,14 @@ class MonthlyReportService:
             'secciones': p.get('sections', []),
             'resumen': {
                 'usuarios': p.get('n_usuarios', 0),
+                'activos_al_corte': p.get('n_activos', len(p.get('ninos', []))),
+                'egresos_periodo': p.get('n_egresados', len(p.get('egresados_periodo', []))),
                 'planificaciones': p.get('n_planificaciones', 0),
                 'tasa_asistencia': (p.get('asistencia') or {}).get('tasa', 0),
                 'casos_riesgo': p.get('casos_riesgo', 0),
                 'detalle_casos_riesgo': p.get('detalle_casos_riesgo', []),
             },
+            'egresados_periodo': p.get('egresados_periodo', []),
             'conclusions_auto': report.conclusions_auto or '',
             'educator_notes': report.educator_notes or '',
             'firmas': [

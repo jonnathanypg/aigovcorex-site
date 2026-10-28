@@ -452,6 +452,8 @@ export interface MonthlyReportPrintView {
   secciones: string[];
   resumen: {
     usuarios: number;
+    activos_al_corte?: number;
+    egresos_periodo?: number;
     planificaciones: number;
     tasa_asistencia: number;
     casos_riesgo: number;
@@ -461,6 +463,16 @@ export interface MonthlyReportPrintView {
       motivo: string;
     }>;
   };
+  egresados_periodo?: Array<{
+    id?: number;
+    cedula: string;
+    nombre: string;
+    fecha_ingreso: string;
+    fecha_egreso: string;
+    motivo_egreso: string;
+    motivo_otro?: string;
+    grupo_sala?: string;
+  }>;
   conclusions_auto: string;
   educator_notes: string;
   firmas: Array<{ rol: string; linea: string }>;

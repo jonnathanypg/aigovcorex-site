@@ -1,0 +1,233 @@
+{
+  "periodo": "29 de septiembre al 29 de octubre de 2026",
+  "centros": [
+    "CMCI Bahía",
+    "CMCI Guasmo",
+    "CMCI Orquídeas"
+  ],
+  "proyecto": "Proyecto Integral de Gestión Técnica y Administrativa de los Centros Municipales de Cuidado Infantil – CMCI Bahía, Guasmo y Orquídeas",
+  "objetivo": "Organizar y consolidar el primer período operativo, asegurando la ejecución planificada, asignación de cupos y nuevos ingresos, fortalecimiento del equipo, implementación del Modelo de Gestión y sistema de monitoreo, atención integral, participación familiar y control administrativo.",
+  "enfoque": "Gestión integral, atención de calidad, protección de derechos, participación familiar y seguimiento por resultados.",
+  "hitos": [
+    {
+      "fecha": "6 oct.",
+      "descripcion": "Primera sesión del Comité de Asignación de Cupos y Nuevos Ingresos."
+    },
+    {
+      "fecha": "22 oct.",
+      "descripcion": "Segunda sesión del Comité de Asignación de Cupos y Nuevos Ingresos."
+    },
+    {
+      "fecha": "8–28 oct.",
+      "descripcion": "Capacitación sobre Modelo de Gestión, herramientas de trabajo y actividades planificadas."
+    },
+    {
+      "fecha": "15–28 oct.",
+      "descripcion": "Capacitación práctica sobre el sistema de monitoreo y validación de avances."
+    },
+    {
+      "fecha": "29 oct.",
+      "descripcion": "Cierre del primer período y consolidación de resultados e información técnica y administrativa."
+    }
+  ],
+  "actividades": [
+    {
+      "id": 1,
+      "tarea": "Planificar, coordinar y socializar la ejecución del primer período, articulando las actividades técnicas, administrativas y operativas previstas para los CMCI.",
+      "periodo": "29 sep.–7 oct.",
+      "responsable": "Coordinador/a General",
+      "apoyo": "Coordinadores/as CMCI; equipo técnico; DASE-EP",
+      "producto": "Plan de trabajo del período socializado, con actividades, responsables, fechas y mecanismos de seguimiento.",
+      "medio_verificacion": "Cronograma; actas; matriz de seguimiento",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 2,
+      "tarea": "Completar la conformación, habilitación documental, inducción y compromisos de confidencialidad del equipo responsable de la operación de los CMCI.",
+      "periodo": "29 sep.–7 oct.",
+      "responsable": "Coordinador/a General",
+      "apoyo": "Técnico/a Administrativo/a; Delegado/a de Protección de Datos; Coordinadores/as",
+      "producto": "Equipo habilitado y documentación administrativa organizada.",
+      "medio_verificacion": "Contratos, Expedientes; registros de inducción; acuerdos",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 3,
+      "tarea": "Actualizar la base de usuarios, verificar continuidad de atención, gestionar nuevos ingresos y aplicar criterios de priorización y asignación de cupos.",
+      "periodo": "29 sep.–29 oct.",
+      "responsable": "Coordinadores/as CMCI",
+      "apoyo": "Educadoras; Técnico/a Administrativo/a; equipo técnico",
+      "producto": "Base de usuarios actualizada y procesos de ingreso y priorización documentados.",
+      "medio_verificacion": "Fichas; base de usuarios; registros de ingreso",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 4,
+      "tarea": "Conformar y desarrollar las sesiones del Comité de Asignación de Cupos y Nuevos Ingresos, revisando casos, disponibilidad, prioridades y decisiones de asignación.",
+      "periodo": "6 y 22 oct.",
+      "responsable": "Coordinador/a General",
+      "apoyo": "Coordinadores/as CMCI; equipo técnico; DASE-EP",
+      "producto": "Decisiones de asignación de cupos y nuevos ingresos formalizadas en las sesiones del 6 y 22 de octubre.",
+      "medio_verificacion": "Actas; matriz de asignación; listados de nuevos ingresos",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 5,
+      "tarea": "Verificar las condiciones de infraestructura, seguridad, higiene, equipamiento y mantenimiento de los centros, gestionando requerimientos y permisos necesarios para garantizar la continuidad del servicio.",
+      "periodo": "1–29 oct.",
+      "responsable": "Coordinadores/as CMCI",
+      "apoyo": "Coordinador/a General; DASE-EP; Técnico/a Administrativo/a",
+      "producto": "Necesidades priorizadas y gestiones de mantenimiento, adecuación y permisos documentadas.",
+      "medio_verificacion": "Inspecciones; fotografías; informes; solicitudes; permisos",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 6,
+      "tarea": "Implementar y socializar las nuevas herramientas de trabajo y asegurar su incorporación a las actividades de ejecución, seguimiento y gestión del proyecto.",
+      "periodo": "1–21 oct.",
+      "responsable": "Coordinador/a General",
+      "apoyo": "Coordinadores/as CMCI; equipo técnico; soporte",
+      "producto": "Herramientas habilitadas, socializadas y disponibles para el equipo.",
+      "medio_verificacion": "Materiales; registros de socialización; evidencias de uso",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 7,
+      "tarea": "Desarrollar jornadas de capacitación sobre el Modelo de Gestión de los CMCI, metodología de atención integral, roles del equipo y actividades planificadas para la ejecución del proyecto.",
+      "periodo": "8–28 oct.",
+      "responsable": "Coordinador/a General",
+      "apoyo": "Coordinadores/as; equipo técnico",
+      "producto": "Personal alineado al Modelo de Gestión y a la planificación operativa.",
+      "medio_verificacion": "Agenda; presentaciones; asistencia; evaluaciones",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 8,
+      "tarea": "Capacitar al equipo en el sistema de monitoreo y registro de información, seguimiento de indicadores, alertas, validación de avances y generación de reportes.",
+      "periodo": "15–28 oct.",
+      "responsable": "Coordinador/a General",
+      "apoyo": "Soporte técnico; Coordinadores/as; responsables de registro",
+      "producto": "Equipo capacitado y habilitado para registrar, validar y monitorear avances.",
+      "medio_verificacion": "Registro de capacitación; ejercicios; reportes",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 9,
+      "tarea": "Validar la planificación pedagógica e implementar actividades de estimulación, juego y aprendizaje de acuerdo con las necesidades de niñas y niños atendidos.",
+      "periodo": "8–29 oct.",
+      "responsable": "Coordinadores/as CMCI",
+      "apoyo": "Educadoras; Auxiliares en Párvulo",
+      "producto": "Planificación pedagógica implementada y evidencias de ejecución organizadas.",
+      "medio_verificacion": "Planificaciones; registros; evidencias",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 10,
+      "tarea": "Realizar valoraciones iniciales de desarrollo y salud, identificar alertas, efectuar derivaciones y aplicar los protocolos de bioseguridad, higiene y prevención correspondientes.",
+      "periodo": "8–29 oct.",
+      "responsable": "Médicos/as",
+      "apoyo": "Educadoras; equipo psicosocial; Coordinadores/as",
+      "producto": "Valoraciones realizadas, alertas identificadas y seguimiento activado cuando corresponda.",
+      "medio_verificacion": "Fichas médicas; IDII; derivaciones; controles",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 11,
+      "tarea": "Implementar el componente nutricional mediante valoración de necesidades, seguimiento del estado nutricional, validación del menú y definición de acciones individualizadas cuando corresponda.",
+      "periodo": "8–29 oct.",
+      "responsable": "Nutricionista",
+      "apoyo": "Médicos/as; Coordinadores/as; proveedor de alimentación",
+      "producto": "Componente nutricional implementado y con seguimiento documentado.",
+      "medio_verificacion": "Fichas nutricionales; menú; planes; registros",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 12,
+      "tarea": "Ejecutar la atención integral diaria de niñas y niños, garantizando cuidado, alimentación, higiene, descanso, actividades y entrega segura en los tres CMCI.",
+      "periodo": "29 sep.–29 oct.",
+      "responsable": "Coordinadores/as CMCI",
+      "apoyo": "Educadoras; Auxiliares; equipo multidisciplinario",
+      "producto": "Servicio de atención integral ejecutado y registrado durante el período.",
+      "medio_verificacion": "Asistencia; registros de atención; evidencias",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 13,
+      "tarea": "Brindar acompañamiento psicosocial y orientación a familias, identificando factores de riesgo y realizando seguimiento y derivación de casos que lo requieran.",
+      "periodo": "15–29 oct.",
+      "responsable": "Psicólogo/a / Trabajador/a Social",
+      "apoyo": "Coordinadores/as; Abogado/a cuando corresponda",
+      "producto": "Casos identificados, atendidos y con seguimiento documentado.",
+      "medio_verificacion": "Fichas; registros de atención; derivaciones",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 14,
+      "tarea": "Fortalecer la comunicación con las familias y promover su participación en las actividades de los CMCI y en acciones comunitarias.",
+      "periodo": "29 sep.–29 oct.",
+      "responsable": "Coordinadores/as CMCI",
+      "apoyo": "Educadoras; Facilitadores/as Comunitarios/as",
+      "producto": "Participación y comunicación familia–centro fortalecidas y registradas.",
+      "medio_verificacion": "Registros de comunicación; asistencia; evidencias",
+      "estado": "EN PROCESO",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 15,
+      "tarea": "Planificar y desarrollar acciones formativas para familias sobre crianza positiva, manejo de conflictos, vínculos emocionales, cuidado infantil y economía familiar.",
+      "periodo": "15–29 oct.",
+      "responsable": "Equipo Psicosocial / Facilitadores/as Comunitarios/as",
+      "apoyo": "Coordinadores/as; Educadoras",
+      "producto": "Plan de formación familiar ejecutado con participación de las familias.",
+      "medio_verificacion": "Plan de talleres; asistencia; materiales; evidencias",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 16,
+      "tarea": "Monitorear cobertura, asistencia, atención, calidad e indicadores del proyecto; identificar brechas y definir acciones correctivas y de mejora.",
+      "periodo": "29 sep.–29 oct.",
+      "responsable": "Coordinador/a General",
+      "apoyo": "Coordinadores/as; Técnico/a Administrativo/a; soporte técnico",
+      "producto": "Indicadores actualizados, brechas identificadas y acciones de mejora definidas.",
+      "medio_verificacion": "Sistema de monitoreo; tablero; reportes; plan de mejora",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 17,
+      "tarea": "Organizar y consolidar el expediente documental, los medios de verificación y los respaldos técnicos y administrativos del período.",
+      "periodo": "22–29 oct.",
+      "responsable": "Técnico/a Administrativo/a",
+      "apoyo": "Coordinadores/as; equipo técnico; Contabilidad",
+      "producto": "Expediente del período completo, ordenado y validado.",
+      "medio_verificacion": "Matriz documental; respaldos digitales y físicos",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    },
+    {
+      "id": 18,
+      "tarea": "Realizar el cierre del primer período de trabajo, consolidando resultados, cumplimiento de actividades, avances, alertas y la información técnica y económica requerida para el informe.",
+      "periodo": "29 oct.",
+      "responsable": "Coordinador/a General",
+      "apoyo": "Equipo multidisciplinario; Técnico/a Administrativo/a; Contabilidad",
+      "producto": "Cierre del período formalizado y documentación preparada para el informe correspondiente.",
+      "medio_verificacion": "Matriz de resultados; informe de cierre; soportes técnicos y económicos",
+      "estado": "PENDIENTE",
+      "evidencia_observaciones": ""
+    }
+  ]
+}

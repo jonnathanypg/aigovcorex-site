@@ -432,6 +432,33 @@ export const cmciService = {
       throw toApiError(err, "Error al eliminar informe mensual");
     }
   },
+
+  async getCronograma(): Promise<CmciCronogramaData> {
+    try {
+      const { data } = await api.get<CmciCronogramaData>("/api/cmci/cronograma");
+      return data;
+    } catch (err) {
+      console.warn("Fallo endpoint cronograma, usando fallback", err);
+      return {
+        periodo: "29 de septiembre al 29 de octubre de 2026",
+        centros: ["CMCI Bahía", "CMCI Guasmo", "CMCI Orquídeas"],
+        proyecto: "Proyecto Integral de Gestión Técnica y Administrativa de los Centros Municipales de Cuidado Infantil – CMCI Bahía, Guasmo y Orquídeas",
+        objetivo: "Organizar y consolidar el primer período operativo, asegurando la ejecución planificada, asignación de cupos y nuevos ingresos, fortalecimiento del equipo, implementación del Modelo de Gestión y sistema de monitoreo, atención integral, participación familiar y control administrativo.",
+        enfoque: "Gestión integral, atención de calidad, protección de derechos, participación familiar y seguimiento por resultados.",
+        hitos: [],
+        actividades: []
+      };
+    }
+  },
+
+  async updateCronograma(cronograma: CmciCronogramaData): Promise<{ message: string; cronograma: CmciCronogramaData }> {
+    try {
+      const { data } = await api.put<{ message: string; cronograma: CmciCronogramaData }>("/api/cmci/cronograma", cronograma);
+      return data;
+    } catch (err) {
+      throw toApiError(err, "Error al actualizar cronograma (se requiere rol Administrador de Licencia)");
+    }
+  },
 };
 
 export interface MonthlyReportListItem {
@@ -490,3 +517,31 @@ export interface MonthlyReportDetail {
   payload: any;
   print_view: MonthlyReportPrintView;
 }
+
+export interface CmciCronogramaActividad {
+  id: number;
+  tarea: string;
+  periodo: string;
+  responsable: string;
+  apoyo: string;
+  producto: string;
+  medio_verificacion: string;
+  estado: string;
+  evidencia_observaciones: string;
+}
+
+export interface CmciHito {
+  fecha: string;
+  descripcion: string;
+}
+
+export interface CmciCronogramaData {
+  periodo: string;
+  centros: string[];
+  proyecto: string;
+  objetivo: string;
+  enfoque: string;
+  hitos: CmciHito[];
+  actividades: CmciCronogramaActividad[];
+}
+

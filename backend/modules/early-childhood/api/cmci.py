@@ -1139,3 +1139,56 @@ def import_excels():
                                "source": "excel-import", "created_by": None}
             imported["socioeconomic"] += 1
     return jsonify({"imported": imported, "params_version": STORE.version}), 201
+
+
+@cmci_bp.route("/cronograma", methods=["GET"])
+def get_cmci_cronograma():
+    """Retorna el cronograma de actividades e hitos del Mes 1 (29 sep - 29 oct 2026).
+    Accesible para todos los roles autorizados (lectura e impresión).
+    """
+    import os, json
+    seed_file = os.path.join(
+        os.path.dirname(__file__), "..", "seeds", "cmci", "cmci_cronograma_mes1.json"
+    )
+    if os.path.exists(seed_file):
+        try:
+            with open(seed_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return jsonify(data), 200
+        except Exception as e:
+            logger.error(f"Error cargando seed cronograma: {e}")
+            return jsonify({"error": "No se pudo leer el cronograma"}), 500
+    return jsonify({"error": "Archivo de cronograma no encontrado"}), 404
+
+
+@cmci_bp.route("/cronograma", methods=["PUT"])
+@tenant_required
+def update_cmci_cronograma():
+    """Actualiza actividades o hitos del cronograma.
+    RBAC ESTRICTO: Reservado exclusivamente para 'license_admin' o 'super_admin'.
+    Los demás roles reciben HTTP 403 Prohibido.
+    """
+    user = getattr(g, "current_user", None)
+    role = (getattr(user, "role", None) or (user.get("role") if isinstance(user, dict) else "")).lower()
+    if role not in ADMIN_ROLES:
+        return jsonify({
+            "error": "Acceso denegado: solo el Administrador de Licencia (license_admin) puede modificar el cronograma institucional."
+        }), 403
+
+    body = request.get_json(force=True, silent=True) or {}
+    if not body:
+        return jsonify({"error": "Payload inválido o vacío"}), 400
+
+    import os, json
+    seed_file = os.path.join(
+        os.path.dirname(__file__), "..", "seeds", "cmci", "cmci_cronograma_mes1.json"
+    )
+    try:
+        with open(seed_file, "w", encoding="utf-8") as f:
+            json.dump(body, f, ensure_ascii=False, indent=2)
+        return jsonify({"message": "Cronograma actualizado exitosamente por Administrador de Licencia", "cronograma": body}), 200
+    except Exception as e:
+        logger.error(f"Error guardando cronograma: {e}")
+        return jsonify({"error": "Error interno al persistir cronograma"}), 500
+
+

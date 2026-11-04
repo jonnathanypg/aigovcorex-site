@@ -309,9 +309,9 @@ export default function PlanificacionesPage() {
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Link href="/planificaciones/cronograma-print" target="_blank">
+                    <Link href="/cronograma">
                         <Button variant="outline" className="border-blue-500/40 text-blue-600 hover:bg-blue-500/10">
-                            <FileSpreadsheet className="mr-2 h-4 w-4" /> Cronograma Mes 1 (A4)
+                            <Calendar className="mr-2 h-4 w-4" /> Cronograma CMCI
                         </Button>
                     </Link>
                     <Link href="/informe-actividades">

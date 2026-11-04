@@ -667,6 +667,14 @@ class ManageChildTool(BaseTool):
                         Child.first_name.ilike(f'%{search}%'),
                         Child.last_name.ilike(f'%{search}%')
                     ))
+                
+                # Filtro por nacionalidad si se solicita
+                nationality = kwargs.get('nationality') or kwargs.get('nacionalidad')
+                if nationality:
+                    query = query.join(Family, Child.family_id == Family.id).join(Representative, Representative.family_id == Family.id).filter(
+                        Representative.nationality.ilike(f'%{nationality}%')
+                    )
+
                 children = query.order_by(Child.last_name).limit(30).all()
                 return {
                     'success': True,
@@ -677,6 +685,11 @@ class ManageChildTool(BaseTool):
                             'nombre': c.full_name,
                             'grupo': c.assigned_group or '',
                             'estado': c.status,
+                            'nacionalidad': (
+                                c.family.representatives.first().nationality 
+                                if c.family and c.family.representatives and c.family.representatives.first() 
+                                else 'Ecuatoriana'
+                            ),
                             'fecha_nacimiento': str(c.birth_date) if c.birth_date else '',
                         }
                         for c in children

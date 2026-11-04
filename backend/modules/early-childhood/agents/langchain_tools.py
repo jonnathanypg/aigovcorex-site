@@ -22,9 +22,16 @@ from datetime import date, datetime
 
 
 class SearchChildTool(BaseTool):
-    """Tool to search for a child by name"""
+    """Tool to search for a child by name, group, or nationality"""
     name: str = "search_child"
-    description: str = "Search for a child by name in the database. Returns child ID and details. Input: {'name': 'nombre', 'tenant_id': 1}"
+    description: str = (
+        "Search for a child or list of children in the database with optional nationality and group filters. "
+        "Returns child ID, full name, group, representative, and nationality. "
+        "Input examples:\n"
+        "  - Por nombre: {'name': 'Carlos', 'tenant_id': 1}\n"
+        "  - Por nacionalidad: {'nationality': 'Venezolana', 'tenant_id': 1}\n"
+        "  - Combinado: {'name': 'Ana', 'nationality': 'Ecuatoriana', 'tenant_id': 1}"
+    )
     
     def _run(self, *args, **kwargs) -> dict:
         """Execute the search with retry logic for stale connections"""
@@ -34,13 +41,14 @@ class SearchChildTool(BaseTool):
         logger.info(f"🔍 SearchChildTool called with kwargs: {kwargs}")
         
         name = kwargs.get('name')
+        nationality_filter = kwargs.get('nationality') or kwargs.get('nacionalidad')
         tenant_id = kwargs.get('tenant_id')
         
-        logger.info(f"  name='{name}', tenant_id={tenant_id}")
+        logger.info(f"  name='{name}', nationality='{nationality_filter}', tenant_id={tenant_id}")
         
-        if not name:
-            logger.warning("  ❌ Missing name")
-            return {'found': False, 'message': 'El nombre del niño es requerido.'}
+        if not name and not nationality_filter:
+            logger.warning("  ❌ Missing search criteria (name or nationality)")
+            return {'found': False, 'message': 'Especifique un nombre o nacionalidad para buscar.'}
         
         # Resolve tenant scope using shared helper (supports license_admin multi-tenant + DB recovery)
         user_id = kwargs.get('user_id')
@@ -80,7 +88,8 @@ class SearchChildTool(BaseTool):
                     clean = "".join([c for c in nfkd if not unicodedata.combining(c)]).lower()
                     return re.sub(r'[^a-z0-9\s]', ' ', clean).strip()
 
-                norm_search = _norm(name)
+                norm_search = _norm(name) if name else ""
+                norm_nat_filter = _norm(nationality_filter) if nationality_filter else ""
                 search_tokens = [t for t in norm_search.split() if len(t) >= 2 and t not in {'del', 'de', 'la', 'las', 'el', 'los', 'y', 'usuario', 'nino', 'nina'}]
                 matches = []
 
@@ -91,28 +100,55 @@ class SearchChildTool(BaseTool):
                     c_inv = f"{c_last} {c_first}".strip()
                     c_all = f"{c_first} {c_last} {c_full}"
 
-                    is_match = False
-                    if norm_search and (norm_search in c_full or norm_search in c_inv or norm_search in c_first or norm_search in c_last):
-                        is_match = True
-                    elif search_tokens:
-                        score = sum(1 for tok in search_tokens if tok in c_all)
-                        if score >= max(1, len(search_tokens) // 2):
-                            is_match = True
+                    # Verificar coincidencia de nombre si se especificó
+                    is_name_match = True
+                    if norm_search:
+                        if norm_search in c_full or norm_search in c_inv or norm_search in c_first or norm_search in c_last:
+                            is_name_match = True
+                        elif search_tokens:
+                            score = sum(1 for tok in search_tokens if tok in c_all)
+                            is_name_match = (score >= max(1, len(search_tokens) // 2))
+                        else:
+                            is_name_match = False
 
-                    if is_match:
-                        logger.info(f"  ✅ MATCH: '{name}' matches child ID={child.id} ('{child.full_name}')")
+                    # Obtener nacionalidad del representante o datos familiares
+                    rep_nat = ""
+                    rep_name = ""
+                    if child.family and child.family.representatives:
+                        rep = child.family.representatives.first()
+                        if rep:
+                            rep_nat = getattr(rep, "nationality", "") or ""
+                            rep_name = rep.full_name
+
+                    # Si la familia tiene migrant_origin o nationality
+                    migrant_origin = getattr(child.family, "migrant_origin", "") if child.family else ""
+                    norm_rep_nat = _norm(f"{rep_nat} {migrant_origin}")
+
+                    # Verificar coincidencia de nacionalidad si se especificó
+                    is_nat_match = True
+                    if norm_nat_filter:
+                        is_nat_match = (norm_nat_filter in norm_rep_nat)
+
+                    if is_name_match and is_nat_match:
+                        logger.info(f"  ✅ MATCH: child ID={child.id} ('{child.full_name}') [Nat: {rep_nat or 'Ecuatoriana'}]")
                         matches.append({
                             'id': child.id,
                             'name': child.full_name,
                             'age': child.age_display,
-                            'group': child.assigned_group
+                            'group': child.assigned_group,
+                            'representative': rep_name,
+                            'nationality': rep_nat or "Ecuatoriana"
                         })
                 
                 logger.info(f"  Total matches: {len(matches)}")
                 
                 if not matches:
-                    logger.warning(f"  ❌ No matches found for '{name}'")
-                    return {'found': False, 'message': f'No se encontró ningún niño con el nombre "{name}"'}
+                    crit_desc = []
+                    if name: crit_desc.append(f'nombre "{name}"')
+                    if nationality_filter: crit_desc.append(f'nacionalidad "{nationality_filter}"')
+                    desc_str = " con ".join(crit_desc)
+                    logger.warning(f"  ❌ No matches found for {desc_str}")
+                    return {'found': False, 'message': f'No se encontraron niños activos con {desc_str}.'}
                 
                 if len(matches) == 1:
                     return {'found': True, 'child': matches[0]}

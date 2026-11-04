@@ -2,29 +2,9 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { PrintButton } from "@/components/cmci/print-header";
-import { cmciService, type CmciCronogramaData, type CmciCronogramaActividad } from "@/services/cmci.service";
+import { cmciService, type CmciCronogramaData } from "@/services/cmci.service";
 import { licenseAdminService } from "@/services/license-admin.service";
-import { authService } from "@/services/auth.service";
 import { resolvePrintBannerUrl } from "@/components/cmci/print-header";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
-import { Pencil, ShieldAlert, CheckCircle2, Lock } from "lucide-react";
 
 export default function CmciCronogramaPrintPage() {
   return (
@@ -37,24 +17,11 @@ export default function CmciCronogramaPrintPage() {
 function CmciCronogramaPrintInner() {
   const [data, setData] = useState<CmciCronogramaData | null>(null);
   const [orgConfig, setOrgConfig] = useState<any>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-
-  // Modal de edición reservado para license_admin
-  const [editingActividad, setEditingActividad] = useState<CmciCronogramaActividad | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     cmciService.getCronograma().then(setData).catch(() => setData(null));
     licenseAdminService.getPublicConfig().then(setOrgConfig).catch(() => setOrgConfig(null));
-    authService.getCurrentUser().then(setCurrentUser).catch(() => {
-      const stored = authService.getStoredUser();
-      setCurrentUser(stored);
-    });
   }, []);
-
-  const role = (currentUser?.role || "").toLowerCase();
-  // Solo license_admin y super_admin tienen permiso de edición
-  const canEdit = role === "license_admin" || role === "super_admin";
 
   const headerUrl = resolvePrintBannerUrl(orgConfig?.header_banner_path) || "/membretes/membrete-gasiba-cabezera.png";
   const footerUrl = resolvePrintBannerUrl(orgConfig?.footer_banner_path) || "/membretes/membrete-gasiba-pie.png";
@@ -63,57 +30,17 @@ function CmciCronogramaPrintInner() {
   const ejecutadas = data?.actividades.filter(a => a.estado.toUpperCase() === "EJECUTADA").length || 0;
   const enProceso = data?.actividades.filter(a => a.estado.toUpperCase() === "EN PROCESO").length || 0;
   const pendientes = data?.actividades.filter(a => a.estado.toUpperCase() === "PENDIENTE").length || 0;
-  const noEjecutadas = data?.actividades.filter(a => a.estado.toUpperCase() === "NO EJECUTADA").length || 0;
   const pctCumplimiento = totalActividades > 0 ? Math.round((ejecutadas / totalActividades) * 100) : 0;
-
-  const handleSaveActivity = async () => {
-    if (!editingActividad || !data || !canEdit) return;
-    setIsSaving(true);
-    try {
-      const updatedActividades = data.actividades.map(a =>
-        a.id === editingActividad.id ? editingActividad : a
-      );
-      const updatedData: CmciCronogramaData = {
-        ...data,
-        actividades: updatedActividades,
-      };
-      await cmciService.updateCronograma(updatedData);
-      setData(updatedData);
-      toast.success("Actividad actualizada correctamente");
-      setEditingActividad(null);
-    } catch (err: any) {
-      toast.error(err?.message || "Error al actualizar actividad");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <div className="print-letterhead-document bg-white text-black min-h-screen">
-      {/* Barra de Herramientas y Control de Rol (Oculta al imprimir) */}
-      <div className="print:hidden p-4 bg-slate-900 text-white border-b flex flex-wrap justify-between items-center max-w-5xl mx-auto w-full gap-4">
+      {/* Botón flotante para vista previa en pantalla */}
+      <div className="print:hidden p-4 bg-slate-100 border-b flex justify-between items-center max-w-5xl mx-auto w-full">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="font-bold text-sm tracking-wide">Cronograma y Control de Ejecución (Mes 1)</h2>
-            {canEdit ? (
-              <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-semibold">
-                <CheckCircle2 className="w-3 h-3" /> Modo Edición (Administrador de Licencia)
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-semibold">
-                <Lock className="w-3 h-3" /> Solo Lectura ({currentUser?.role || "Personal Autorizado"})
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {canEdit
-              ? "Usted tiene permisos de Administrador de Licencia para modificar estados, fechas y evidencias."
-              : "Vista institucional con formato oficial de impresión A4 con membrete. Edición restringida a Administrador de Licencia."}
-          </p>
+          <h2 className="font-bold text-sm text-slate-800">Vista Oficial Imprimible A4</h2>
+          <p className="text-xs text-slate-500">Cronograma de Trabajo y Control de Ejecución — Primer Período CMCI</p>
         </div>
-        <div className="flex items-center gap-2">
-          <PrintButton />
-        </div>
+        <PrintButton />
       </div>
 
       {/* Cabecera membretada fija por CSS */}
@@ -123,7 +50,7 @@ function CmciCronogramaPrintInner() {
         </div>
       )}
 
-      {/* Estructura semántica thead / tfoot: reserva márgenes exactos de membrete en CADA hoja impresa sin límite de páginas */}
+      {/* Estructura semántica thead / tfoot para respetar encabezado y pie membretado en CADA página sin límite */}
       <table className="print-letterhead-table w-full">
         <thead>
           <tr>
@@ -198,16 +125,9 @@ function CmciCronogramaPrintInner() {
 
               {/* Matriz Completa de Actividades (18 Tareas) */}
               <div className="mb-6">
-                <div className="flex justify-between items-center border-b border-slate-400 pb-0.5 mb-2">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-900">
-                    Matriz de Actividades y Productos Esperados
-                  </h3>
-                  {canEdit && (
-                    <span className="print:hidden text-[10px] text-blue-600 font-medium">
-                      (Haga clic en el lápiz para editar cada actividad)
-                    </span>
-                  )}
-                </div>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-900 border-b border-slate-400 pb-0.5 mb-2">
+                  Matriz de Actividades y Productos Esperados
+                </h3>
                 <table className="w-full text-[9px] border-collapse border border-slate-300 leading-tight">
                   <thead>
                     <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-400 text-left">
@@ -218,7 +138,6 @@ function CmciCronogramaPrintInner() {
                       <th className="p-1.5 border-r border-slate-300 w-36">Producto Esperado</th>
                       <th className="p-1.5 border-r border-slate-300 w-28">Medio Verificación / Evidencia</th>
                       <th className="p-1.5 w-16 text-center">Estado</th>
-                      {canEdit && <th className="print:hidden p-1.5 w-8 text-center">Acción</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -259,18 +178,6 @@ function CmciCronogramaPrintInner() {
                               {a.estado}
                             </span>
                           </td>
-                          {canEdit && (
-                            <td className="print:hidden p-1.5 text-center">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 hover:bg-slate-200"
-                                onClick={() => setEditingActividad({ ...a })}
-                              >
-                                <Pencil className="h-3 w-3 text-slate-600" />
-                              </Button>
-                            </td>
-                          )}
                         </tr>
                       );
                     })}
@@ -322,107 +229,6 @@ function CmciCronogramaPrintInner() {
         <div className="print-letterhead-footer" aria-hidden="true">
           <img src={footerUrl} alt="Pie oficial" />
         </div>
-      )}
-
-      {/* Dialog de Edición Exclusivo para License Admin */}
-      {canEdit && editingActividad && (
-        <Dialog open={!!editingActividad} onOpenChange={(open) => !open && setEditingActividad(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="text-sm font-bold flex items-center gap-2">
-                <Pencil className="h-4 w-4 text-primary" /> Editar Actividad #{editingActividad.id}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 text-xs py-2">
-              <div>
-                <Label className="text-xs">Actividad / Tarea</Label>
-                <Input
-                  className="text-xs mt-1"
-                  value={editingActividad.tarea}
-                  onChange={(e) => setEditingActividad({ ...editingActividad, tarea: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Fecha / Período</Label>
-                  <Input
-                    className="text-xs mt-1"
-                    value={editingActividad.periodo}
-                    onChange={(e) => setEditingActividad({ ...editingActividad, periodo: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Estado de Ejecución</Label>
-                  <Select
-                    value={editingActividad.estado}
-                    onValueChange={(val) => setEditingActividad({ ...editingActividad, estado: val })}
-                  >
-                    <SelectTrigger className="text-xs mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PENDIENTE">PENDIENTE</SelectItem>
-                      <SelectItem value="EN PROCESO">EN PROCESO</SelectItem>
-                      <SelectItem value="EJECUTADA">EJECUTADA</SelectItem>
-                      <SelectItem value="NO EJECUTADA">NO EJECUTADA</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Responsable Principal</Label>
-                  <Input
-                    className="text-xs mt-1"
-                    value={editingActividad.responsable}
-                    onChange={(e) => setEditingActividad({ ...editingActividad, responsable: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Apoyo / Coordinación</Label>
-                  <Input
-                    className="text-xs mt-1"
-                    value={editingActividad.apoyo}
-                    onChange={(e) => setEditingActividad({ ...editingActividad, apoyo: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Producto / Resultado Esperado</Label>
-                <Input
-                  className="text-xs mt-1"
-                  value={editingActividad.producto}
-                  onChange={(e) => setEditingActividad({ ...editingActividad, producto: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Medio de Verificación</Label>
-                <Input
-                  className="text-xs mt-1"
-                  value={editingActividad.medio_verificacion}
-                  onChange={(e) => setEditingActividad({ ...editingActividad, medio_verificacion: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Evidencia / Observaciones</Label>
-                <Input
-                  className="text-xs mt-1"
-                  placeholder="Ej. Registro fotográfico, acta firmada..."
-                  value={editingActividad.evidencia_observaciones}
-                  onChange={(e) => setEditingActividad({ ...editingActividad, evidencia_observaciones: e.target.value })}
-                />
-              </div>
-            </div>
-            <DialogFooter className="gap-2">
-              <Button size="sm" variant="outline" onClick={() => setEditingActividad(null)}>
-                Cancelar
-              </Button>
-              <Button size="sm" onClick={handleSaveActivity} disabled={isSaving}>
-                {isSaving ? "Guardando..." : "Guardar Cambios"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );

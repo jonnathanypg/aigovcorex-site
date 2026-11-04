@@ -311,7 +311,7 @@ export default function PlanificacionesPage() {
                 <div className="flex flex-wrap items-center gap-2">
                     <Link href="/cronograma">
                         <Button variant="outline" className="border-blue-500/40 text-blue-600 hover:bg-blue-500/10">
-                            <Calendar className="mr-2 h-4 w-4" /> Cronograma CMCI
+                            <Calendar className="mr-2 h-4 w-4" /> Cronograma
                         </Button>
                     </Link>
                     <Link href="/informe-actividades">

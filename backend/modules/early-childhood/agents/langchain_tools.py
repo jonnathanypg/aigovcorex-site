@@ -665,7 +665,7 @@ def get_all_tools():
     from agents.tools.identity_tools import GetCurrentUserProfileTool, GetAssistantCapabilitiesTool
     from agents.tools.attendance_tools import GetAbsentChildrenTool, GetAttendanceTodayTool
     from agents.tools.management_tools import (
-        ManagePlanningTool, ManageWeeklyMenuTool,
+        ManagePlanningTool, ManageCronogramaTool, ManageWeeklyMenuTool,
         ManageMaintenanceTaskTool, ManageInterventionTool,
         ManageAdmissionTool, ManageChildTool, ManageIngestionTool,
         SendEmailTool, ManageSocialProgramsTool, ManageChannelsTool,
@@ -706,6 +706,7 @@ def get_all_tools():
         GenerateReportTool(),
         # Management Tools (Phase 4)
         ManagePlanningTool(),
+        ManageCronogramaTool(),
         ManageWeeklyMenuTool(),
         ManageMaintenanceTaskTool(),
         ManageInterventionTool(),

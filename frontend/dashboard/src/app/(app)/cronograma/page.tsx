@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -49,26 +49,63 @@ import {
   ChevronRight,
   Bot,
   FileCheck2,
+  Inbox,
 } from "lucide-react";
+
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
+const MONTH_SHORT = [
+  "ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic"
+];
+
+function formatDateDisplay(dateStr: string): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const d = parseInt(parts[2], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  return `${d} ${MONTH_SHORT[m] || ""}`;
+}
 
 export default function CronogramaPage() {
   const [data, setData] = useState<CmciCronogramaData | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<"table" | "calendar">("calendar");
+  const [viewMode, setViewMode] = useState<"calendar" | "table">("calendar");
+
+  // Navegación Dinámica de Mes y Año (por defecto Octubre 2026 según el primer período operativo)
+  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(9); // 0 = Enero, 9 = Octubre
 
   // Filtros
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("all");
   const [filterResponsable, setFilterResponsable] = useState("all");
-  const [selectedMonth, setSelectedMonth] = useState<string>("Octubre 2026");
   const { toast } = useToast();
 
-  // Modal para agregar nueva acción
+  // Estados de Rango de Fechas para Agregar Acción (Inicio / Fin)
+  const defaultStartDate = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}-01`;
+  const defaultEndDate = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}-07`;
+
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newActivity, setNewActivity] = useState<Partial<CmciCronogramaActividad>>({
+  const [newActivity, setNewActivity] = useState<{
+    tarea: string;
+    startDate: string;
+    endDate: string;
+    responsable: string;
+    apoyo: string;
+    producto: string;
+    medio_verificacion: string;
+    estado: string;
+    evidencia_observaciones: string;
+  }>({
     tarea: "",
-    periodo: "Octubre 2026",
+    startDate: defaultStartDate,
+    endDate: defaultEndDate,
     responsable: "Coordinador/a General",
     apoyo: "Equipo técnico",
     producto: "",
@@ -112,12 +149,79 @@ export default function CronogramaPage() {
   const role = (currentUser?.role || "").toLowerCase();
   const canEdit = role === "license_admin" || role === "super_admin";
 
-  const totalActividades = data?.actividades.length || 0;
-  const ejecutadas = data?.actividades.filter((a) => a.estado.toUpperCase() === "EJECUTADA").length || 0;
-  const enProceso = data?.actividades.filter((a) => a.estado.toUpperCase() === "EN PROCESO").length || 0;
-  const pendientes = data?.actividades.filter((a) => a.estado.toUpperCase() === "PENDIENTE").length || 0;
-  const noEjecutadas = data?.actividades.filter((a) => a.estado.toUpperCase() === "NO EJECUTADA").length || 0;
-  const pctCumplimiento = totalActividades > 0 ? Math.round((ejecutadas / totalActividades) * 100) : 0;
+  // Manejo de Avance y Retroceso de Mes Dinámico
+  const handlePrevMonth = () => {
+    if (currentMonthIndex === 0) {
+      setCurrentMonthIndex(11);
+      setCurrentYear((y) => y - 1);
+    } else {
+      setCurrentMonthIndex((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonthIndex === 11) {
+      setCurrentMonthIndex(0);
+      setCurrentYear((y) => y + 1);
+    } else {
+      setCurrentMonthIndex((m) => m + 1);
+    }
+  };
+
+  const currentMonthLabel = `${MONTH_NAMES[currentMonthIndex]} ${currentYear}`;
+  const currentMonthShort = MONTH_SHORT[currentMonthIndex]; // ej: "oct", "nov"
+
+  // Actividades que corresponden al mes visualizado
+  const monthActivities = useMemo(() => {
+    if (!data?.actividades) return [];
+    return data.actividades.filter((a) => {
+      const p = (a.periodo || "").toLowerCase();
+      // Si el período contiene el mes corto ("oct", "sep", etc.) o el nombre completo del mes
+      const matchesMonth =
+        p.includes(currentMonthShort) ||
+        p.includes(MONTH_NAMES[currentMonthIndex].toLowerCase()) ||
+        // Si tiene formato ISO YYYY-MM
+        p.includes(`${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}`);
+      return matchesMonth;
+    });
+  }, [data?.actividades, currentMonthIndex, currentYear, currentMonthShort]);
+
+  // Hitos correspondientes al mes
+  const monthHitos = useMemo(() => {
+    if (!data?.hitos) return [];
+    return data.hitos.filter((h) => {
+      const f = (h.fecha || "").toLowerCase();
+      return f.includes(currentMonthShort) || f.includes(MONTH_NAMES[currentMonthIndex].toLowerCase());
+    });
+  }, [data?.hitos, currentMonthIndex, currentMonthShort]);
+
+  // Métricas del Mes en Curso
+  const totalMes = monthActivities.length;
+  const ejecutadasMes = monthActivities.filter((a) => a.estado.toUpperCase() === "EJECUTADA").length;
+  const enProcesoMes = monthActivities.filter((a) => a.estado.toUpperCase() === "EN PROCESO").length;
+  const pendientesMes = monthActivities.filter((a) => a.estado.toUpperCase() === "PENDIENTE").length;
+  const pctCumplimientoMes = totalMes > 0 ? Math.round((ejecutadasMes / totalMes) * 100) : 0;
+
+  // Filtrado por buscador y estado dentro del mes activo
+  const filteredActividades = useMemo(() => {
+    return monthActivities.filter((a) => {
+      const matchSearch =
+        a.tarea.toLowerCase().includes(search.toLowerCase()) ||
+        a.responsable.toLowerCase().includes(search.toLowerCase()) ||
+        a.producto.toLowerCase().includes(search.toLowerCase()) ||
+        (a.evidencia_observaciones || "").toLowerCase().includes(search.toLowerCase());
+
+      const matchEstado =
+        filterEstado === "all" ||
+        a.estado.toUpperCase() === filterEstado.toUpperCase();
+
+      const matchResponsable =
+        filterResponsable === "all" ||
+        a.responsable.toLowerCase().includes(filterResponsable.toLowerCase());
+
+      return matchSearch && matchEstado && matchResponsable;
+    });
+  }, [monthActivities, search, filterEstado, filterResponsable]);
 
   // Guardar edición
   const handleSaveActivity = async () => {
@@ -149,20 +253,29 @@ export default function CronogramaPage() {
     }
   };
 
-  // Agregar nueva actividad
+  // Agregar nueva actividad con rango dinámico de fecha
   const handleAddActivity = async () => {
     if (!newActivity.tarea || !data || !canEdit) return;
     setIsSaving(true);
     try {
       const nextId = (Math.max(...data.actividades.map((a) => a.id), 0) || 0) + 1;
+
+      // Formatear rango dinámico: ej "1 nov.–7 nov." o "5 oct.–12 oct."
+      const formattedPeriod =
+        newActivity.startDate && newActivity.endDate
+          ? `${formatDateDisplay(newActivity.startDate)}–${formatDateDisplay(newActivity.endDate)}`
+          : newActivity.startDate
+          ? formatDateDisplay(newActivity.startDate)
+          : currentMonthLabel;
+
       const completeNewAct: CmciCronogramaActividad = {
         id: nextId,
-        tarea: newActivity.tarea || "",
-        periodo: newActivity.periodo || selectedMonth,
+        tarea: newActivity.tarea.trim(),
+        periodo: formattedPeriod,
         responsable: newActivity.responsable || "Coordinador/a General",
         apoyo: newActivity.apoyo || "Equipo multidisciplinario",
-        producto: newActivity.producto || "Informe de ejecución",
-        medio_verificacion: newActivity.medio_verificacion || "Actas y evidencias fotográficas",
+        producto: newActivity.producto || "Informe y evidencias técnicas",
+        medio_verificacion: newActivity.medio_verificacion || "Actas y registros fotográficos",
         estado: newActivity.estado || "PENDIENTE",
         evidencia_observaciones: newActivity.evidencia_observaciones || "",
       };
@@ -175,12 +288,13 @@ export default function CronogramaPage() {
       setData(updatedData);
       toast({
         title: "Acción Agregada",
-        description: `Se incorporó la actividad #${nextId} al cronograma mensual.`,
+        description: `Actividad #${nextId} incorporada en el rango ${formattedPeriod}.`,
       });
       setIsAddOpen(false);
       setNewActivity({
         tarea: "",
-        periodo: selectedMonth,
+        startDate: `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}-01`,
+        endDate: `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}-07`,
         responsable: "Coordinador/a General",
         apoyo: "Equipo técnico",
         producto: "",
@@ -199,23 +313,23 @@ export default function CronogramaPage() {
     }
   };
 
-  // Generar tareas con Copiloto IA
+  // Generar con Copiloto IA para el mes activo
   const handleGenerateWithAi = async () => {
     if (!aiPrompt.trim() || !data || !canEdit) return;
     setIsGeneratingAi(true);
     try {
-      // Simulación de generación estructurada en base a la directriz dada
-      const baseId = (Math.max(...data.actividades.map((a) => a.id), 0) || 0);
+      const baseId = Math.max(...data.actividades.map((a) => a.id), 0) || 0;
+      const formattedPeriod = `1 ${currentMonthShort}.–15 ${currentMonthShort}.`;
       const generatedTask: CmciCronogramaActividad = {
         id: baseId + 1,
         tarea: aiPrompt.trim(),
-        periodo: selectedMonth,
+        periodo: formattedPeriod,
         responsable: "Equipo Técnico / Multidisciplinario",
         apoyo: "Coordinadores y Dirección de Área",
         producto: "Plan y evidencias de ejecución completados",
         medio_verificacion: "Registros de asistencia, informes de resultados y fotografías",
         estado: "PENDIENTE",
-        evidencia_observaciones: "Propuesta generada mediante asistencia agéntica de Copiloto IA.",
+        evidencia_observaciones: `Propuesta generada mediante asistencia agéntica de Copiloto IA para ${currentMonthLabel}.`,
       };
 
       const updatedData: CmciCronogramaData = {
@@ -226,7 +340,7 @@ export default function CronogramaPage() {
       setData(updatedData);
       toast({
         title: "Cronograma Generado con IA",
-        description: "El Copiloto IA estructuró la nueva tarea y la vinculó al cronograma.",
+        description: `El Copiloto IA vinculó la acción al mes de ${currentMonthLabel}.`,
       });
       setIsAiModalOpen(false);
       setAiPrompt("");
@@ -240,25 +354,6 @@ export default function CronogramaPage() {
       setIsGeneratingAi(false);
     }
   };
-
-  // Filtrado
-  const filteredActividades = (data?.actividades || []).filter((a) => {
-    const matchSearch =
-      a.tarea.toLowerCase().includes(search.toLowerCase()) ||
-      a.responsable.toLowerCase().includes(search.toLowerCase()) ||
-      a.producto.toLowerCase().includes(search.toLowerCase()) ||
-      (a.evidencia_observaciones || "").toLowerCase().includes(search.toLowerCase());
-
-    const matchEstado =
-      filterEstado === "all" ||
-      a.estado.toUpperCase() === filterEstado.toUpperCase();
-
-    const matchResponsable =
-      filterResponsable === "all" ||
-      a.responsable.toLowerCase().includes(filterResponsable.toLowerCase());
-
-    return matchSearch && matchEstado && matchResponsable;
-  });
 
   const getStatusBadge = (estado: string) => {
     const st = estado.toUpperCase();
@@ -327,7 +422,14 @@ export default function CronogramaPage() {
               </Button>
               <Button
                 variant="default"
-                onClick={() => setIsAddOpen(true)}
+                onClick={() => {
+                  setNewActivity((prev) => ({
+                    ...prev,
+                    startDate: `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}-01`,
+                    endDate: `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}-07`,
+                  }));
+                  setIsAddOpen(true);
+                }}
               >
                 <Plus className="mr-2 h-4 w-4" /> Agregar Acción
               </Button>
@@ -342,64 +444,81 @@ export default function CronogramaPage() {
         </div>
       </div>
 
-      {/* KPI Cards de Avance */}
+      {/* KPI Cards de Avance Dinámicas por Mes */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="bg-card/50 backdrop-blur-sm border-border">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Acciones</p>
-            <div className="text-2xl font-bold mt-1 text-foreground">{totalActividades}</div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{selectedMonth}</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Acciones ({currentMonthLabel})</p>
+            <div className="text-2xl font-bold mt-1 text-foreground">{totalMes}</div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {totalMes === 0 ? "Sin acciones aún" : "Actividades activas"}
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-emerald-500/5 border-emerald-500/20">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Ejecutadas</p>
-            <div className="text-2xl font-bold mt-1 text-emerald-400">{ejecutadas}</div>
+            <div className="text-2xl font-bold mt-1 text-emerald-400">{ejecutadasMes}</div>
             <p className="text-[11px] text-emerald-500/70 mt-0.5">Con evidencias OK</p>
           </CardContent>
         </Card>
         <Card className="bg-amber-500/5 border-amber-500/20">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-amber-400 uppercase tracking-wider">En Proceso</p>
-            <div className="text-2xl font-bold mt-1 text-amber-400">{enProceso}</div>
+            <div className="text-2xl font-bold mt-1 text-amber-400">{enProcesoMes}</div>
             <p className="text-[11px] text-amber-500/70 mt-0.5">En curso activo</p>
           </CardContent>
         </Card>
         <Card className="bg-card/50 border-border">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pendientes</p>
-            <div className="text-2xl font-bold mt-1 text-foreground">{pendientes}</div>
+            <div className="text-2xl font-bold mt-1 text-foreground">{pendientesMes}</div>
             <p className="text-[11px] text-muted-foreground mt-0.5">Por iniciar</p>
           </CardContent>
         </Card>
         <Card className="bg-blue-500/5 border-blue-500/20">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-blue-400 uppercase tracking-wider">% Cumplimiento</p>
-            <div className="text-2xl font-bold mt-1 text-blue-400">{pctCumplimiento}%</div>
+            <div className="text-2xl font-bold mt-1 text-blue-400">{pctCumplimientoMes}%</div>
             <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
               <div
                 className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${pctCumplimiento}%` }}
+                style={{ width: `${pctCumplimientoMes}%` }}
               />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Selector de Mes y Alternador de Vistas (Calendario vs Tabla) */}
+      {/* Barra de Navegación Dinámica de Mes y Alternador de Vistas */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card/60 p-3 rounded-lg border border-border">
+        {/* Controles de Mes Anterior / Siguiente */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={handlePrevMonth}
+            title="Mes anterior"
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-semibold text-sm flex items-center gap-1.5 px-2">
-            <CalendarIcon className="w-4 h-4 text-primary" /> {selectedMonth}
-          </span>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <div className="flex items-center gap-2 px-3 py-1 bg-background/60 rounded-md border border-border">
+            <CalendarIcon className="w-4 h-4 text-primary" />
+            <span className="font-bold text-sm text-foreground">{currentMonthLabel}</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={handleNextMonth}
+            title="Siguiente mes"
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
+        {/* Selector de Vista */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Vista:</span>
           <Button
@@ -421,243 +540,309 @@ export default function CronogramaPage() {
         </div>
       </div>
 
-      {/* VISTA 1: VISTA MENSUAL EN CUADRÍCULA DE CALENDARIO */}
-      {viewMode === "calendar" ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Semana 1 */}
-            <Card className="border-border bg-card/40">
-              <CardHeader className="py-2.5 px-3 border-b border-border bg-secondary/30">
-                <CardTitle className="text-xs font-bold uppercase text-primary">
-                  Semana 1 (29 Sep – 07 Oct)
-                </CardTitle>
-                <CardDescription className="text-[10px]">
-                  Fase de Arranque y Habilitación
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 space-y-2">
-                {filteredActividades
-                  .filter((a) => a.periodo.includes("29 sep") || a.periodo.includes("6 oct") || a.periodo.includes("1–") || a.periodo.includes("7 oct"))
-                  .slice(0, 6)
-                  .map((act) => (
-                    <div
-                      key={act.id}
-                      className="p-2 rounded border border-border/80 bg-background/50 hover:border-primary/50 transition-colors text-xs space-y-1 cursor-pointer"
-                      onClick={() => canEdit && setEditingActividad(act)}
-                    >
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="font-semibold line-clamp-1">{act.tarea}</span>
-                        {getStatusBadge(act.estado)}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">
-                        <strong>Resp:</strong> {act.responsable}
-                      </p>
-                      <span className="inline-block text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground font-mono">
-                        {act.periodo}
-                      </span>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
+      {/* Si el mes no tiene actividades programadas, se muestra el estado vacío */}
+      {monthActivities.length === 0 ? (
+        <Card className="border-border border-dashed bg-card/20 py-12">
+          <CardContent className="flex flex-col items-center justify-center text-center space-y-3">
+            <div className="p-3 bg-secondary/50 rounded-full text-muted-foreground">
+              <Inbox className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-base text-foreground">
+                No hay actividades programadas en {currentMonthLabel}
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-sm mt-1">
+                Este período no cuenta con acciones registradas. Puedes agregar nuevas actividades con rango de fecha o generarlas mediante el Copiloto IA.
+              </p>
+            </div>
+            {canEdit && (
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => setIsAiModalOpen(true)}
+                >
+                  <Bot className="w-3.5 h-3.5 mr-1 text-primary" /> Planificar con Copiloto IA
+                </Button>
+                <Button
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {
+                    setNewActivity((prev) => ({
+                      ...prev,
+                      startDate: `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}-01`,
+                      endDate: `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}-07`,
+                    }));
+                    setIsAddOpen(true);
+                  }}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Agregar Primera Acción
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* VISTA 1: VISTA MENSUAL EN CUADRÍCULA DE CALENDARIO */}
+          {viewMode === "calendar" ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Semana 1: Días 1 al 7 */}
+                <Card className="border-border bg-card/40">
+                  <CardHeader className="py-2.5 px-3 border-b border-border bg-secondary/30">
+                    <CardTitle className="text-xs font-bold uppercase text-primary">
+                      Semana 1 (Días 1 – 7)
+                    </CardTitle>
+                    <CardDescription className="text-[10px]">
+                      Fase de Inicio y Habilitación
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-3 space-y-2">
+                    {filteredActividades
+                      .filter((a) => {
+                        const p = a.periodo.toLowerCase();
+                        return (
+                          p.includes("1–") || p.includes("1 al") || p.includes("29 sep") ||
+                          p.includes("6 oct") || p.includes("7 oct") || p.includes("1 nov") ||
+                          p.includes("7 nov") || p.includes("1 dic") || p.includes("7 dic")
+                        );
+                      })
+                      .map((act) => (
+                        <div
+                          key={act.id}
+                          className="p-2 rounded border border-border/80 bg-background/50 hover:border-primary/50 transition-colors text-xs space-y-1 cursor-pointer"
+                          onClick={() => canEdit && setEditingActividad(act)}
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <span className="font-semibold line-clamp-1">{act.tarea}</span>
+                            {getStatusBadge(act.estado)}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">
+                            <strong>Resp:</strong> {act.responsable}
+                          </p>
+                          <span className="inline-block text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground font-mono">
+                            {act.periodo}
+                          </span>
+                        </div>
+                      ))}
+                  </CardContent>
+                </Card>
 
-            {/* Semana 2 */}
-            <Card className="border-border bg-card/40">
-              <CardHeader className="py-2.5 px-3 border-b border-border bg-secondary/30">
-                <CardTitle className="text-xs font-bold uppercase text-primary">
-                  Semana 2 (08 Oct – 14 Oct)
-                </CardTitle>
-                <CardDescription className="text-[10px]">
-                  Pedagogía, Salud y Nutrición
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 space-y-2">
-                {filteredActividades
-                  .filter((a) => a.periodo.includes("8–") || a.periodo.includes("8 oct"))
-                  .map((act) => (
-                    <div
-                      key={act.id}
-                      className="p-2 rounded border border-border/80 bg-background/50 hover:border-primary/50 transition-colors text-xs space-y-1 cursor-pointer"
-                      onClick={() => canEdit && setEditingActividad(act)}
-                    >
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="font-semibold line-clamp-1">{act.tarea}</span>
-                        {getStatusBadge(act.estado)}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">
-                        <strong>Resp:</strong> {act.responsable}
-                      </p>
-                      <span className="inline-block text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground font-mono">
-                        {act.periodo}
-                      </span>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
+                {/* Semana 2: Días 8 al 14 */}
+                <Card className="border-border bg-card/40">
+                  <CardHeader className="py-2.5 px-3 border-b border-border bg-secondary/30">
+                    <CardTitle className="text-xs font-bold uppercase text-primary">
+                      Semana 2 (Días 8 – 14)
+                    </CardTitle>
+                    <CardDescription className="text-[10px]">
+                      Operación y Prestación de Servicios
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-3 space-y-2">
+                    {filteredActividades
+                      .filter((a) => {
+                        const p = a.periodo.toLowerCase();
+                        return p.includes("8–") || p.includes("8 al") || p.includes("8 oct") || p.includes("14 oct") || p.includes("8 nov");
+                      })
+                      .map((act) => (
+                        <div
+                          key={act.id}
+                          className="p-2 rounded border border-border/80 bg-background/50 hover:border-primary/50 transition-colors text-xs space-y-1 cursor-pointer"
+                          onClick={() => canEdit && setEditingActividad(act)}
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <span className="font-semibold line-clamp-1">{act.tarea}</span>
+                            {getStatusBadge(act.estado)}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">
+                            <strong>Resp:</strong> {act.responsable}
+                          </p>
+                          <span className="inline-block text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground font-mono">
+                            {act.periodo}
+                          </span>
+                        </div>
+                      ))}
+                  </CardContent>
+                </Card>
 
-            {/* Semana 3 */}
-            <Card className="border-border bg-card/40">
-              <CardHeader className="py-2.5 px-3 border-b border-border bg-secondary/30">
-                <CardTitle className="text-xs font-bold uppercase text-primary">
-                  Semana 3 (15 Oct – 21 Oct)
-                </CardTitle>
-                <CardDescription className="text-[10px]">
-                  Monitoreo y Acompañamiento Familiar
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 space-y-2">
-                {filteredActividades
-                  .filter((a) => a.periodo.includes("15–") || a.periodo.includes("21 oct") || a.periodo.includes("15 oct"))
-                  .map((act) => (
-                    <div
-                      key={act.id}
-                      className="p-2 rounded border border-border/80 bg-background/50 hover:border-primary/50 transition-colors text-xs space-y-1 cursor-pointer"
-                      onClick={() => canEdit && setEditingActividad(act)}
-                    >
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="font-semibold line-clamp-1">{act.tarea}</span>
-                        {getStatusBadge(act.estado)}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">
-                        <strong>Resp:</strong> {act.responsable}
-                      </p>
-                      <span className="inline-block text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground font-mono">
-                        {act.periodo}
-                      </span>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
+                {/* Semana 3: Días 15 al 21 */}
+                <Card className="border-border bg-card/40">
+                  <CardHeader className="py-2.5 px-3 border-b border-border bg-secondary/30">
+                    <CardTitle className="text-xs font-bold uppercase text-primary">
+                      Semana 3 (Días 15 – 21)
+                    </CardTitle>
+                    <CardDescription className="text-[10px]">
+                      Monitoreo y Acompañamiento
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-3 space-y-2">
+                    {filteredActividades
+                      .filter((a) => {
+                        const p = a.periodo.toLowerCase();
+                        return p.includes("15–") || p.includes("15 al") || p.includes("21 oct") || p.includes("15 oct") || p.includes("15 nov");
+                      })
+                      .map((act) => (
+                        <div
+                          key={act.id}
+                          className="p-2 rounded border border-border/80 bg-background/50 hover:border-primary/50 transition-colors text-xs space-y-1 cursor-pointer"
+                          onClick={() => canEdit && setEditingActividad(act)}
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <span className="font-semibold line-clamp-1">{act.tarea}</span>
+                            {getStatusBadge(act.estado)}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">
+                            <strong>Resp:</strong> {act.responsable}
+                          </p>
+                          <span className="inline-block text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground font-mono">
+                            {act.periodo}
+                          </span>
+                        </div>
+                      ))}
+                  </CardContent>
+                </Card>
 
-            {/* Semana 4 y Cierre */}
-            <Card className="border-border bg-card/40">
-              <CardHeader className="py-2.5 px-3 border-b border-border bg-secondary/30">
-                <CardTitle className="text-xs font-bold uppercase text-primary">
-                  Semana 4 y Cierre (22 – 29 Oct)
-                </CardTitle>
-                <CardDescription className="text-[10px]">
-                  Cierre de Mes y Consolidación
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 space-y-2">
-                {filteredActividades
-                  .filter((a) => a.periodo.includes("22–") || a.periodo.includes("29 oct") || a.periodo.includes("22 oct"))
-                  .map((act) => (
-                    <div
-                      key={act.id}
-                      className="p-2 rounded border border-border/80 bg-background/50 hover:border-primary/50 transition-colors text-xs space-y-1 cursor-pointer"
-                      onClick={() => canEdit && setEditingActividad(act)}
-                    >
-                      <div className="flex justify-between items-start gap-1">
-                        <span className="font-semibold line-clamp-1">{act.tarea}</span>
-                        {getStatusBadge(act.estado)}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">
-                        <strong>Resp:</strong> {act.responsable}
-                      </p>
-                      <span className="inline-block text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground font-mono">
-                        {act.periodo}
-                      </span>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
-          </div>
+                {/* Semana 4 y Cierre: Días 22 al fin de mes */}
+                <Card className="border-border bg-card/40">
+                  <CardHeader className="py-2.5 px-3 border-b border-border bg-secondary/30">
+                    <CardTitle className="text-xs font-bold uppercase text-primary">
+                      Semana 4 y Cierre (Días 22 – 31)
+                    </CardTitle>
+                    <CardDescription className="text-[10px]">
+                      Consolidación y Cierre de Mes
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-3 space-y-2">
+                    {filteredActividades
+                      .filter((a) => {
+                        const p = a.periodo.toLowerCase();
+                        return (
+                          p.includes("22–") || p.includes("22 al") || p.includes("29 oct") ||
+                          p.includes("22 oct") || p.includes("30 oct") || p.includes("22 nov") ||
+                          p.includes("29 sep.–29 oct") || p.includes("1–29 oct")
+                        );
+                      })
+                      .map((act) => (
+                        <div
+                          key={act.id}
+                          className="p-2 rounded border border-border/80 bg-background/50 hover:border-primary/50 transition-colors text-xs space-y-1 cursor-pointer"
+                          onClick={() => canEdit && setEditingActividad(act)}
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <span className="font-semibold line-clamp-1">{act.tarea}</span>
+                            {getStatusBadge(act.estado)}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">
+                            <strong>Resp:</strong> {act.responsable}
+                          </p>
+                          <span className="inline-block text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground font-mono">
+                            {act.periodo}
+                          </span>
+                        </div>
+                      ))}
+                  </CardContent>
+                </Card>
+              </div>
 
-          {/* Hitos Clave del Período */}
-          {data?.hitos && data.hitos.length > 0 && (
-            <Card className="bg-card/40 border-border">
-              <CardHeader className="py-3 px-4 border-b border-border">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <FileCheck2 className="w-4 h-4 text-primary" /> Hitos Clave Calendarizados
-                </CardTitle>
+              {/* Hitos Clave del Período Visualizado */}
+              {monthHitos.length > 0 && (
+                <Card className="bg-card/40 border-border">
+                  <CardHeader className="py-3 px-4 border-b border-border">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <FileCheck2 className="w-4 h-4 text-primary" /> Hitos Calendarizados para {currentMonthLabel}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                    {monthHitos.map((h, idx) => (
+                      <div key={idx} className="bg-secondary/20 p-3 rounded-lg border border-border/50 text-xs">
+                        <span className="inline-block px-2 py-0.5 rounded bg-primary/10 text-primary font-bold text-[10px] mb-1">
+                          {h.fecha}
+                        </span>
+                        <p className="text-muted-foreground leading-snug">{h.descripcion}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            /* VISTA 2: VISTA TABULAR / MATRIZ */
+            <Card className="border-border">
+              <CardHeader className="py-4 px-6 border-b border-border flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-semibold">
+                    Matriz de Actividades y Productos ({filteredActividades.length} acciones en {currentMonthLabel})
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Listado consolidado por responsabilidades operativas
+                  </CardDescription>
+                </div>
               </CardHeader>
-              <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-                {data.hitos.map((h, idx) => (
-                  <div key={idx} className="bg-secondary/20 p-3 rounded-lg border border-border/50 text-xs">
-                    <span className="inline-block px-2 py-0.5 rounded bg-primary/10 text-primary font-bold text-[10px] mb-1">
-                      {h.fecha}
-                    </span>
-                    <p className="text-muted-foreground leading-snug">{h.descripcion}</p>
-                  </div>
-                ))}
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-secondary/40 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border font-semibold">
+                      <tr>
+                        <th className="p-3 w-10 text-center">Nº</th>
+                        <th className="p-3 w-32">Fecha / Período</th>
+                        <th className="p-3">Actividad / Tarea</th>
+                        <th className="p-3 w-40">Responsable</th>
+                        <th className="p-3 w-56">Producto Esperado</th>
+                        <th className="p-3 w-48">Medio de Verificación / Evidencias</th>
+                        <th className="p-3 w-28 text-center">Estado</th>
+                        {canEdit && <th className="p-3 w-16 text-center">Acción</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {filteredActividades.map((act) => (
+                        <tr key={act.id} className="hover:bg-secondary/15 transition-colors">
+                          <td className="p-3 text-center font-bold text-muted-foreground">{act.id}</td>
+                          <td className="p-3 font-medium whitespace-nowrap text-foreground">{act.periodo}</td>
+                          <td className="p-3 font-medium text-foreground">
+                            <div>{act.tarea}</div>
+                            {act.apoyo && (
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                <span className="font-semibold">Apoyo:</span> {act.apoyo}
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3 text-muted-foreground">{act.responsable}</td>
+                          <td className="p-3 text-muted-foreground">{act.producto}</td>
+                          <td className="p-3 text-muted-foreground">
+                            <div>{act.medio_verificacion}</div>
+                            {act.evidencia_observaciones && (
+                              <div className="mt-1 text-[10px] bg-primary/5 text-primary border border-primary/20 p-1.5 rounded">
+                                <strong>Observaciones:</strong> {act.evidencia_observaciones}
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3 text-center whitespace-nowrap">{getStatusBadge(act.estado)}</td>
+                          {canEdit && (
+                            <td className="p-3 text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary"
+                                onClick={() => setEditingActividad({ ...act })}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           )}
-        </div>
-      ) : (
-        /* VISTA 2: VISTA TABULAR / MATRIZ TRADICIONAL */
-        <Card className="border-border">
-          <CardHeader className="py-4 px-6 border-b border-border flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-semibold">
-                Matriz de Actividades y Productos ({filteredActividades.length} acciones)
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Listado consolidado por responsabilidades operativas
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-secondary/40 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border font-semibold">
-                  <tr>
-                    <th className="p-3 w-10 text-center">Nº</th>
-                    <th className="p-3 w-28">Fecha / Período</th>
-                    <th className="p-3">Actividad / Tarea</th>
-                    <th className="p-3 w-40">Responsable</th>
-                    <th className="p-3 w-56">Producto Esperado</th>
-                    <th className="p-3 w-48">Medio de Verificación / Evidencias</th>
-                    <th className="p-3 w-28 text-center">Estado</th>
-                    {canEdit && <th className="p-3 w-16 text-center">Acción</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {filteredActividades.map((act) => (
-                    <tr key={act.id} className="hover:bg-secondary/15 transition-colors">
-                      <td className="p-3 text-center font-bold text-muted-foreground">{act.id}</td>
-                      <td className="p-3 font-medium whitespace-nowrap text-foreground">{act.periodo}</td>
-                      <td className="p-3 font-medium text-foreground">
-                        <div>{act.tarea}</div>
-                        {act.apoyo && (
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
-                            <span className="font-semibold">Apoyo:</span> {act.apoyo}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-3 text-muted-foreground">{act.responsable}</td>
-                      <td className="p-3 text-muted-foreground">{act.producto}</td>
-                      <td className="p-3 text-muted-foreground">
-                        <div>{act.medio_verificacion}</div>
-                        {act.evidencia_observaciones && (
-                          <div className="mt-1 text-[10px] bg-primary/5 text-primary border border-primary/20 p-1.5 rounded">
-                            <strong>Observaciones:</strong> {act.evidencia_observaciones}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-3 text-center whitespace-nowrap">{getStatusBadge(act.estado)}</td>
-                      {canEdit && (
-                        <td className="p-3 text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary"
-                            onClick={() => setEditingActividad({ ...act })}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        </>
       )}
 
-      {/* Modal: Agregar Nueva Acción al Cronograma */}
+      {/* Modal: Agregar Nueva Acción al Cronograma con Selector de Rango de Fecha */}
       {isAddOpen && (
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogContent className="max-w-xl">
@@ -678,16 +863,33 @@ export default function CronogramaPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Rango de Fechas Dinámico: Fecha Inicio y Fecha Fin */}
+              <div className="grid grid-cols-2 gap-3 bg-secondary/20 p-2.5 rounded-lg border border-border">
                 <div>
-                  <Label className="text-xs">Fecha / Período</Label>
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <CalendarIcon className="w-3.5 h-3.5 text-primary" /> Fecha de Inicio
+                  </Label>
                   <Input
+                    type="date"
                     className="text-xs mt-1"
-                    placeholder="Ej. 1 al 15 Nov"
-                    value={newActivity.periodo}
-                    onChange={(e) => setNewActivity({ ...newActivity, periodo: e.target.value })}
+                    value={newActivity.startDate}
+                    onChange={(e) => setNewActivity({ ...newActivity, startDate: e.target.value })}
                   />
                 </div>
+                <div>
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <CalendarIcon className="w-3.5 h-3.5 text-primary" /> Fecha de Fin
+                  </Label>
+                  <Input
+                    type="date"
+                    className="text-xs mt-1"
+                    value={newActivity.endDate}
+                    onChange={(e) => setNewActivity({ ...newActivity, endDate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Estado Inicial</Label>
                   <Select
@@ -704,9 +906,6 @@ export default function CronogramaPage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Responsable Principal</Label>
                   <Input
@@ -716,15 +915,16 @@ export default function CronogramaPage() {
                     onChange={(e) => setNewActivity({ ...newActivity, responsable: e.target.value })}
                   />
                 </div>
-                <div>
-                  <Label className="text-xs">Apoyo / Coordinación</Label>
-                  <Input
-                    className="text-xs mt-1"
-                    placeholder="Ej. Educadoras, Médicos"
-                    value={newActivity.apoyo}
-                    onChange={(e) => setNewActivity({ ...newActivity, apoyo: e.target.value })}
-                  />
-                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Apoyo / Coordinación</Label>
+                <Input
+                  className="text-xs mt-1"
+                  placeholder="Ej. Educadoras, Médicos, DASE-EP"
+                  value={newActivity.apoyo}
+                  onChange={(e) => setNewActivity({ ...newActivity, apoyo: e.target.value })}
+                />
               </div>
 
               <div>
@@ -770,14 +970,14 @@ export default function CronogramaPage() {
             </DialogHeader>
             <div className="space-y-3 py-2 text-xs">
               <p className="text-muted-foreground text-xs">
-                Dicta o escribe las instrucciones de lo que deseas planificar para el mes o la semana. El Copiloto agéntico estructurará automáticamente la tarea, definirá los medios de verificación y la integrará en el calendario.
+                Dicta o escribe las instrucciones de lo que deseas planificar para <strong>{currentMonthLabel}</strong>. El Copiloto agéntico estructurará automáticamente la tarea, definirá los medios de verificación y la integrará en el calendario.
               </p>
               <div>
                 <Label className="text-xs">Instrucción u Objetivo Operativo</Label>
                 <Textarea
                   className="text-xs mt-1"
                   rows={4}
-                  placeholder="Ej: Necesito planificar una jornada médica y de tamizaje nutricional para la tercera semana de noviembre con informe fotográfico y actas firmadas."
+                  placeholder={`Ej: Necesito planificar una jornada médica y de tamizaje nutricional para la tercera semana de ${MONTH_NAMES[currentMonthIndex].toLowerCase()} con informe fotográfico y actas firmadas.`}
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                 />

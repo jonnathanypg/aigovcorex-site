@@ -100,6 +100,22 @@ Funciones PROHIBIDAS:
 | `status` | ENUM | 'pendiente', 'aplicada', 'omitida' |
 | `batch_number` | VARCHAR | Lote |
 
+### Tabla: `representatives` (Representantes/Padres) - ~200 registros
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | INT PK | ID único |
+| `family_id` | INT FK | Familia (JOIN `families.id = children.family_id`) |
+| `first_name` | VARCHAR | Nombre |
+| `last_name` | VARCHAR | Apellido |
+| `cedula` | VARCHAR | Cédula |
+| `relationship` | ENUM | 'padre', 'madre', 'abuelo', 'tutor', etc |
+| `email` | VARCHAR | Correo electrónico |
+| `phone` | VARCHAR | Teléfono |
+| `nationality` | VARCHAR | 🌐 Nacionalidad ('Ecuatoriana', 'Venezolana', 'Colombiana', etc.). Para extranjeros: `nationality != 'Ecuatoriana'` |
+| `birth_place` | VARCHAR | Lugar de nacimiento |
+| `birth_province` | VARCHAR | Provincia de nacimiento |
+| `is_primary` | BOOLEAN | Si es representante principal |
+
 ### Tabla: `families` (Familias) - ~200 registros
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
@@ -108,25 +124,14 @@ Funciones PROHIBIDAS:
 | `address` | TEXT | Dirección |
 | `city` | VARCHAR | Ciudad |
 | `province` | VARCHAR | Provincia |
+| `mobility_status` | VARCHAR | Estado de movilidad humana ('no_aplica', 'inmigrante', 'refugiado') |
+| `migrant_origin` | VARCHAR | País o región de origen del hogar |
 | `phone_primary` | VARCHAR | Teléfono principal |
 | `phone_secondary` | VARCHAR | Teléfono secundario |
 | `emergency_contact_name` | VARCHAR | Contacto de emergencia |
 | `emergency_contact_phone` | VARCHAR | Teléfono emergencia |
 | `socioeconomic_level` | ENUM | 'bajo', 'medio_bajo', 'medio', 'medio_alto', 'alto' |
 | `vulnerability_score` | INT | Puntuación de vulnerabilidad |
-
-### Tabla: `representatives` (Representantes/Padres) - ~200 registros
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `id` | INT PK | ID único |
-| `family_id` | INT FK | Familia |
-| `first_name` | VARCHAR | Nombre |
-| `last_name` | VARCHAR | Apellido |
-| `cedula` | VARCHAR | Cédula |
-| `relationship` | ENUM | 'padre', 'madre', 'abuelo', 'tutor', etc |
-| `email` | VARCHAR | Correo electrónico |
-| `phone` | VARCHAR | Teléfono |
-| `is_primary` | BOOLEAN | Si es representante principal |
 
 ### Tabla: `milestones` (Hitos de Desarrollo) - ~400 registros
 | Columna | Tipo | Descripción |
@@ -232,6 +237,7 @@ Funciones PROHIBIDAS:
 | "comió todo" / "buen apetito" | `nutrition_daily.consumption_level = 'todo'` |
 | "no comió" / "rechazó" | `nutrition_daily.consumption_level = 'nada'` |
 | "familia" / "padres" / "representante" | `families` + `representatives` |
+| "nacionalidad" / "extranjeros" / "país" / "migrante" | `representatives.nationality` / `families.mobility_status` / `families.migrant_origin` |
 | "desarrollo" / "hitos" / "logros" | `milestones` |
 | "centro" / "organización" | `tenants` |
 | "operación" / "operaciones" / "tarea" / "mantenimiento" | `maintenance_tasks` |

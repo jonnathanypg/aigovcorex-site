@@ -438,7 +438,7 @@ export default function CronogramaPage() {
 
           <Link href="/planificaciones/cronograma-print" target="_blank">
             <Button variant="outline" className="bg-secondary/40 hover:bg-secondary border-border shadow-sm">
-              <Printer className="mr-2 h-4 w-4" /> Imprimir / PDF (A4 Membretado)
+              <Printer className="mr-2 h-4 w-4" /> Imprimir / PDF
             </Button>
           </Link>
         </div>

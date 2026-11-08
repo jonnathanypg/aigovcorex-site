@@ -57,6 +57,10 @@ def _consume(license_id: int, reason: str, ref: str = "") -> int:
     from models import db
     from models.llm_config import LEMCreditLedger
     from models.license import License
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
     lic = License.query.get(license_id)
     if not lic:
         raise ValueError("Licencia no encontrada")
@@ -65,7 +69,11 @@ def _consume(license_id: int, reason: str, ref: str = "") -> int:
         raise ValueError("Sin creditos LEM-V4. Recargue inferencia para continuar.")
     lic.lem_credits_balance = bal - LEM_COST_PER_VALIDATION
     db.session.add(LEMCreditLedger(license_id=license_id, amount=-LEM_COST_PER_VALIDATION, reason=reason, ref=ref[:200]))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     try:
         mask_mod, audit_mod = _load_core()
         if audit_mod:

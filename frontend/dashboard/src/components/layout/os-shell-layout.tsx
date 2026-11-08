@@ -109,7 +109,7 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
       />
 
       {/* ── Level 3: Main Canvas ── */}
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+      <div className="os-canvas flex flex-col flex-1 overflow-hidden min-w-0">
         {/* Module accent top line */}
         {currentMod && (
           <div
@@ -126,7 +126,7 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
         {/* Content Canvas */}
         <main
           className={cn(
-            'flex-1 overflow-y-auto print:overflow-visible',
+            'os-main flex-1 overflow-y-auto print:overflow-visible',
             'pb-4 md:pb-0 mb-16 md:mb-0 print:mb-0 print:pb-0',
           )}
         >
@@ -144,11 +144,17 @@ export function OSShellLayout({ children }: { children: React.ReactNode }) {
                 </div>
                 <Button
                   variant="outline"
-                  onClick={() => router.push('/dashboard')}
+                  onClick={() => {
+                    if (hasModule('social')) router.push('/social/dashboard');
+                    else if (hasModule('kindicore')) router.push('/dashboard');
+                    else if (hasModule('geo')) router.push('/geo/mapa');
+                    else if (hasModule('channels')) router.push('/canales/dashboard');
+                    else router.push('/dashboard');
+                  }}
                   className="flex items-center gap-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Volver a KindiCore
+                  Volver al Módulo Principal
                 </Button>
               </div>
             ) : (

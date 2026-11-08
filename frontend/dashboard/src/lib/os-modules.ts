@@ -108,6 +108,7 @@ export const OS_MODULES: OSModule[] = [
         items: [
           { label: 'Seguimiento IDII', href: '/seguimiento-idii', icon: Layers },
           { label: 'Salud y Nutrición', href: '/salud-nutricion', icon: Shield },
+          { label: 'Cronograma', href: '/cronograma', icon: FileSpreadsheet },
           { label: 'Planificaciones', href: '/planificaciones', icon: FileText },
           { label: 'Informe de Actividades', href: '/informe-actividades', icon: FileSpreadsheet },
           { label: 'Intervención Familiar', href: '/intervencion-familiar', icon: Users },

@@ -20,6 +20,7 @@ import {
   Activity,
   FileSpreadsheet,
   Gamepad2,
+  CalendarDays,
 } from 'lucide-react';
 import { type ChartConfig } from "@/components/ui/chart"
 
@@ -30,6 +31,7 @@ export const navItems = [
   { href: '/asistencia', label: 'Asistencia', icon: CalendarCheck, roles: ['license_admin', 'admin', 'coordinator', 'center_coordinator', 'educator', 'educadora', 'administrative', 'supervisor'] },
   { href: '/seguimiento-idii', label: 'Seguimiento IDII', icon: Baby, roles: ['license_admin', 'admin', 'coordinator', 'center_coordinator', 'educator', 'educadora', 'psychologist', 'supervisor', 'social_worker'] },
   { href: '/salud-nutricion', label: 'Salud y Nutrición', icon: HeartPulse, roles: ['license_admin', 'admin', 'coordinator', 'center_coordinator', 'educator', 'educadora', 'doctor', 'supervisor'] },
+  { href: '/cronograma', label: 'Cronograma', icon: CalendarDays, roles: ['license_admin', 'admin', 'coordinator', 'center_coordinator', 'educator', 'educadora', 'administrative', 'supervisor'] },
   { href: '/planificaciones', label: 'Planificaciones', icon: Gamepad2, roles: ['license_admin', 'admin', 'coordinator', 'center_coordinator', 'educator', 'educadora', 'administrative', 'supervisor'] },
   { href: '/intervencion-familiar', label: 'Intervención Familiar', icon: Users, roles: ['license_admin', 'admin', 'coordinator', 'center_coordinator', 'educator', 'educadora', 'doctor', 'psychologist', 'supervisor', 'social_worker'] },
   { href: '/operaciones', label: 'Operaciones', icon: Settings, roles: ['license_admin', 'admin', 'coordinator', 'center_coordinator', 'educator', 'educadora', 'doctor', 'psychologist', 'administrative', 'supervisor', 'social_worker'] },

@@ -314,9 +314,10 @@ class ManageRationsTool(BaseTool):
 class ManageCMCITool(BaseTool):
     name: str = "manage_cmci"
     description: str = (
-        "CMCI admisión: listar fichas, priorización, explicación ML, reportes mensuales, exportar matriz. "
-        "Input: {'action':'fichas|priorizacion|ml_explain|monthly_list|compose_monthly|export', "
-        "'tenant_id':1, 'user_id':1, 'assessment_id':7, 'matrix':'socioeconomica|vulnerabilidad'}."
+        "CMCI admisión: listar y consultar fichas de vulnerabilidad y socioeconómicas, priorización, explicación ML, reportes mensuales. "
+        "Para consultar si un niño tiene ficha de vulnerabilidad o socioeconómica: "
+        "Input: {'action':'fichas', 'matrix':'vulnerabilidad|socioeconomica', 'child_name':'Aisha' (o child_id:472), 'tenant_id':1, 'user_id':1}. "
+        "Acciones: fichas|priorizacion|ml_explain|monthly_list|compose_monthly|export."
     )
 
     def _run(self, *args, **kwargs) -> dict:
@@ -329,10 +330,62 @@ class ManageCMCITool(BaseTool):
             if action == "fichas":
                 matrix = (kwargs.get("matrix") or "vulnerabilidad").lower()
                 Model = VulnerabilityAssessment if "vuln" in matrix else SocioeconomicAssessment
-                rows = Model.query.filter(Model.tenant_id.in_(target_ids)).order_by(Model.id.desc()).limit(30).all() \
-                    if hasattr(Model, "tenant_id") else Model.query.order_by(Model.id.desc()).limit(30).all()
-                return {"success": True, "count": len(rows),
-                        "fichas": [{"id": r.id, "puntaje": getattr(r, "vulnerability_score", getattr(r, "score", None))} for r in rows]}
+                query = Model.query
+                # Filtrar por centros autorizados
+                if hasattr(Model, "center_id"):
+                    query = query.filter(Model.center_id.in_(target_ids))
+                elif hasattr(Model, "tenant_id"):
+                    query = query.filter(Model.tenant_id.in_(target_ids))
+
+                # Filtrar por niño si se proporcionó child_id o child_name
+                cid = kwargs.get("child_id")
+                cname = kwargs.get("child_name")
+                if not cid and cname:
+                    try:
+                        from agents.langchain_tools import SearchChildTool
+                        s_tool = SearchChildTool()
+                        s_res = s_tool._run(name=cname, user_id=kwargs.get("user_id"))
+                        if s_res.get("found"):
+                            child_list = [s_res.get("child")] if s_res.get("child") else s_res.get("children", [])
+                            # Priorizar coincidencia exacta de tokens
+                            import unicodedata, re
+                            def _n(x): return re.sub(r'[^a-z0-9]', '', unicodedata.normalize('NFKD', str(x or '')).encode('ASCII', 'ignore').decode().lower())
+                            target_norm = _n(cname)
+                            matched_c = None
+                            for ch in child_list:
+                                if _n(ch.get("name", "")) == target_norm or all(t in _n(ch.get("name", "")) for t in target_norm.split()):
+                                    matched_c = ch
+                                    break
+                            if not matched_c and child_list:
+                                matched_c = child_list[0]
+                            if matched_c:
+                                cid = matched_c.get("id")
+                    except Exception:
+                        pass
+
+                if cid:
+                    query = query.filter(Model.child_id == int(cid))
+
+                rows = query.order_by(Model.id.desc()).limit(30).all()
+                return {
+                    "success": True, 
+                    "count": len(rows),
+                    "matrix": matrix,
+                    "child_id": cid,
+                    "fichas": [
+                        {
+                            "id": r.id, 
+                            "child_id": r.child_id,
+                            "code": getattr(r, "code", None),
+                            "fecha": str(getattr(r, "assessed_at", "")),
+                            "puntaje_total": getattr(r, "total", None),
+                            "nivel": getattr(r, "level", None),
+                            "prioridad": getattr(r, "priority", None),
+                            "semaforo": getattr(r, "semaphore", None),
+                            "estado": getattr(r, "status", None)
+                        } for r in rows
+                    ]
+                }
             if action == "priorizacion":
                 try:
                     from services.priority_service import rank_families  # type: ignore

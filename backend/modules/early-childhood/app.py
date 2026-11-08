@@ -297,7 +297,19 @@ def create_app(config_name=None):
                 except Exception:
                     db.session.rollback()
 
-            app.logger.info("Migration: Verified licenses schema with AI GovCoreX OS columns and knowledge LONGTEXT")
+            # CMCI Egresados: Asegurar columnas exit_date, exit_reason y exit_notes en children
+            for col_sql in [
+                "ALTER TABLE children ADD COLUMN exit_date DATE NULL",
+                "ALTER TABLE children ADD COLUMN exit_reason VARCHAR(100) NULL",
+                "ALTER TABLE children ADD COLUMN exit_notes TEXT NULL",
+            ]:
+                try:
+                    db.session.execute(text(col_sql))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+            app.logger.info("Migration: Verified licenses schema with AI GovCoreX OS columns, knowledge LONGTEXT and children exit columns")
         except Exception as e:
             pass
     

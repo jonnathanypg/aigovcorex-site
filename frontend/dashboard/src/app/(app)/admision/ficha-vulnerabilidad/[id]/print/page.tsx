@@ -347,23 +347,27 @@ export default function FichaVulnerabilidadPrintPage({ params }: { params?: { id
                 </div>
               )}
 
-              {/* F. FIRMAS FÍSICAS */}
-              <div className="mt-12 pt-4 break-inside-avoid print:break-inside-avoid">
+              {/* F. FIRMAS FÍSICAS REGLAMENTARIAS EN PAPEL (Con amplio espacio h-20) */}
+              <div className="mt-8 pt-4 break-inside-avoid print:break-inside-avoid">
                 <div className="grid grid-cols-2 gap-16 px-12">
                   <div className="text-center">
-                    <div className="border-t border-slate-400 pt-1">
-                      <p className="font-semibold text-[10px] text-slate-800">Trabajadora Social / Evaluadora</p>
-                      <p className="text-[8.5px] text-slate-500 mt-0.5">Responsable de aplicación y entrevista</p>
+                    <div className="h-20" />
+                    <div className="border-t border-black pt-2">
+                      <p className="font-bold text-[10.5px] uppercase text-slate-900">Trabajadora Social / Evaluadora</p>
+                      <p className="text-[9px] text-slate-600 mt-0.5">Responsable de aplicación y entrevista</p>
+                      <p className="text-[8px] text-slate-400 mt-0.5">Firma y Fecha</p>
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="border-t border-slate-400 pt-1">
-                      <p className="font-semibold text-[10px] text-slate-800">Coordinadora del Centro</p>
-                      <p className="text-[8.5px] text-slate-500 mt-0.5">Revisión, validación de expediente y sello</p>
+                    <div className="h-20" />
+                    <div className="border-t border-black pt-2">
+                      <p className="font-bold text-[10.5px] uppercase text-slate-900">Coordinadora del Centro</p>
+                      <p className="text-[9px] text-slate-600 mt-0.5">Revisión, validación de expediente y sello</p>
+                      <p className="text-[8px] text-slate-400 mt-0.5">Firma, Sello y Fecha</p>
                     </div>
                   </div>
                 </div>
-                <p className="text-[8px] text-center text-slate-400 mt-6 print-only">
+                <p className="text-[8.5px] text-center text-slate-500 mt-6 print-only">
                   Firma física en papel fuera del sistema · Documento oficial CMCI
                 </p>
               </div>

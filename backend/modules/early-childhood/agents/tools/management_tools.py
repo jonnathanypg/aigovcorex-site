@@ -164,6 +164,105 @@ class ManagePlanningTool(BaseTool):
             return {'success': False, 'error': str(e)}
 
 
+class ManageCronogramaTool(BaseTool):
+    """Tool para gestionar, consultar y generar actividades o hitos en el cronograma institucional."""
+    name: str = "manage_cronograma"
+    description: str = (
+        "Manage institutional work schedule and milestones (cronograma operativo). "
+        "Allows querying, adding tasks, adding milestones, or assisting via voice/text copilot. "
+        "Actions: 'get' (query full schedule), 'add_activity' (add single task), 'add_milestone' (add milestone). "
+        "Examples:\n"
+        "  - Consultar: {'action': 'get'}\n"
+        "  - Agregar actividad: {'action': 'add_activity', 'tarea': 'Taller de estimulación temprana', 'periodo': '15-20 nov', 'responsable': 'Coordinador/a', 'producto': 'Informe de taller'}\n"
+        "  - Agregar hito: {'action': 'add_milestone', 'fecha': '25 nov', 'descripcion': 'Evaluación integral de fin de mes'}"
+    )
+
+    @graceful_tool
+    def _run(self, *args, **kwargs) -> dict:
+        import os, json
+        action = kwargs.get('action', 'get')
+        seed_file = os.path.join(
+            os.path.dirname(__file__), "..", "..", "seeds", "cmci", "cmci_cronograma_mes1.json"
+        )
+
+        try:
+            data = {}
+            if os.path.exists(seed_file):
+                with open(seed_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            else:
+                data = {
+                    "periodo": "Período Operativo Vigente",
+                    "centros": ["Centro Principal"],
+                    "proyecto": "Gestión Integral Institucional",
+                    "objetivo": "Cumplimiento operativo y atención de calidad",
+                    "enfoque": "Gestión por resultados y protección de derechos",
+                    "hitos": [],
+                    "actividades": []
+                }
+
+            if action == 'get':
+                return {
+                    'success': True,
+                    'periodo': data.get('periodo'),
+                    'total_actividades': len(data.get('actividades', [])),
+                    'hitos': data.get('hitos', []),
+                    'actividades': data.get('actividades', [])
+                }
+
+            elif action == 'add_activity':
+                tarea = kwargs.get('tarea') or kwargs.get('actividad')
+                if not tarea:
+                    return {'success': False, 'error': 'El campo tarea/actividad es obligatorio.'}
+
+                actividades = data.setdefault('actividades', [])
+                new_id = (max([a.get('id', 0) for a in actividades], default=0) + 1)
+                new_act = {
+                    'id': new_id,
+                    'tarea': tarea,
+                    'periodo': kwargs.get('periodo') or kwargs.get('fecha') or 'En curso',
+                    'responsable': kwargs.get('responsable') or 'Coordinador/a General',
+                    'apoyo': kwargs.get('apoyo') or 'Equipo técnico',
+                    'producto': kwargs.get('producto') or 'Actividad documentada',
+                    'medio_verificacion': kwargs.get('medio_verificacion') or 'Actas y registros',
+                    'estado': kwargs.get('estado') or 'PENDIENTE',
+                    'evidencia_observaciones': kwargs.get('evidencia_observaciones') or kwargs.get('observaciones') or ''
+                }
+                actividades.append(new_act)
+                with open(seed_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+
+                return {
+                    'success': True,
+                    'message': f'Actividad #{new_id} ("{tarea}") agregada exitosamente al cronograma.',
+                    'actividad': new_act
+                }
+
+            elif action == 'add_milestone':
+                fecha = kwargs.get('fecha')
+                descripcion = kwargs.get('descripcion') or kwargs.get('hito')
+                if not fecha or not descripcion:
+                    return {'success': False, 'error': 'Se requiere fecha y descripción para el hito.'}
+
+                hitos = data.setdefault('hitos', [])
+                new_hito = {'fecha': fecha, 'descripcion': descripcion}
+                hitos.append(new_hito)
+                with open(seed_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+
+                return {
+                    'success': True,
+                    'message': f'Hito ("{fecha}: {descripcion}") agregado al cronograma.',
+                    'hito': new_hito
+                }
+
+            return {'success': False, 'error': f'Acción no reconocida: {action}'}
+
+        except Exception as e:
+            return {'success': False, 'error': f'Error al operar en cronograma: {str(e)}'}
+
+
+
 # ═══════════════════════════════════════════════════════
 # 2. Menú Semanal
 # ═══════════════════════════════════════════════════════
@@ -667,6 +766,14 @@ class ManageChildTool(BaseTool):
                         Child.first_name.ilike(f'%{search}%'),
                         Child.last_name.ilike(f'%{search}%')
                     ))
+                
+                # Filtro por nacionalidad si se solicita
+                nationality = kwargs.get('nationality') or kwargs.get('nacionalidad')
+                if nationality:
+                    query = query.join(Family, Child.family_id == Family.id).join(Representative, Representative.family_id == Family.id).filter(
+                        Representative.nationality.ilike(f'%{nationality}%')
+                    )
+
                 children = query.order_by(Child.last_name).limit(30).all()
                 return {
                     'success': True,
@@ -677,6 +784,11 @@ class ManageChildTool(BaseTool):
                             'nombre': c.full_name,
                             'grupo': c.assigned_group or '',
                             'estado': c.status,
+                            'nacionalidad': (
+                                c.family.representatives.first().nationality 
+                                if c.family and c.family.representatives and c.family.representatives.first() 
+                                else 'Ecuatoriana'
+                            ),
                             'fecha_nacimiento': str(c.birth_date) if c.birth_date else '',
                         }
                         for c in children

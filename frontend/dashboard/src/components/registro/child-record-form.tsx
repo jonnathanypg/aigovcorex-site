@@ -32,6 +32,9 @@ export const formSchema = z.object({
   gender: z.enum(['masculino', 'femenino']),
   center_id: z.string().optional(), // For license admins
   status: z.enum(['activo', 'inactivo', 'egresado', 'lista_espera']),
+  exit_date: z.string().optional().or(z.literal('')),
+  exit_reason: z.string().optional().or(z.literal('')),
+  exit_notes: z.string().optional().or(z.literal('')),
   assigned_group: z.string().optional(),
   assigned_educator_id: z.number().optional().nullable(),
 
@@ -247,6 +250,68 @@ export function ChildRecordForm({ form, onSubmit, onCancel, isEditing, effective
                 )}
               />
             </div>
+
+            {/* Campos condicionales al marcar como Egresado */}
+            {form.watch("status") === "egresado" && (
+              <div className="p-3 border border-amber-200 bg-amber-50/60 rounded-md space-y-3">
+                <p className="text-xs font-bold text-amber-900 uppercase tracking-wide">
+                  📋 Información de Egreso (Reglamento CMCI)
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="exit_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold">Fecha de Egreso / Último Día *</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="exit_reason"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold">Motivo de Egreso *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || "Retiro voluntario de la familia"}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Seleccione motivo" /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Cambio de domicilio">Cambio de domicilio</SelectItem>
+                            <SelectItem value="Retiro voluntario de la familia">Retiro voluntario de la familia</SelectItem>
+                            <SelectItem value="Edad cumplida (42 meses)">Edad cumplida (42 meses)</SelectItem>
+                            <SelectItem value="Inasistencia prolongada">Inasistencia prolongada</SelectItem>
+                            <SelectItem value="Traslado a otro CMCI">Traslado a otro CMCI</SelectItem>
+                            <SelectItem value="Otro">Otro (+ especificar)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                {form.watch("exit_reason") === "Otro" && (
+                  <FormField
+                    control={form.control}
+                    name="exit_notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold">Especificar Motivo *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Describa el motivo del egreso..." {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+            )}
 
             {isLicenseAdmin && (
               <div className="grid grid-cols-2 gap-4">

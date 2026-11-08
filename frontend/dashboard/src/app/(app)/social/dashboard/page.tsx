@@ -70,12 +70,15 @@ export default function SocialDashboardPage() {
   };
 
   const totalBeneficiaries = programs.reduce((acc, p) => acc + (p.beneficiaries_count || p.current_beneficiaries || 0), 0);
+  const totalOrgs = programs.reduce((acc, p) => acc + (p.orgs_count || 1), 0);
+  const allRegions = Array.from(new Set(programs.flatMap(p => p.coverage_regions || [])));
+  const territoryLabel = allRegions.length > 0 ? `${allRegions.length} Regiones` : 'Ecuador Nacional';
 
   const stats = [
     { label: 'Programas Activos', value: programs.length.toString(), change: 'En ejecución', icon: ClipboardList, color: '#0ea5e9' },
-    { label: 'Beneficiarios Totales', value: totalBeneficiaries.toString(), change: 'Postulados / Aprobados', icon: Users, color: '#10b981' },
-    { label: 'Organizaciones Vinculadas', value: '38', change: 'Red interinstitucional', icon: LayoutGrid, color: '#8b5cf6' },
-    { label: 'Cobertura Territorial', value: '18 Cantones', change: 'Ecuador', icon: MapPin, color: '#f97316' },
+    { label: 'Beneficiarios Totales', value: totalBeneficiaries.toString(), change: 'Padrón Consolidado', icon: Users, color: '#10b981' },
+    { label: 'Organizaciones / Red', value: totalOrgs.toString(), change: 'Red interinstitucional', icon: LayoutGrid, color: '#8b5cf6' },
+    { label: 'Cobertura Territorial', value: territoryLabel, change: 'Cobertura activa', icon: MapPin, color: '#f97316' },
   ];
 
   return (

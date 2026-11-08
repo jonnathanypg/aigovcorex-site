@@ -547,6 +547,11 @@ textarea:focus {
   border: none !important;
 }
 
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
 @media print {
   .print-letterhead-document {
     display: block !important;
@@ -575,7 +580,7 @@ textarea:focus {
     height: 33mm !important;
   }
   .print-letterhead-bottom-spacer {
-    height: 44mm !important;
+    height: 46mm !important;
   }
   .print-letterhead-header,
   .print-letterhead-footer {
@@ -709,6 +714,18 @@ textarea:focus {
     position: static !important;
     background: #fff !important;
     animation: none !important;
+  }
+
+  /* El shell (flex + h-screen + overflow-hidden) recorta el documento al paginar: lo forzamos a flujo de bloque
+     para que TODAS las páginas (secciones finales y firmas incluidas) se impriman completas. */
+  .os-shell-root { display: block !important; width: 100% !important; }
+  .os-canvas, .os-main, .os-main > div {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
   }
 
   .os-module-rail, .os-subnav-panel, .os-bottom-nav, .app-header,

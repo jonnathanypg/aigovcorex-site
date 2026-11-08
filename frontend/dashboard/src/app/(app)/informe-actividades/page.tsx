@@ -493,7 +493,7 @@ export default function InformeActividadesPage() {
                         <Eye className="mr-1.5 h-3.5 w-3.5" />
                         Ver Resumen
                       </Button>
-                      <Link href={`/informe-actividades/${r.id}/print`} target="_blank">
+                      <Link href={`/informe-actividades/${r.id}/print`}>
                         <Button
                           size="sm"
                           variant="outline"
@@ -564,7 +564,16 @@ export default function InformeActividadesPage() {
                 <div className="p-2.5 rounded-lg border bg-muted/30 text-center">
                   <p className="text-[11px] text-muted-foreground uppercase font-semibold">Casos Riesgo</p>
                   <p className="text-lg font-bold text-amber-500">
-                    {previewReport.print_view?.resumen?.casos_riesgo || 0}
+                    {(() => {
+                      const rawDetails = previewReport.print_view?.resumen?.detalle_casos_riesgo || previewReport.payload?.detalle_casos_riesgo || [];
+                      if (Array.isArray(rawDetails) && rawDetails.length > 0) {
+                        return rawDetails.filter((d: any) => {
+                          const m = String(d?.motivo ?? "").trim().toLowerCase();
+                          return m && !["ninguno", "ninguna", "no", "n/a", "sin riesgo", "sin riesgos", "-"].includes(m);
+                        }).length;
+                      }
+                      return previewReport.print_view?.resumen?.casos_riesgo || 0;
+                    })()}
                   </p>
                 </div>
               </div>
@@ -656,7 +665,7 @@ export default function InformeActividadesPage() {
                 <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
                   Cerrar
                 </Button>
-                <Link href={`/informe-actividades/${previewReport.id}/print`} target="_blank">
+                <Link href={`/informe-actividades/${previewReport.id}/print`}>
                   <Button className="bg-amber-600 hover:bg-amber-700 text-white">
                     <Printer className="mr-2 h-4 w-4" />
                     Abrir Formato para Imprimir (A4)

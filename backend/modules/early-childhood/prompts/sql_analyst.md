@@ -25,6 +25,10 @@ Funciones PROHIBIDAS:
 *Nota: La estructura exacta de todas las tablas con sus columnas, tipos y llaves se te ha inyectado dinámicamente al final de tu contexto. Usa este glosario solo para entender el significado del negocio.*
 
 ### Tabla: `children` (Niños) - ~200 registros
+⚠️ ATENCIÓN: La tabla `children` NO tiene columna `nationality`. Para consultar o filtrar por nacionalidad, país de origen o condición de extranjero de un niño, DEBES hacer JOIN con `families` y `representatives`:
+`SELECT r.nationality, COUNT(c.id) FROM children c JOIN families f ON c.family_id = f.id JOIN representatives r ON f.id = r.family_id WHERE ...`
+O verificar `families.mobility_status` / `families.migrant_origin`. ¡NUNCA hagas `SELECT nationality FROM children`!
+
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
 | `id` | INT PK | ID único del niño |
@@ -100,6 +104,22 @@ Funciones PROHIBIDAS:
 | `status` | ENUM | 'pendiente', 'aplicada', 'omitida' |
 | `batch_number` | VARCHAR | Lote |
 
+### Tabla: `representatives` (Representantes/Padres) - ~200 registros
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | INT PK | ID único |
+| `family_id` | INT FK | Familia (JOIN `families.id = children.family_id`) |
+| `first_name` | VARCHAR | Nombre |
+| `last_name` | VARCHAR | Apellido |
+| `cedula` | VARCHAR | Cédula |
+| `relationship` | ENUM | 'padre', 'madre', 'abuelo', 'tutor', etc |
+| `email` | VARCHAR | Correo electrónico |
+| `phone` | VARCHAR | Teléfono |
+| `nationality` | VARCHAR | 🌐 Nacionalidad ('Ecuatoriana', 'Venezolana', 'Colombiana', etc.). Para extranjeros: `nationality != 'Ecuatoriana'` |
+| `birth_place` | VARCHAR | Lugar de nacimiento |
+| `birth_province` | VARCHAR | Provincia de nacimiento |
+| `is_primary` | BOOLEAN | Si es representante principal |
+
 ### Tabla: `families` (Familias) - ~200 registros
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
@@ -108,25 +128,14 @@ Funciones PROHIBIDAS:
 | `address` | TEXT | Dirección |
 | `city` | VARCHAR | Ciudad |
 | `province` | VARCHAR | Provincia |
+| `mobility_status` | VARCHAR | Estado de movilidad humana ('no_aplica', 'inmigrante', 'refugiado') |
+| `migrant_origin` | VARCHAR | País o región de origen del hogar |
 | `phone_primary` | VARCHAR | Teléfono principal |
 | `phone_secondary` | VARCHAR | Teléfono secundario |
 | `emergency_contact_name` | VARCHAR | Contacto de emergencia |
 | `emergency_contact_phone` | VARCHAR | Teléfono emergencia |
 | `socioeconomic_level` | ENUM | 'bajo', 'medio_bajo', 'medio', 'medio_alto', 'alto' |
 | `vulnerability_score` | INT | Puntuación de vulnerabilidad |
-
-### Tabla: `representatives` (Representantes/Padres) - ~200 registros
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `id` | INT PK | ID único |
-| `family_id` | INT FK | Familia |
-| `first_name` | VARCHAR | Nombre |
-| `last_name` | VARCHAR | Apellido |
-| `cedula` | VARCHAR | Cédula |
-| `relationship` | ENUM | 'padre', 'madre', 'abuelo', 'tutor', etc |
-| `email` | VARCHAR | Correo electrónico |
-| `phone` | VARCHAR | Teléfono |
-| `is_primary` | BOOLEAN | Si es representante principal |
 
 ### Tabla: `milestones` (Hitos de Desarrollo) - ~400 registros
 | Columna | Tipo | Descripción |
@@ -139,6 +148,31 @@ Funciones PROHIBIDAS:
 | `achieved_date` | DATE | Fecha de logro |
 | `expected_age_months` | INT | Edad esperada en meses |
 | `observations` | TEXT | Observaciones |
+
+### Tabla: `vulnerability_assessments` (Fichas de Vulnerabilidad CMCI)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | INT PK | ID único de la valoración |
+| `child_id` | INT FK | ID del niño evaluado (FK con `children.id`) |
+| `center_id` | INT FK | ⚠️ Centro evaluador (FK con `tenants.id`, usa `center_id IN (...)`) |
+| `code` | VARCHAR | Código oficial de ficha (ej. FV-GASIBA-2026-...) |
+| `assessed_at` | DATE | Fecha de valoración |
+| `total` | FLOAT | Puntaje total (0-100) |
+| `level` | VARCHAR | Nivel ('Vulnerabilidad muy baja', 'baja', 'media', 'alta', 'muy alta') |
+| `semaphore` | VARCHAR | Color del semáforo ('VERDE', 'AMARILLO', 'NARANJA', 'ROJO') |
+| `priority` | VARCHAR | Prioridad de cupo ('PRIORIDAD 1', 'PRIORIDAD 2', 'PRIORIDAD 3') |
+| `status` | VARCHAR | Estado ('En proceso', 'Completa', 'Validada', etc.) |
+
+### Tabla: `socioeconomic_assessments` (Fichas Socioeconómicas CMCI)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | INT PK | ID único de valoración socioeconómica |
+| `child_id` | INT FK | ID del niño evaluado (FK con `children.id`) |
+| `center_id` | INT FK | ⚠️ Centro evaluador (FK con `tenants.id`, usa `center_id IN (...)`) |
+| `code` | VARCHAR | Código oficial |
+| `assessed_at` | DATE | Fecha de valoración |
+| `total` | FLOAT | Puntaje total |
+| `classification` | VARCHAR | Clasificación socioeconómica |
 
 ### Tabla: `tenants` (Centros) - 2 registros
 | Columna | Tipo | Descripción |
@@ -232,6 +266,9 @@ Funciones PROHIBIDAS:
 | "comió todo" / "buen apetito" | `nutrition_daily.consumption_level = 'todo'` |
 | "no comió" / "rechazó" | `nutrition_daily.consumption_level = 'nada'` |
 | "familia" / "padres" / "representante" | `families` + `representatives` |
+| "nacionalidad" / "extranjeros" / "país" / "migrante" | `representatives.nationality` / `families.mobility_status` / `families.migrant_origin` |
+| "ficha de vulnerabilidad" / "vulnerabilidad" | `vulnerability_assessments` (usa `center_id` o JOIN con `children`) |
+| "ficha socioeconómica" / "situación económica" | `socioeconomic_assessments` (usa `center_id` o JOIN con `children`) |
 | "desarrollo" / "hitos" / "logros" | `milestones` |
 | "centro" / "organización" | `tenants` |
 | "operación" / "operaciones" / "tarea" / "mantenimiento" | `maintenance_tasks` |

@@ -421,9 +421,15 @@ def _process_public_citizen_message(message: str, license_obj: License, phone: s
         from models.user import User
         from models.social_program import SocialProgram
 
-        primary_tenant = Tenant.query.filter_by(license_id=license_obj.id, is_active=True).first()
+        license_id_val = license_obj.id
+        license_name = license_obj.name or ''
+        legal_name = license_obj.legal_name or ''
+        license_ruc = license_obj.ruc or ''
+        license_agent_name = license_obj.agent_name or ''
+
+        primary_tenant = Tenant.query.filter_by(license_id=license_id_val, is_active=True).first()
         if not primary_tenant:
-            primary_tenant = Tenant.query.filter_by(license_id=license_obj.id).first()
+            primary_tenant = Tenant.query.filter_by(license_id=license_id_val).first()
         tenant_id = primary_tenant.id if primary_tenant else 1
 
         system_user = User.query.filter_by(tenant_id=tenant_id, is_active=True).first()
@@ -434,7 +440,7 @@ def _process_public_citizen_message(message: str, license_obj: License, phone: s
         # Obtener programas sociales activos de esta organización
         active_programs = []
         try:
-            progs = SocialProgram.query.filter_by(license_id=license_obj.id, status='active').all()
+            progs = SocialProgram.query.filter_by(license_id=license_id_val, status='active').all()
             for p in progs:
                 active_programs.append(f"- *{p.name}* (ID: {p.id}): {p.description or 'Sin descripción'}")
         except Exception:
@@ -444,7 +450,7 @@ def _process_public_citizen_message(message: str, license_obj: License, phone: s
 
         context_prompt = f"""[CIUDADANO PÚBLICO - WHATSAPP]
 Teléfono de contacto: {phone}
-Organización: {license_obj.name} ({license_obj.legal_name or ''})
+Organización: {license_name} ({legal_name})
 Programas Activos de la Organización:
 {programs_context}
 
@@ -459,11 +465,11 @@ INSTRUCCIONES CLAVE:
         orchestrator = LangGraphOrchestrator(
             tenant_id=tenant_id,
             user_id=user_id,
-            license_id=license_obj.id,
+            license_id=license_id_val,
             role='public_citizen',
-            license_name=license_obj.name,
-            legal_name=license_obj.legal_name,
-            ruc=license_obj.ruc,
+            license_name=license_name,
+            legal_name=legal_name,
+            ruc=license_ruc,
         )
 
         full_message = f"{context_prompt}\n\nMensaje recibido de WhatsApp: {message}"
@@ -476,11 +482,11 @@ INSTRUCCIONES CLAVE:
             print(f"[WhatsApp Public Citizen] recursion_limit_reached phone={phone}")
         elif not response.get('success', True):
             print(f"[WhatsApp Public Citizen] process_message error={response.get('error')} phone={phone}")
-        return response.get('response', f"¡Hola! Gracias por comunicarte con {license_obj.name}. ¿En qué podemos ayudarte hoy?")
+        return response.get('response', f"¡Hola! Gracias por comunicarte con {license_name}. ¿En qué podemos ayudarte hoy?")
 
     except Exception as e:
         print(f"[WhatsApp Public Citizen] Error: {e}")
-        return f"¡Hola! Bienvenido/a a {license_obj.name}. Soy {license_obj.agent_name or 'su Asistente'}. Cuéntame qué necesitas y con gusto te oriento hacia nuestros programas activos."
+        return f"¡Hola! Bienvenido/a a {license_name}. Soy {license_agent_name or 'su Asistente'}. Cuéntame qué necesitas y con gusto te oriento hacia nuestros programas activos."
 
 
 def _send_whatsapp_response(license_id: str, to_phone: str, message: str):

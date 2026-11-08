@@ -252,6 +252,29 @@ def _process_program_intake(channel, conversation, program, user_message: str, c
                         db.session.rollback()
                     return (f"Buenas noticias: usted ya tiene una postulación registrada en *{program.name}* "
                             f"con el código #{dup.id} (estado: {dup.status}). No es necesario registrarla de nuevo.")
+            # ── EVALUACIÓN DE INVARIANZA LEM-V4 (GUARDIA NEUROSIMBÓLICA) ──
+            lem_notes = notes or ""
+            initial_status = 'applicant'
+            try:
+                from services.lem_guard import LEMAdmissionGuard
+                from api.social_programs import _validate_ecuador_cedula
+                ced_ok = _validate_ecuador_cedula(ced) if ced else True
+                lem_eval = LEMAdmissionGuard.get_instance().audit_intake_admission(
+                    form_data=collected,
+                    eligibility_score=score,
+                    cedula_valid=ced_ok,
+                    intake_channel=channel.channel_type or 'whatsapp'
+                )
+                if lem_eval.get('allowed') and score >= 70:
+                    initial_status = 'approved'
+                    lem_notes = f"[LEM-V4: PASS E={lem_eval.get('energy')}] {lem_notes}".strip()
+                else:
+                    initial_status = 'applicant'
+                    lem_notes = f"[LEM-V4: REVIEW E={lem_eval.get('energy')}] {lem_notes}".strip()
+            except Exception as _e_lem:
+                logger.warning(f"[LEM-V4 Webhook Guard] Fallback safe: {_e_lem}")
+                initial_status = 'approved' if score >= 70 else 'applicant'
+
             ben = ProgramBeneficiary(
                 program_id=program.id,
                 full_name=collected.get('full_name') or 'Postulante WhatsApp/Telegram',
@@ -259,8 +282,8 @@ def _process_program_intake(channel, conversation, program, user_message: str, c
                 intake_channel=channel.channel_type or 'messaging',
                 intake_conversation_id=str(conversation.external_id or conversation.id),
                 form_data=collected,
-                status='applicant' if score < 70 else 'approved',
-                eligibility_score=score, eligibility_notes=notes)
+                status=initial_status,
+                eligibility_score=score, eligibility_notes=lem_notes)
             db.session.add(ben)
             db.session.commit()
             conversation.status = 'completed'

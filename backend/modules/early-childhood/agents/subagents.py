@@ -26,13 +26,15 @@ class DelegateChildProfile(BaseTool):
     def _run(self, *args, **kwargs) -> dict:
         from agents.langchain_tools import SearchChildTool, GetChildSummaryTool
         from agents.tools.org_admin_tools import ManageFamilyTool
-        from agents.tools.care_ops_tools import ManageMilestonesTool
+        from agents.tools.care_ops_tools import ManageMilestonesTool, ManageCMCITool
         tid, uid, nm = kwargs.get("tenant_id"), kwargs.get("user_id"), kwargs.get("child_name", "")
         out: dict = {"success": True, "nino": nm}
         out["busqueda"] = _call(SearchChildTool, name=nm, tenant_id=tid, user_id=uid)
         out["resumen"] = _call(GetChildSummaryTool, name=nm, tenant_id=tid, user_id=uid)
         out["familia"] = _call(ManageFamilyTool, action="view", child_name=nm, tenant_id=tid, user_id=uid)
         out["desarrollo"] = _call(ManageMilestonesTool, action="progress", child_name=nm, tenant_id=tid, user_id=uid)
+        out["ficha_vulnerabilidad"] = _call(ManageCMCITool, action="fichas", matrix="vulnerabilidad", child_name=nm, tenant_id=tid, user_id=uid)
+        out["ficha_socioeconomica"] = _call(ManageCMCITool, action="fichas", matrix="socioeconomica", child_name=nm, tenant_id=tid, user_id=uid)
         return out
 
 

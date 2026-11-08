@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -326,10 +327,10 @@ export function ReportsClient({ tenantId }: ReportsClientProps) {
                       size="sm"
                       asChild
                     >
-                      <a href={`/reportes/print?reportId=${report.id}`}>
+                      <Link href={`/reportes/print?reportId=${report.id}`}>
                         <Eye className="mr-1 h-4 w-4" />
                         Vista previa
-                      </a>
+                      </Link>
                     </Button>
 
                     <AlertDialog open={reportToDelete === report.id} onOpenChange={(open) => open ? setReportToDelete(report.id) : setReportToDelete(null)}>

@@ -69,8 +69,8 @@ def resolve_tenant_ids(tenant_id, user_id):
                 break  # Query succeeded but no tenants (rol sin alcance)
             except Exception as e:
                 error_msg = str(e).lower()
-                is_conn = any(x in error_msg for x in ['gone away', 'broken pipe', 'lost connection', 'rollback'])
-                if is_conn and attempt < max_retries - 1:
+                is_conn = any(x in error_msg for x in ['gone away', 'broken pipe', 'lost connection', 'rollback', 'interfaceerror', 'concurrent operations'])
+                if attempt < max_retries - 1:
                     logger.warning(f"⚠️ DB connection error in resolve_tenant_ids (retry {attempt+1}): {e}")
                     continue
                 logger.warning(f"⚠️ Could not resolve tenant scope for user {user_id}: {e}")

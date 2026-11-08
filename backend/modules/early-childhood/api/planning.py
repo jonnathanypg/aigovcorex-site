@@ -106,7 +106,7 @@ def create_planning():
         # Determine tenant_id
         tenant_id = data.get('tenant_id')
         if not tenant_id:
-            tenant_id = user.tenant_id
+            tenant_id = user.tenant_id or (tenant_ids[0] if tenant_ids else None)
         
         if not tenant_id or tenant_id not in tenant_ids:
             return jsonify({'error': 'Centro no válido o sin acceso'}), 403

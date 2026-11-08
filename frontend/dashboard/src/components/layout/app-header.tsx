@@ -52,6 +52,7 @@ const routeLabels: Record<string, string> = {
   '/asistencia': 'Control de Asistencia',
   '/seguimiento-idii': 'Seguimiento IDII',
   '/salud-nutricion': 'Salud & Nutrición',
+  '/cronograma': 'Cronograma Institucional',
   '/planificaciones': 'Planificaciones',
   '/informe-actividades': 'Informe Mensual de Actividades',
   '/intervencion-familiar': 'Intervención Familiar',

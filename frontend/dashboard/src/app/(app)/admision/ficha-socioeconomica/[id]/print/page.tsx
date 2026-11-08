@@ -1,7 +1,9 @@
 "use client";
 /**
  * Ficha Socioeconómica Familiar CMCI — Constancia Oficial de Valoración Imprimible A4.
- * Formato oficial en 1 página A4 con membrete institucional, bloques A-D y firmas físicas.
+ * Formato oficial en 2 páginas A4 con membrete institucional en ambas, bloques A-D y firmas físicas amplias:
+ * - Página 1: Identificación general, composición familiar y vivienda, balance de ingresos y egresos + ratios económicos.
+ * - Página 2: Matriz completa de las 7 dimensiones socioeconómicas (B62-B68), puntaje global y firmas físicas con espacio reglamentario.
  */
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -47,11 +49,12 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
     Promise.all([
       cmciService.getSocio(id).catch(() => undefined),
       licenseAdminService.getPublicConfig().catch(() => null),
-    ]).then(([socioData, config]) => {
-      setRec(socioData);
-      setOrgConfig(config);
-      setLoading(false);
-    });
+    ])
+      .then(([socioData, config]) => {
+        setRec(socioData);
+        setOrgConfig(config);
+        setLoading(false);
+      });
   }, [id]);
 
   if (loading) {
@@ -136,13 +139,16 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
           </Link>
           <div>
             <h2 className="font-bold text-sm text-slate-800">Vista de Impresión — Ficha Socioeconómica</h2>
-            <p className="text-xs text-slate-500">Expediente Oficial A4 · {rec.codigo}</p>
+            <p className="text-xs text-slate-500">Expediente Oficial A4 (2 Páginas) · {rec.codigo}</p>
           </div>
         </div>
         <PrintButton />
       </div>
 
-      <div className="max-w-[210mm] mx-auto text-black text-[11px] leading-tight print:max-w-none print:m-0">
+      <div className="max-w-[210mm] mx-auto text-black text-[10.5px] leading-tight print:max-w-none print:m-0 space-y-6 print:space-y-0">
+        {/* ═══════════════════════════════════════════════════════════════
+            PÁGINA 1 — Identificación, composición familiar y balance mensual
+            ═══════════════════════════════════════════════════════════════ */}
         <PrintA4Page headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
           <div className="relative z-10">
             {/* Encabezado Superior */}
@@ -152,9 +158,9 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
                   {institutionsHeader}
                 </div>
               )}
-              <div className="flex justify-between items-center text-[10px] text-slate-600 mt-0.5">
-                <span>Centro: <b>{rec.cmci || "CMCI"}</b></span>
-                <span>Ficha N.°: <b className="font-mono">{rec.codigo || id}</b></span>
+              <div className="flex justify-between items-center text-[10px] text-slate-600 mt-0.5 font-mono">
+                <span>Centro: <b>{rec.cmci || "CMCI"}</b> · Ficha N.°: <b>{rec.codigo || id}</b></span>
+                <span>Página <b>1</b> de <b>2</b></span>
               </div>
             </div>
 
@@ -181,22 +187,22 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
               <table className="w-full border-collapse border border-slate-300 text-[10px]">
                 <tbody>
                   <tr className="border-b border-slate-300">
-                    <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Niño / Niña</td>
-                    <td className="w-1/4 py-0.5 px-2 font-bold border-r border-slate-200">{rec.nino}</td>
-                    <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Código único</td>
-                    <td className="w-1/4 py-0.5 px-2 font-mono font-bold text-[#1e3a5f]">{rec.codigo || `CMCI-${id}`}</td>
+                    <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Niño / Niña</td>
+                    <td className="w-1/4 py-1 px-2 font-bold border-r border-slate-200">{rec.nino}</td>
+                    <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Código único</td>
+                    <td className="w-1/4 py-1 px-2 font-mono font-bold text-[#1e3a5f]">{rec.codigo || `CMCI-${id}`}</td>
                   </tr>
                   <tr className="border-b border-slate-300">
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha nacimiento</td>
-                    <td className="py-0.5 px-2 border-r border-slate-200">{rec.nacimiento || "—"}</td>
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Centro asignado</td>
-                    <td className="py-0.5 px-2 font-semibold">{rec.cmci}</td>
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Fecha nacimiento</td>
+                    <td className="py-1 px-2 border-r border-slate-200">{rec.nacimiento || "—"}</td>
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Centro asignado</td>
+                    <td className="py-1 px-2 font-semibold">{rec.cmci}</td>
                   </tr>
                   <tr>
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Representante legal</td>
-                    <td className="py-0.5 px-2 font-medium border-r border-slate-200">{rec.representante || "—"}</td>
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Teléfono contacto</td>
-                    <td className="py-0.5 px-2 font-mono">{rec.telefono || "—"}</td>
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Representante legal</td>
+                    <td className="py-1 px-2 font-medium border-r border-slate-200">{rec.representante || "—"}</td>
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Teléfono contacto</td>
+                    <td className="py-1 px-2 font-mono">{rec.telefono || "—"}</td>
                   </tr>
                 </tbody>
               </table>
@@ -210,14 +216,14 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
               <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
                 <tbody>
                   <tr className="border-b border-slate-300">
-                    <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Total integrantes</td>
-                    <td className="w-1/4 py-0.5 px-2 font-bold border-r border-slate-200">{integrantes} personas</td>
-                    <td className="w-1/4 py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Generan ingreso</td>
-                    <td className="w-1/4 py-0.5 px-2 font-semibold">{generanIngreso} perceptor(es)</td>
+                    <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Total integrantes</td>
+                    <td className="w-1/4 py-1 px-2 font-bold border-r border-slate-200">{integrantes} personas</td>
+                    <td className="w-1/4 py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Generan ingreso</td>
+                    <td className="w-1/4 py-1 px-2 font-semibold">{generanIngreso} perceptor(es)</td>
                   </tr>
                   <tr className="border-b border-slate-300">
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Distribución etaria</td>
-                    <td colSpan={3} className="py-0.5 px-2">
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Distribución etaria</td>
+                    <td colSpan={3} className="py-1 px-2">
                       <span className="inline-flex flex-wrap gap-x-4">
                         <span>Menores 5 años: <b>{menores5}</b></span>
                         <span>5 a 17 años: <b>{de5a17}</b></span>
@@ -229,20 +235,20 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
                     </td>
                   </tr>
                   <tr className="border-b border-slate-300">
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tenencia vivienda</td>
-                    <td className="py-0.5 px-2 border-r border-slate-200">{tenencia}</td>
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tipo de vivienda</td>
-                    <td className="py-0.5 px-2">{tipoVivienda} ({dormitorios} dormitorio(s))</td>
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tenencia vivienda</td>
+                    <td className="py-1 px-2 border-r border-slate-200">{tenencia}</td>
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Tipo de vivienda</td>
+                    <td className="py-1 px-2">{tipoVivienda} ({dormitorios} dormitorio(s))</td>
                   </tr>
                   <tr className="border-b border-slate-300">
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Situación laboral</td>
-                    <td className="py-0.5 px-2 border-r border-slate-200">{situacionLaboral}</td>
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nivel de instrucción</td>
-                    <td className="py-0.5 px-2">{educacion}</td>
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Situación laboral</td>
+                    <td className="py-1 px-2 border-r border-slate-200">{situacionLaboral}</td>
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Nivel de instrucción</td>
+                    <td className="py-1 px-2">{educacion}</td>
                   </tr>
                   <tr>
-                    <td className="py-0.5 px-2 font-semibold bg-slate-50 border-r border-slate-200">Servicios básicos</td>
-                    <td colSpan={3} className="py-0.5 px-2">
+                    <td className="py-1 px-2 font-semibold bg-slate-50 border-r border-slate-200">Servicios básicos</td>
+                    <td colSpan={3} className="py-1 px-2">
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                         {SERV_LABELS.map((label, idx) => {
                           const active = serviciosArr[idx] === true;
@@ -264,7 +270,7 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
               <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
                 3. BALANCE ECONÓMICO MENSUAL DEL NÚCLEO FAMILIAR
               </div>
-              <div className="grid grid-cols-2 gap-2 border border-slate-300 p-1.5 bg-slate-50/50">
+              <div className="grid grid-cols-2 gap-2 border border-slate-300 p-2 bg-slate-50/50">
                 {/* Tabla Ingresos */}
                 <div>
                   <div className="font-bold text-[9px] uppercase border-b border-slate-300 pb-0.5 mb-1 text-slate-800 flex justify-between">
@@ -283,8 +289,8 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
                         );
                       })}
                       <tr className="border-t-2 border-slate-400 font-bold bg-white">
-                        <td className="py-0.5">TOTAL INGRESOS</td>
-                        <td className="py-0.5 text-right font-mono text-emerald-800">${totalIngresos.toFixed(2)}</td>
+                        <td className="py-1">TOTAL INGRESOS</td>
+                        <td className="py-1 text-right font-mono text-emerald-800">${totalIngresos.toFixed(2)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -308,8 +314,8 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
                         );
                       })}
                       <tr className="border-t-2 border-slate-400 font-bold bg-white">
-                        <td className="py-0.5">TOTAL EGRESOS</td>
-                        <td className="py-0.5 text-right font-mono text-rose-800">${totalEgresos.toFixed(2)}</td>
+                        <td className="py-1">TOTAL EGRESOS</td>
+                        <td className="py-1 text-right font-mono text-rose-800">${totalEgresos.toFixed(2)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -317,7 +323,7 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
               </div>
 
               {/* Indicadores Clave de Economía */}
-              <div className="grid grid-cols-4 gap-2 border border-t-0 border-slate-300 p-1.5 bg-white text-center text-[9.5px]">
+              <div className="grid grid-cols-4 gap-2 border border-t-0 border-slate-300 p-2 bg-white text-center text-[9.5px]">
                 <div>
                   <span className="text-slate-500 block text-[8.5px]">Ingreso Per-Cápita:</span>
                   <b className="font-mono text-[11px] text-[#1e3a5f]">${perCapita.toFixed(2)}</b>
@@ -338,99 +344,126 @@ export default function FichaSocioeconomicaPrintPage({ params }: { params?: { id
                 </div>
               </div>
             </div>
+          </div>
+        </PrintA4Page>
 
-            {/* 4. CONSOLIDADO DE PUNTAJES Y CLASIFICACIÓN SOCIOECONÓMICA */}
-            <div className="mb-2 break-inside-avoid">
-              <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-0.5 font-bold uppercase text-[9.5px] tracking-wide">
-                4. MATRIZ DE DIMENSIONES Y CLASIFICACIÓN FINAL
+        {/* ═══════════════════════════════════════════════════════════════
+            PÁGINA 2 — Matriz de dimensiones B62-B68, clasificación y firmas
+            ═══════════════════════════════════════════════════════════════ */}
+        <PrintA4Page headerUrl={headerBannerUrl} footerUrl={footerBannerUrl}>
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div>
+              {/* Encabezado Continuación Página 2 */}
+              <div className="border-b-2 border-black pb-1 mb-2">
+                {institutionsHeader && (
+                  <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-900">
+                    {institutionsHeader}
+                  </div>
+                )}
+                <div className="flex justify-between items-center text-[10px] text-slate-600 mt-0.5 font-mono">
+                  <span>Código: <b>{rec.codigo || id}</b> · Niño/a: <b>{rec.nino}</b></span>
+                  <span>Página <b>2</b> de <b>2</b></span>
+                </div>
               </div>
-              <table className="w-full border-collapse border border-slate-300 text-[9.5px]">
-                <thead>
-                  <tr className="border-b border-slate-300 bg-slate-100 font-bold text-center">
-                    <th className="text-left py-0.5 px-2 border-r border-slate-300">Dimensión Socioeconómica</th>
-                    <th className="py-0.5 px-2 w-24 border-r border-slate-300">Ponderación</th>
-                    <th className="py-0.5 px-2 w-24 border-r border-slate-300">Puntaje Base</th>
-                    <th className="text-right py-0.5 px-2 w-28">Puntaje Ponderado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SOCIO_WEIGHTS.map((w) => {
-                    const score =
-                      subscoresMap[w.key] ??
-                      subscoresMap[w.dim.toLowerCase()] ??
-                      subscoresMap[w.key.toLowerCase()] ??
-                      subscoresMap[
-                        w.key === "B62" ? "ingreso" :
-                        w.key === "B63" ? "composicion" :
-                        w.key === "B64" ? "laboral" :
-                        w.key === "B65" ? "vivienda" :
-                        w.key === "B66" ? "servicios" :
-                        w.key === "B67" ? "gastos" : "educacion"
-                      ] ?? 0;
-                    const weighted = score * w.w;
-                    return (
-                      <tr key={w.key} className="border-b border-slate-200">
-                        <td className="py-0.5 px-2 border-r border-slate-200">
-                          <span className="font-semibold text-slate-900">{w.dim}</span>
-                          <span className="text-[8.5px] text-slate-500 block">
-                            {DIM_DESCRIPTIONS[w.key] || ""}
-                          </span>
-                        </td>
-                        <td className="py-0.5 px-2 text-center border-r border-slate-200 font-mono">
-                          {Math.round(w.w * 100)}%
-                        </td>
-                        <td className="py-0.5 px-2 text-center border-r border-slate-200 font-mono font-bold">
-                          {score} pts
-                        </td>
-                        <td className="py-0.5 px-2 text-right font-mono font-semibold">
-                          {weighted.toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="border-t-2 border-slate-400 bg-slate-50 font-bold">
-                    <td colSpan={2} className="py-1 px-2 uppercase text-slate-900 border-r border-slate-200">
-                      Puntaje Global Socioeconómico
-                    </td>
-                    <td colSpan={2} className="py-1 px-2 text-right">
-                      <span className="text-sm font-extrabold text-[#1e3a5f] font-mono mr-2">
-                        {rec.total.toFixed(1)} / 100
-                      </span>
-                      <span
-                        className="inline-block px-2 py-0.5 text-xs font-bold uppercase rounded border border-black/20"
-                        style={{
-                          background:
-                            clasificacion.includes("alta") ? "#F8A354" :
-                            clasificacion.includes("media") ? "#FFEB84" : "#63BE7B",
-                          color: "#000",
-                        }}
-                      >
-                        Vulnerabilidad {rec.clasificacion || "Media"}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+
+              {/* 4. CONSOLIDADO DE PUNTAJES Y CLASIFICACIÓN SOCIOECONÓMICA */}
+              <div className="mb-4 break-inside-avoid">
+                <div className="bg-[#1e3a5f] text-white border border-[#1e3a5f] px-2 py-1 font-bold uppercase text-[10px] tracking-wide">
+                  4. MATRIZ DE VALORACIÓN POR DIMENSIONES SOCIOECONÓMICAS (B62 - B68)
+                </div>
+                <table className="w-full border-collapse border border-slate-300 text-[10px]">
+                  <thead>
+                    <tr className="border-b border-slate-300 bg-slate-100 font-bold text-center">
+                      <th className="text-left py-1 px-2 border-r border-slate-300">Dimensión Socioeconómica</th>
+                      <th className="py-1 px-2 w-28 border-r border-slate-300">Ponderación</th>
+                      <th className="py-1 px-2 w-28 border-r border-slate-300">Puntaje Base</th>
+                      <th className="text-right py-1 px-2 w-32">Puntaje Ponderado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SOCIO_WEIGHTS.map((w) => {
+                      const score =
+                        subscoresMap[w.key] ??
+                        subscoresMap[w.dim.toLowerCase()] ??
+                        subscoresMap[w.key.toLowerCase()] ??
+                        subscoresMap[
+                          w.key === "B62" ? "ingreso" :
+                          w.key === "B63" ? "composicion" :
+                          w.key === "B64" ? "laboral" :
+                          w.key === "B65" ? "vivienda" :
+                          w.key === "B66" ? "servicios" :
+                          w.key === "B67" ? "gastos" : "educacion"
+                        ] ?? 0;
+                      const weighted = score * w.w;
+                      return (
+                        <tr key={w.key} className="border-b border-slate-200">
+                          <td className="py-1 px-2 border-r border-slate-200">
+                            <span className="font-semibold text-slate-900">{w.dim}</span>
+                            <span className="text-[9px] text-slate-500 block">
+                              {DIM_DESCRIPTIONS[w.key] || ""}
+                            </span>
+                          </td>
+                          <td className="py-1 px-2 text-center border-r border-slate-200 font-mono">
+                            {Math.round(w.w * 100)}%
+                          </td>
+                          <td className="py-1 px-2 text-center border-r border-slate-200 font-mono font-bold">
+                            {score} pts
+                          </td>
+                          <td className="py-1 px-2 text-right font-mono font-semibold">
+                            {weighted.toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="border-t-2 border-slate-400 bg-slate-50 font-bold">
+                      <td colSpan={2} className="py-1.5 px-2 uppercase text-slate-900 border-r border-slate-200">
+                        Puntaje Global Socioeconómico
+                      </td>
+                      <td colSpan={2} className="py-1.5 px-2 text-right">
+                        <span className="text-sm font-extrabold text-[#1e3a5f] font-mono mr-2">
+                          {rec.total.toFixed(1)} / 100
+                        </span>
+                        <span
+                          className="inline-block px-2.5 py-0.5 text-xs font-bold uppercase rounded border border-black/20"
+                          style={{
+                            background:
+                              clasificacion.includes("alta") ? "#F8A354" :
+                              clasificacion.includes("media") ? "#FFEB84" : "#63BE7B",
+                            color: "#000",
+                          }}
+                        >
+                          Vulnerabilidad {rec.clasificacion || "Media"}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            {/* 5. FIRMAS FÍSICAS */}
-            <div className="mt-6 pt-3 break-inside-avoid print:break-inside-avoid">
+            {/* 5. FIRMAS FÍSICAS REGLAMENTARIAS EN PAPEL (Con amplio espacio h-20) */}
+            <div className="pt-6 mb-4 break-inside-avoid print:break-inside-avoid">
               <div className="grid grid-cols-2 gap-16 px-12">
                 <div className="text-center">
-                  <div className="border-t border-slate-400 pt-1">
-                    <p className="font-semibold text-[10px] text-slate-800">Trabajadora Social / Educadora</p>
-                    <p className="text-[9px] text-slate-500 mt-0.5">Responsable de aplicación y entrevista</p>
+                  {/* Espacio en blanco amplio de ~22mm sobre la línea para firma manuscrita */}
+                  <div className="h-20" />
+                  <div className="border-t border-black pt-2">
+                    <p className="font-bold text-[10.5px] uppercase text-slate-900">Trabajadora Social / Evaluadora</p>
+                    <p className="text-[9px] text-slate-600 mt-0.5">Responsable de aplicación y entrevista</p>
+                    <p className="text-[8px] text-slate-400 mt-0.5">Firma y Fecha</p>
                   </div>
                 </div>
 
                 <div className="text-center">
-                  <div className="border-t border-slate-400 pt-1">
-                    <p className="font-semibold text-[10px] text-slate-800">Coordinadora del Centro</p>
-                    <p className="text-[9px] text-slate-500 mt-0.5">Revisión y validación de expediente</p>
+                  <div className="h-20" />
+                  <div className="border-t border-black pt-2">
+                    <p className="font-bold text-[10.5px] uppercase text-slate-900">Coordinadora del Centro</p>
+                    <p className="text-[9px] text-slate-600 mt-0.5">Revisión, validación de expediente y sello</p>
+                    <p className="text-[8px] text-slate-400 mt-0.5">Firma, Sello y Fecha</p>
                   </div>
                 </div>
               </div>
-              <p className="text-[8.5px] text-center text-slate-400 mt-4 print-only">
+              <p className="text-[8.5px] text-center text-slate-500 mt-6 print-only">
                 Firma física en papel fuera del sistema · Documento oficial CMCI
               </p>
             </div>

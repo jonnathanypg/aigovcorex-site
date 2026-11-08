@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecentAdmissions } from "@/components/dashboard/recent-admissions";
 import { DevelopmentChart } from "@/components/dashboard/development-chart";
@@ -11,9 +12,24 @@ import { useLicense } from "@/contexts/license-context";
 import { SponsorLogoDisplay } from "@/components/license-admin/SponsorLogoDisplay";
 
 export default function DashboardPage() {
+    const router = useRouter();
     const { role, center } = useRole();
-    const { isLicenseAdmin, selectedCenterId } = useLicense();
+    const { isLicenseAdmin, selectedCenterId, hasModule, isSuperAdmin, isLoading: licenseLoading } = useLicense();
     const [range, setRange] = useState<DateRange>({ preset: "month" });
+
+    // Si la organización no tiene contratado el módulo kindicore pero sí tiene social u otro,
+    // redirigir automáticamente al dashboard de su módulo principal (ej: /social/dashboard)
+    useEffect(() => {
+        if (!licenseLoading && !isSuperAdmin && !hasModule('kindicore')) {
+            if (hasModule('social')) {
+                router.replace('/social/dashboard');
+            } else if (hasModule('geo')) {
+                router.replace('/geo/mapa');
+            } else if (hasModule('channels')) {
+                router.replace('/canales/dashboard');
+            }
+        }
+    }, [licenseLoading, isSuperAdmin, hasModule, router]);
 
     // Determine filter
     const tenantId = (isLicenseAdmin && selectedCenterId !== 'all') ? Number(selectedCenterId) : undefined;

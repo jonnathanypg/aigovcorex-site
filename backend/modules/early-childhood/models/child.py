@@ -16,10 +16,10 @@ class Family(db.Model, BaseModel):
     address = db.Column(db.Text)
     city = db.Column(db.String(100))
     province = db.Column(db.String(100))
-    phone_primary = db.Column(db.String(20))
-    phone_secondary = db.Column(db.String(20))
+    phone_primary = db.Column(db.String(50))
+    phone_secondary = db.Column(db.String(50))
     emergency_contact_name = db.Column(db.String(255))
-    emergency_contact_phone = db.Column(db.String(20))
+    emergency_contact_phone = db.Column(db.String(50))
     emergency_contact_relationship = db.Column(db.String(100))
     socioeconomic_level = db.Column(db.Enum('bajo', 'medio_bajo', 'medio', 'medio_alto', 'alto', name='socioeconomic_enum'))
     vulnerability_score = db.Column(db.Integer)
@@ -113,6 +113,9 @@ class Child(db.Model, BaseModel):
     blood_type = db.Column(db.String(5))
     photo_url = db.Column(db.String(500))
     enrollment_date = db.Column(db.Date, nullable=False)
+    exit_date = db.Column(db.Date, nullable=True)
+    exit_reason = db.Column(db.String(100), nullable=True)
+    exit_notes = db.Column(db.Text, nullable=True)
     status = db.Column(db.Enum('activo', 'inactivo', 'egresado', 'lista_espera', name='status_enum'), default='activo')
     assigned_group = db.Column(db.String(100))
     assigned_educator_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
@@ -209,6 +212,9 @@ class Child(db.Model, BaseModel):
             'blood_type': self.blood_type,
             'photo_url': self.photo_url,
             'enrollment_date': self.enrollment_date.isoformat() if hasattr(self.enrollment_date, 'isoformat') else self.enrollment_date,
+            'exit_date': self.exit_date.isoformat() if hasattr(self.exit_date, 'isoformat') and self.exit_date else (self.exit_date or None),
+            'exit_reason': self.exit_reason,
+            'exit_notes': self.exit_notes,
             'status': self.status,
             'assigned_group': self.assigned_group,
             'assigned_educator_id': self.assigned_educator_id,

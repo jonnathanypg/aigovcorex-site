@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAgentRefresh } from "@/hooks/use-agent-refresh";
 import { planningService, type LudicPlanning } from "@/services/planning.service";
 import { authService } from "@/services/auth.service";
+import { useLicense } from "@/contexts/license-context";
 import Link from "next/link";
 import {
     Gamepad2,
@@ -118,6 +119,7 @@ export default function PlanificacionesPage() {
     const [filterStatus, setFilterStatus] = useState("");
     const [formData, setFormData] = useState(emptyForm);
     const { toast } = useToast();
+    const { selectedCenterId, centers } = useLicense();
 
     const user = authService.getStoredUser();
 
@@ -209,8 +211,13 @@ export default function PlanificacionesPage() {
                 formData.indicador_general
             ].filter(Boolean);
 
+            const targetTenantId = (selectedCenterId && selectedCenterId !== 'all')
+                ? Number(selectedCenterId)
+                : (user?.tenant_id || (centers && centers.length > 0 ? centers[0].id : undefined));
+
             const payload: any = {
                 ...formData,
+                tenant_id: targetTenantId,
                 nombre_actividad: nombrePrincipal,
                 objetivo: objetivoConsolidado,
                 momento_juego_intencionado: {
@@ -309,6 +316,11 @@ export default function PlanificacionesPage() {
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <Link href="/cronograma">
+                        <Button variant="outline" className="border-blue-500/40 text-blue-600 hover:bg-blue-500/10">
+                            <Calendar className="mr-2 h-4 w-4" /> Cronograma
+                        </Button>
+                    </Link>
                     <Link href="/informe-actividades">
                         <Button variant="outline" className="border-amber-500/40 text-amber-500 hover:bg-amber-500/10">
                             <FileSpreadsheet className="mr-2 h-4 w-4" /> Informe Mensual de Actividades

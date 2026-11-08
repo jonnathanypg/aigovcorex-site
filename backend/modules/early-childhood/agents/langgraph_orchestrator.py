@@ -103,8 +103,9 @@ class LangGraphOrchestrator:
         # Initialize LLM
         self.llm = self._init_llm()
         
-        # Get tools (filtradas por rol: public_citizen/padre sin escritura)
-        self.tools = self._filter_tools_by_role(get_all_tools())
+        # Get tools (filtradas por rol y por módulos activos de la organización)
+        role_filtered_tools = self._filter_tools_by_role(get_all_tools())
+        self.tools = self._filter_tools_by_modules(role_filtered_tools)
 
         # Límite determinista de reintentos de tools (además del recursion_limit=15 del grafo)
         self.max_tool_retries = 2
@@ -233,12 +234,9 @@ class LangGraphOrchestrator:
         """Build the state graph for agent orchestration"""
         workflow = StateGraph(AgentState)
         
-        # Use sequential executor (max_workers=1) to prevent DB connection corruption
+        # Use sequential executor (max_concurrency=1) to prevent DB connection corruption
         # Flask-SQLAlchemy's session is not thread-safe across parallel tool execution
-        sequential_executor = ThreadPoolExecutor(max_workers=1)
-        tool_node = ToolNode(self.tools, handle_tool_errors=True)
-        # Override the default executor
-        tool_node.executor = sequential_executor
+        tool_node = ToolNode(self.tools, handle_tool_errors=True).with_config({"max_concurrency": 1})
 
         # Add nodes
         workflow.add_node("agent", self._agent_node)
@@ -283,6 +281,52 @@ class LangGraphOrchestrator:
         ]
         removed = len(tools) - len(filtered)
         self.logger.info(f"🔒 Tools filtradas por rol '{self.role}': {len(filtered)} activas ({removed} escritura bloqueadas)")
+        return filtered
+
+    def _filter_tools_by_modules(self, tools: list) -> list:
+        """
+        Filtra herramientas según los módulos contratados/habilitados para la organización.
+        Permite que fundaciones que SOLO tienen activo Social AI no vean ni invoquen herramientas
+        de centros infantiles (KindiCore), o viceversa.
+        """
+        enabled = set((m or '').lower() for m in (self.enabled_modules or []))
+        if not enabled:
+            return tools
+
+        # Herramientas del módulo KindiCore (primera infancia, centros, hitos, asistencia)
+        kindicore_exclusive_tools = {
+            'get_absent_children', 'get_attendance_today', 'record_attendance',
+            'log_nutrition', 'log_health', 'search_child', 'get_child_summary',
+            'delegate_child_profile', 'delegate_health_nutrition', 'delegate_development',
+            'delegate_cmci_admission', 'manage_cmci', 'manage_milestones',
+            'manage_health_vaccines', 'manage_rations', 'manage_weekly_menu',
+            'manage_child', 'manage_family'
+        }
+
+        # Herramientas exclusivas del módulo Social AI
+        social_exclusive_tools = {
+            'manage_social_programs', 'delegate_social'
+        }
+
+        # Herramientas exclusivas del módulo Geo
+        geo_exclusive_tools = {
+            'manage_geo_channels', 'delegate_operations_geo'
+        }
+
+        filtered = []
+        for t in tools:
+            t_name = (getattr(t, 'name', None) or '').lower()
+            if 'kindicore' not in enabled and t_name in kindicore_exclusive_tools:
+                continue
+            if 'social' not in enabled and t_name in social_exclusive_tools:
+                continue
+            if 'geo' not in enabled and t_name in geo_exclusive_tools:
+                continue
+            filtered.append(t)
+
+        self.logger.info(
+            f"🧩 Tools filtradas por módulos ({list(enabled)}): {len(filtered)} de {len(tools)} activas."
+        )
         return filtered
 
     @staticmethod
@@ -504,9 +548,11 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
    (Alternativa manual: 'search_child' + 'get_child_summary' + 'manage_family/view'.)
 5. SALUD/NUTRICIÓN / PESO Y TALLA: para 'peso/talla/crecimiento/salud de [nombre]', USA 'delegate_health_nutrition' pasando 'child_name' (o 'manage_health_vaccines' con action='growth' y child_name). Si consultan peso o talla por WhatsApp, responde amablemente con el último peso y talla registrados, o el dato de nacimiento si no hay controles recientes. NUNCA respondas que no tienes autorización si el usuario es educadora o coordinador.
    Desarrollo IDII: 'delegate_development' o 'manage_milestones' (catalog|record|progress|alerts).
+5.1. NACIONALIDAD / EXTRANJEROS: La nacionalidad de los niños registrados se encuentra documentada a través de sus familias y representantes (`representatives.nationality`, `families.mobility_status`, `families.migrant_origin`). Para preguntas analíticas como "cuántos niños extranjeros hay", "de qué nacionalidades hay y cuántos de cada una", USA 'run_sql_analysis' haciendo JOIN entre `children`, `families` y `representatives` (filtrando `representatives.nationality != 'Ecuatoriana'` o agrupando por `representatives.nationality`). Para buscar niños de una nacionalidad específica usa 'search_child' pasando nationality='Venezolana'/'Colombiana'/'extranjeros'/etc. NUNCA respondas que no se puede acceder a la nacionalidad o que no existe la columna.
+5.2. FICHAS DE VULNERABILIDAD Y SOCIOECONÓMICAS CMCI: Sí existen en el sistema (`vulnerability_assessments` y `socioeconomic_assessments`). Para verificar si un niño tiene ficha de vulnerabilidad o socioeconómica, USA DIRECTAMENTE 'manage_cmci' pasando action='fichas', matrix='vulnerabilidad' (o 'socioeconomica') y 'child_name' o 'child_id'. También puedes usar 'delegate_child_profile' para una ficha integral. NUNCA digas que no existe la tabla de vulnerabilidad en el sistema.
 6. CMCI/ADMISIÓN: 'delegate_cmci_admission' o 'manage_cmci' (fichas|priorizacion|ml_explain|monthly_list|compose_monthly) + 'manage_applications' (list|approve|reject|waitlist).
 7. PERSONAS/ORG: 'delegate_people_org' o directo 'manage_users' (list|get|create|deactivate) + 'manage_centers' (list|get|create|update|stats|global_stats|territorial) + 'manage_monitoring_staff' (kpis|staff_load|delegate).
-8. OPERACIÓN/TERRITORIO: 'delegate_operations_geo' o 'manage_geo_channels' (geo_points|geo_create|templates_list|template_create|broadcast) + 'manage_maintenance_task' + 'manage_planning'.
+8. OPERACIÓN/TERRITORIO: 'delegate_operations_geo' o 'manage_geo_channels' (geo_points|geo_create|templates_list|template_create|broadcast) + 'manage_maintenance_task' + 'manage_planning' + 'manage_cronograma' (para agregar/consultar tareas o hitos al cronograma mensual o semanal mediante voz o texto).
 9. NOTIFS/DOCS/KNOWLEDGE/REPORTES: 'manage_notifications' (list|create|read|delete), 'manage_documents_knowledge' (docs_list|knowledge_list|knowledge_delete), 'consult_knowledge_base', 'generate_report', 'delegate_knowledge_reports'.
 10. SOCIAL AI: programas/beneficiarios/postulaciones/convocatorias → 'delegate_social' o 'manage_social_programs' (list_programs|create_program|get_form|configure_form|register_applicant|list_beneficiaries|program_stats). Para "cuántos postulantes/estado del programa" usa 'program_stats' o 'list_beneficiaries'. Docs del programa (bases, requisitos, TDR) → 'consult_knowledge_base' con module='social' y el 'program_id' correspondiente. Puedes listar programas y guiar una postulación paso a paso.
 11. BASE DE CONOCIMIENTO: 'consult_knowledge_base' para políticas, protocolos, MIES, documentos.
@@ -557,7 +603,7 @@ INSTRUCCIONES CRÍTICAS DE MEMORIA Y HERRAMIENTAS:
             try:
                 final_state = self.graph.invoke(
                     initial_state,
-                    config={"recursion_limit": 15}
+                    config={"recursion_limit": 15, "max_concurrency": 1}
                 )
             except Exception as recursion_err:
                 err_msg = str(recursion_err).lower()
